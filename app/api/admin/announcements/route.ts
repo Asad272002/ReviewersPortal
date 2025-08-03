@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// Utility to initialize Google Sheets
+// Auth helper
 const initializeGoogleSheets = async () => {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
@@ -23,29 +23,27 @@ const initializeGoogleSheets = async () => {
   return doc;
 };
 
-// Utility to get Announcements sheet
+// Sheet getter
 const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
   const sheet = doc.sheetsByTitle['Announcements'];
-  if (!sheet) {
-    throw new Error('Announcements sheet not found.');
-  }
+  if (!sheet) throw new Error('Announcements sheet not found');
   return sheet;
 };
 
-// ✅ FIXED: Correct PUT handler with proper second argument
+// ✅ Correct signature: second arg is destructured { params }
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     const data = await request.json();
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
     const rows = await sheet.getRows();
 
-    const row = rows.find((r) => r.get('id') === id);
+    const row = rows.find(r => r.get('id') === id);
     if (!row) {
       return NextResponse.json(
         { error: 'Announcement not found' },
@@ -78,9 +76,9 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error('PUT Error:', error);
+    console.error('Error in PUT /announcements/[id]:', error);
     return NextResponse.json(
-      { error: 'Failed to update announcement' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
