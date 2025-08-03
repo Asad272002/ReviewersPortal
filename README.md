@@ -1,24 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Review Circle - Reviewer Portal
+
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app). The application serves as a reviewer portal for the Deep Funding Review Circle, allowing reviewers to access requirement documents and submit proposals.
+
+## Features
+
+- Interactive dashboard for reviewers
+- Requirement documents and guidelines
+- Proposal submission form with Google Sheets integration
+- Responsive design with smooth animations
+- Authentication system with Google Sheets integration for user management
 
 ## Getting Started
 
-First, run the development server:
+First, install the dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Google Sheets Integration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This application integrates with Google Sheets for two main purposes:
+
+### 1. Proposal Submission Storage
+
+The proposal submission form stores data in a Google Sheet. To set up this integration:
+
+1. Follow the instructions in the `docs/google-sheets-setup.md` file
+2. Copy `.env.local.example` to `.env.local` and update with your Google API credentials
+3. Install the required packages: `npm install google-spreadsheet google-auth-library`
+4. Run the setup script: `node scripts/create-google-sheet.js`
+
+### 2. User Authentication
+
+The authentication system uses Google Sheets to store and validate user credentials:
+
+- Admin and reviewer accounts are stored in a separate sheet
+- Login credentials are verified against the Google Sheet
+- User roles (admin/reviewer) are managed through the sheet
+
+For a complete setup guide, refer to the `scripts/SETUP_GUIDE.md` file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load custom fonts.
 
 ## Learn More
 
