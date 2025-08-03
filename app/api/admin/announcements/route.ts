@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// Initialize Google Sheets
+// Utility to initialize Google Sheets
 const initializeGoogleSheets = async () => {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
@@ -12,30 +12,45 @@ const initializeGoogleSheets = async () => {
     throw new Error('Missing Google Sheets credentials.');
   }
 
-  const auth = new JWT({ email, key, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  const auth = new JWT({
+    email,
+    key,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+
   const doc = new GoogleSpreadsheet(sheetId, auth);
   await doc.loadInfo();
   return doc;
 };
 
+// Utility to get Announcements sheet
 const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
   const sheet = doc.sheetsByTitle['Announcements'];
-  if (!sheet) throw new Error('Announcements sheet not found.');
+  if (!sheet) {
+    throw new Error('Announcements sheet not found.');
+  }
   return sheet;
 };
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+// ✅ FIXED: Correct PUT handler with proper second argument
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const id = params.id;
+    const { id } = context.params;
     const data = await request.json();
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
     const rows = await sheet.getRows();
 
-    const row = rows.find(r => r.get('id') === id);
+    const row = rows.find((r) => r.get('id') === id);
     if (!row) {
-      return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Announcement not found' },
+        { status: 404 }
+      );
     }
 
     const { title, content, category, duration, expiresAt } = data;
@@ -63,7 +78,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     });
   } catch (error) {
-    console.error('PUT error:', error);
-    return NextResponse.json({ error: 'Failed to update announcement' }, { status: 500 });
+    console.error('PUT Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update announcement' },
+      { status: 500 }
+    );
   }
 }
