@@ -211,21 +211,25 @@ export default function Support() {
                   <div className="border-b border-[#9D9FA9] pb-4">
                     <h3 className="font-montserrat font-medium text-xl text-[#9D9FA9] mb-2">How do I reset my password?</h3>
                     <p className="font-montserrat text-[#9D9FA9]">
-                      To reset your password, click on the "Forgot Password" link on the login page. You will receive an email with instructions to create a new password.
+                      To reset your password, click on the &quot;Forgot Password&quot; link on the login page. You will receive an email with instructions to create a new password.
+
                     </p>
                   </div>
                   
                   <div className="border-b border-[#9D9FA9] pb-4">
-                    <h3 className="font-montserrat font-medium text-xl text-[#9D9FA9] mb-2">What if I can't access my assigned proposals?</h3>
+                    <h3 className="font-montserrat font-medium text-xl text-[#9D9FA9] mb-2">What if I can&apos;t access my assigned proposals?</h3>
+
                     <p className="font-montserrat text-[#9D9FA9]">
-                      If you're having trouble accessing your assigned proposals, please contact technical support at tech@reviewcircle.com with your username and a description of the issue.
+                      If you&apos;re having trouble accessing your assigned proposals, please contact technical support at tech@reviewcircle.com with your username and a description of the issue.
+
                     </p>
                   </div>
                   
                   <div>
                     <h3 className="font-montserrat font-medium text-xl text-[#9D9FA9] mb-2">How do I update my profile information?</h3>
                     <p className="font-montserrat text-[#9D9FA9]">
-                      You can update your profile information by navigating to the "Profile" section in your account settings. From there, you can edit your personal information, contact details, and notification preferences.
+                      You can update your profile information by navigating to the &quot;Profile&quot; section in your account settings. From there, you can edit your personal information, contact details, and notification preferences.
+
                     </p>
                   </div>
                 </div>
