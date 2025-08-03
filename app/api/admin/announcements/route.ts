@@ -113,3 +113,57 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// PUT - Update an existing announcement
+export async function PUT(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
+  try {
+    const { id } = context.params;
+    const body = await request.json();
+    const { title, content, category, duration, expiresAt } = body;
+
+    const doc = await initializeGoogleSheets();
+    const sheet = await getAnnouncementsSheet(doc);
+
+    const rows = await sheet.getRows();
+    const row = rows.find((r) => r.get('id') === id);
+
+    if (!row) {
+      return NextResponse.json(
+        { error: 'Announcement not found' },
+        { status: 404 }
+      );
+    }
+
+    if (title !== undefined) row.set('title', title);
+    if (content !== undefined) row.set('content', content);
+    if (category !== undefined) row.set('category', category);
+    if (duration !== undefined) row.set('duration', duration.toString());
+    if (expiresAt !== undefined) row.set('expiresAt', expiresAt);
+
+    row.set('updatedAt', new Date().toISOString());
+    await row.save();
+
+    return NextResponse.json({
+      message: 'Announcement updated successfully',
+      announcement: {
+        id,
+        title,
+        content,
+        category,
+        duration,
+        expiresAt,
+        updatedAt: row.get('updatedAt'),
+        createdAt: row.get('createdAt'),
+      },
+    });
+  } catch (error) {
+    console.error('Error updating announcement:', error);
+    return NextResponse.json(
+      { error: 'Failed to update announcement' },
+      { status: 500 }
+    );
+  }
+}
