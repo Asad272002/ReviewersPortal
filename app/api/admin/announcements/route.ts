@@ -34,13 +34,16 @@ const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
   return sheet;
 };
 
-// PUT - Update an existing announcement
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// ✅ Corrected PUT function
+export async function PUT(request: NextRequest) {
   try {
-    const { id } = params;
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop(); // Extract the ID from the URL
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing announcement ID in URL' }, { status: 400 });
+    }
+
     const body = await request.json();
     const { title, content, category, duration, expiresAt } = body;
 
