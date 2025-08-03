@@ -115,6 +115,9 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT - Update an existing announcement
+import { NextRequest, NextResponse } from 'next/server';
+
+// PUT - Update an existing announcement
 export async function PUT(
   request: NextRequest,
   context: { params: { id: string } }
@@ -126,10 +129,9 @@ export async function PUT(
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
-
     const rows = await sheet.getRows();
-    const row = rows.find((r) => r.get('id') === id);
 
+    const row = rows.find(r => r.get('id') === id);
     if (!row) {
       return NextResponse.json(
         { error: 'Announcement not found' },
@@ -157,7 +159,7 @@ export async function PUT(
         expiresAt,
         updatedAt: row.get('updatedAt'),
         createdAt: row.get('createdAt'),
-      },
+      }
     });
   } catch (error) {
     console.error('Error updating announcement:', error);
