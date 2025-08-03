@@ -2,50 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// Google Sheets Auth
+// Initialize Google Sheets
 const initializeGoogleSheets = async () => {
-  if (
-    !process.env.GOOGLE_SHEET_ID ||
-    !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-    !process.env.GOOGLE_PRIVATE_KEY
-  ) {
-    throw new Error('Google Sheets environment variables not configured');
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const sheetId = process.env.GOOGLE_SHEET_ID;
+
+  if (!email || !key || !sheetId) {
+    throw new Error('Missing Google Sheets credentials.');
   }
 
-  const serviceAccountAuth = new JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
-  const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+  const auth = new JWT({ email, key, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+  const doc = new GoogleSpreadsheet(sheetId, auth);
   await doc.loadInfo();
   return doc;
 };
 
 const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
-  let sheet = doc.sheetsByTitle['Announcements'];
-  if (!sheet) {
-    sheet = await doc.addSheet({
-      title: 'Announcements',
-      headerValues: ['id', 'title', 'content', 'category', 'duration', 'expiresAt', 'createdAt', 'updatedAt'],
-    });
-  }
+  const sheet = doc.sheetsByTitle['Announcements'];
+  if (!sheet) throw new Error('Announcements sheet not found.');
   return sheet;
 };
 
-// ✅ Corrected PUT function
-export async function PUT(request: NextRequest) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const url = new URL(request.url);
-    const id = url.pathname.split('/').pop(); // Extract the ID from the URL
-
-    if (!id) {
-      return NextResponse.json({ error: 'Missing announcement ID in URL' }, { status: 400 });
-    }
-
-    const body = await request.json();
-    const { title, content, category, duration, expiresAt } = body;
+    const id = params.id;
+    const data = await request.json();
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
@@ -55,6 +37,8 @@ export async function PUT(request: NextRequest) {
     if (!row) {
       return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
     }
+
+    const { title, content, category, duration, expiresAt } = data;
 
     if (title !== undefined) row.set('title', title);
     if (content !== undefined) row.set('content', content);
@@ -79,7 +63,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error updating announcement:', error);
+    console.error('PUT error:', error);
     return NextResponse.json({ error: 'Failed to update announcement' }, { status: 500 });
   }
 }
