@@ -120,7 +120,7 @@ export default function Guides() {
                   <div>
                     <h3 className="font-montserrat font-medium text-xl text-[#9D9FA9] mb-2">Budget Review</h3>
                     <p className="font-montserrat text-[#9D9FA9] mb-4">
-                      Analyze the proposed budget for reasonableness, efficiency, and alignment with project goals. Ensure all expenses are justified and necessary for the project's success.
+                        Analyze the proposed budget for reasonableness, efficiency, and alignment with project goals. Ensure all expenses are justified and necessary for the project&apos;s success.
                     </p>
                     <div className="bg-[rgba(144,80,233,0.05)] p-3 rounded border border-[#9050E9] font-montserrat text-sm text-[#9D9FA9]">
                       <strong>Tip:</strong> Compare the budget allocation with industry standards and look for any inconsistencies or inflated costs.
