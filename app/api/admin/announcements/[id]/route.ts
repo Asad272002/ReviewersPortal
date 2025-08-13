@@ -1,13 +1,9 @@
-// app/api/admin/announcements/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// Ensure Node.js runtime (required for google-* libs)
+// Ensure Node.js runtime (google-* needs Node APIs)
 export const runtime = 'nodejs';
-
-// (Optional) If you need to always run on server and avoid static caching:
-// export const dynamic = 'force-dynamic';
 
 const initializeGoogleSheets = async () => {
   const SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -36,9 +32,11 @@ const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
 };
 
 // PUT /api/admin/announcements/:id
-export async function PUT(req: Request, context: { params: { id: string } }) {
+export async function PUT(req: Request, context: any) {
   try {
-    const { id } = context.params;
+    const { id } = (context?.params ?? {}) as { id: string };
+    if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
+
     const body = await req.json();
     const { title, content, category, duration, expiresAt } = body ?? {};
 
@@ -47,7 +45,6 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
 
     const rows = await sheet.getRows();
     const rowIndex = rows.findIndex((row: any) => row.get('id') === id);
-
     if (rowIndex === -1) {
       return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
     }
@@ -84,23 +81,21 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
 }
 
 // DELETE /api/admin/announcements/:id
-export async function DELETE(_req: Request, context: { params: { id: string } }) {
+export async function DELETE(_req: Request, context: any) {
   try {
-    const { id } = context.params;
+    const { id } = (context?.params ?? {}) as { id: string };
+    if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
 
     const rows = await sheet.getRows();
     const rowIndex = rows.findIndex((row: any) => row.get('id') === id);
-
     if (rowIndex === -1) {
       return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
     }
 
-    const row = rows[rowIndex];
-    await row.delete();
-
+    await rows[rowIndex].delete();
     return NextResponse.json({ message: 'Announcement deleted successfully' });
   } catch (error) {
     console.error('Error deleting announcement:', error);
