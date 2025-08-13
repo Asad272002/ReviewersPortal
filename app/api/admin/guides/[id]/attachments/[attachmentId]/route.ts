@@ -1,96 +1,86 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/admin/guides/[id]/attachments/[attachmentId]/route.ts
+import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// Initialize Google Sheets authentication
+export const runtime = 'nodejs';
+
 const initializeGoogleSheets = async () => {
-  if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+  const SHEET_ID = process.env.GOOGLE_SHEET_ID;
+  const EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const KEY = process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!SHEET_ID || !EMAIL || !KEY) {
     throw new Error('Google Sheets environment variables not configured');
   }
 
-  const serviceAccountAuth = new JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  const auth = new JWT({
+    email: EMAIL,
+    key: KEY.replace(/\\n/g, '\n'),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
 
-  const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+  const doc = new GoogleSpreadsheet(SHEET_ID, auth);
   await doc.loadInfo();
-  
   return doc;
 };
 
-// Get Guides sheet
 const getGuidesSheet = async (doc: GoogleSpreadsheet) => {
   const sheet = doc.sheetsByTitle['Guides'];
-  if (!sheet) {
-    throw new Error('Guides sheet not found');
-  }
+  if (!sheet) throw new Error('Guides sheet not found');
   return sheet;
 };
 
 // DELETE - Remove attachment from guide
-export async function DELETE(
-  request: NextRequest, 
-  { params }: { params: { id: string; attachmentId: string } }
-) {
+export async function DELETE(_req: Request, context: any) {
   try {
-    const { id, attachmentId } = params;
+    const { id, attachmentId } =
+      (context?.params ?? {}) as { id?: string; attachmentId?: string };
+
+    if (!id || !attachmentId) {
+      return NextResponse.json({ error: 'Missing params' }, { status: 400 });
+    }
 
     const doc = await initializeGoogleSheets();
     const sheet = await getGuidesSheet(doc);
-    
+
     const rows = await sheet.getRows();
-    const rowIndex = rows.findIndex(row => row.get('id') === id);
-    
+    const rowIndex = rows.findIndex((row: any) => row.get('id') === id);
+
     if (rowIndex === -1) {
-      return NextResponse.json(
-        { error: 'Guide not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Guide not found' }, { status: 404 });
     }
 
     const row = rows[rowIndex];
-    
-    // Parse current attachments
-    let attachments = [];
-    try {
-      const attachmentsStr = row.get('attachments');
-      if (attachmentsStr) {
-        attachments = JSON.parse(attachmentsStr);
+
+    // Parse current attachments (robust)
+    let attachments: any[] = [];
+    const attachmentsStr = row.get('attachments');
+    if (attachmentsStr) {
+      try {
+        const parsed = JSON.parse(attachmentsStr);
+        if (Array.isArray(parsed)) attachments = parsed;
+      } catch {
+        console.warn('Failed to parse attachments for guide:', id);
+        return NextResponse.json(
+          { error: 'Failed to parse guide attachments' },
+          { status: 500 }
+        );
       }
-    } catch (e) {
-      console.warn('Failed to parse attachments for guide:', id);
-      return NextResponse.json(
-        { error: 'Failed to parse guide attachments' },
-        { status: 500 }
-      );
     }
-    
-    // Remove the specific attachment
-    const updatedAttachments = attachments.filter((att: any) => att.id !== attachmentId);
-    
-    if (updatedAttachments.length === attachments.length) {
-      return NextResponse.json(
-        { error: 'Attachment not found' },
-        { status: 404 }
-      );
+
+    const updated = attachments.filter((att) => att?.id !== attachmentId);
+    if (updated.length === attachments.length) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
     }
-    
-    // Update the row
-    row.set('attachments', JSON.stringify(updatedAttachments));
+
+    row.set('attachments', JSON.stringify(updated));
     row.set('updatedAt', new Date().toISOString());
-    
     await row.save();
 
-    return NextResponse.json({
-      message: 'Attachment removed successfully'
-    });
+    return NextResponse.json({ message: 'Attachment removed successfully' });
   } catch (error) {
     console.error('Error removing attachment:', error);
-    return NextResponse.json(
-      { error: 'Failed to remove attachment' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to remove attachment' }, { status: 500 });
   }
 }
