@@ -1,85 +1,76 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/admin/announcements/route.ts
+import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
-// Auth helper
+export const runtime = 'nodejs';
+
 const initializeGoogleSheets = async () => {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const sheetId = process.env.GOOGLE_SHEET_ID;
-
-  if (!email || !key || !sheetId) {
-    throw new Error('Missing Google Sheets credentials.');
-  }
-
-  const auth = new JWT({
-    email,
-    key,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
+  const key = process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+  const sheetId = process.env.GOOGLE_SHEET_ID!;
+  const auth = new JWT({ email, key, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
   const doc = new GoogleSpreadsheet(sheetId, auth);
   await doc.loadInfo();
   return doc;
 };
 
-// Sheet getter
 const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
   const sheet = doc.sheetsByTitle['Announcements'];
   if (!sheet) throw new Error('Announcements sheet not found');
   return sheet;
 };
 
-// ✅ Correct signature: second arg is destructured { params }
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// GET /api/admin/announcements (list)
+export async function GET(_req: Request) {
   try {
-    const { id } = params;
-    const data = await request.json();
-
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
     const rows = await sheet.getRows();
+    const data = rows.map((r: any) => ({
+      id: r.get('id'),
+      title: r.get('title'),
+      content: r.get('content'),
+      category: r.get('category'),
+      duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
+      expiresAt: r.get('expiresAt') || undefined,
+      createdAt: r.get('createdAt'),
+      updatedAt: r.get('updatedAt'),
+    }));
+    return NextResponse.json(data);
+  } catch (e) {
+    console.error('GET /announcements error:', e);
+    return NextResponse.json({ error: 'Failed to fetch announcements' }, { status: 500 });
+  }
+}
 
-    const row = rows.find(r => r.get('id') === id);
-    if (!row) {
-      return NextResponse.json(
-        { error: 'Announcement not found' },
-        { status: 404 }
-      );
+// POST /api/admin/announcements (create)
+export async function POST(req: Request) {
+  try {
+    const { id, title, content, category, duration, expiresAt } = await req.json();
+
+    if (!id || !title) {
+      return NextResponse.json({ error: 'id and title are required' }, { status: 400 });
     }
 
-    const { title, content, category, duration, expiresAt } = data;
+    const doc = await initializeGoogleSheets();
+    const sheet = await getAnnouncementsSheet(doc);
+    const now = new Date().toISOString();
 
-    if (title !== undefined) row.set('title', title);
-    if (content !== undefined) row.set('content', content);
-    if (category !== undefined) row.set('category', category);
-    if (duration !== undefined) row.set('duration', duration.toString());
-    if (expiresAt !== undefined) row.set('expiresAt', expiresAt);
-
-    row.set('updatedAt', new Date().toISOString());
-    await row.save();
-
-    return NextResponse.json({
-      message: 'Announcement updated successfully',
-      announcement: {
-        id,
-        title,
-        content,
-        category,
-        duration,
-        expiresAt,
-        updatedAt: row.get('updatedAt'),
-        createdAt: row.get('createdAt'),
-      },
+    await sheet.addRow({
+      id,
+      title,
+      content,
+      category,
+      duration: duration?.toString() ?? '',
+      expiresAt: expiresAt ?? '',
+      createdAt: now,
+      updatedAt: now,
     });
-  } catch (error) {
-    console.error('Error in PUT /announcements/[id]:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ message: 'Announcement created' }, { status: 201 });
+  } catch (e) {
+    console.error('POST /announcements error:', e);
+    return NextResponse.json({ error: 'Failed to create announcement' }, { status: 500 });
   }
 }
