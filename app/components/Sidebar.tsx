@@ -80,6 +80,13 @@ const Sidebar = () => {
         active={pathname === '/guides'} 
       />
       <NavItem 
+        icon="vote-icon.svg" 
+        label="Vote for Proposals" 
+        href="/vote-proposals"
+        active={pathname === '/vote-proposals'} 
+        multiline={true} 
+      />
+      <NavItem 
         icon="document-icon.svg" 
         label="Process Documentation" 
         href="/processes"

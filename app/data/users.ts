@@ -20,6 +20,12 @@ export const users: User[] = [
     name: 'Admin User',
     role: 'admin',
   },
+  {
+    id: '4',
+    username: 'coordinator1',
+    name: 'Project Coordinator',
+    role: 'coordinator',
+  },
 ];
 
 // Mock credentials database (in a real app, passwords would be hashed)
@@ -27,6 +33,7 @@ export const credentials: Record<string, string> = {
   'reviewer1': 'password123',
   'reviewer2': 'password123',
   'admin1': 'admin123',
+  'coordinator1': 'coord123',
 };
 
 export const authenticateUser = (username: string, password: string): User | null => {

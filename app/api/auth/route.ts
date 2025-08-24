@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         id: userRow.get('ID'),
         username: userRow.get('Username'),
         name: userRow.get('Name'),
-        role: userRow.get('Role') as 'admin' | 'reviewer',
+        role: userRow.get('Role') as 'admin' | 'reviewer' | 'coordinator',
       };
       
       return NextResponse.json({

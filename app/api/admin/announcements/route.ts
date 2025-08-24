@@ -27,17 +27,20 @@ export async function GET(_req: Request) {
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
     const rows = await sheet.getRows();
-    const data = rows.map((r: any) => ({
-      id: r.get('id'),
-      title: r.get('title'),
-      content: r.get('content'),
-      category: r.get('category'),
-      duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
-      expiresAt: r.get('expiresAt') || undefined,
-      createdAt: r.get('createdAt'),
-      updatedAt: r.get('updatedAt'),
-    }));
-    return NextResponse.json(data);
+    // Filter only general announcements to avoid duplicates with important updates
+    const data = rows
+      .filter((r: any) => r.get('category') === 'general')
+      .map((r: any) => ({
+        id: r.get('id'),
+        title: r.get('title'),
+        content: r.get('content'),
+        category: r.get('category'),
+        duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
+        expiresAt: r.get('expiresAt') || undefined,
+        createdAt: r.get('createdAt'),
+        updatedAt: r.get('updatedAt'),
+      }));
+    return NextResponse.json({ announcements: data });
   } catch (e) {
     console.error('GET /announcements error:', e);
     return NextResponse.json({ error: 'Failed to fetch announcements' }, { status: 500 });
@@ -49,16 +52,26 @@ export async function POST(req: Request) {
   try {
     const { id, title, content, category, duration, expiresAt } = await req.json();
 
-    if (!id || !title) {
-      return NextResponse.json({ error: 'id and title are required' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'title is required' }, { status: 400 });
     }
+
+    const announcementId = id || `ann_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
-    const now = new Date().toISOString();
+    const now = new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  });
 
     await sheet.addRow({
-      id,
+      id: announcementId,
       title,
       content,
       category,

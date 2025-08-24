@@ -61,7 +61,15 @@ export async function POST(request: NextRequest) {
           'Proposal Summary': data.proposalSummary,
           'Technical Approach': data.technicalApproach,
           'Additional Notes': data.additionalNotes || '',
-          'Submission Date': new Date().toISOString(),
+          'Submission Date': new Date().toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC',
+            timeZoneName: 'short'
+          }),
           'Proposal ID': `PROP-${Date.now()}`
         });
         
@@ -80,7 +88,15 @@ export async function POST(request: NextRequest) {
       message: 'Proposal submitted successfully',
       data: {
         id: `PROP-${Date.now()}`,
-        submittedAt: new Date().toISOString(),
+        submittedAt: new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  }),
       }
     });
     

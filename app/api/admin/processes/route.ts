@@ -65,8 +65,24 @@ export async function POST(request: NextRequest) {
       order: order?.toString() || '',
       isPublished: isPublished ? 'true' : 'false',
       attachments: Array.isArray(attachments) ? attachments.join(', ') : (attachments || ''),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  }),
+      updatedAt: new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  })
     });
     
     return NextResponse.json({ message: 'Process created successfully', id: newId });

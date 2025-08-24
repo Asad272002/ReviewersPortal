@@ -13,23 +13,26 @@ export async function GET() {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
     await doc.loadInfo();
     
-    const sheet = doc.sheetsByTitle['Important Updates'];
+    const sheet = doc.sheetsByTitle['Announcements'];
     if (!sheet) {
-      return NextResponse.json({ error: 'Important Updates sheet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Announcements sheet not found' }, { status: 404 });
     }
     
     const rows = await sheet.getRows();
     
-    const importantUpdates = rows.map(row => ({
-      id: row.get('id'),
-      title: row.get('title'),
-      content: row.get('content'),
-      category: row.get('category'),
-      duration: row.get('duration') ? parseInt(row.get('duration')) : null,
-      expiresAt: row.get('expiresAt'),
-      createdAt: row.get('createdAt'),
-      updatedAt: row.get('updatedAt')
-    }));
+    // Filter only announcements with category 'important'
+    const importantUpdates = rows
+      .filter(row => row.get('category') === 'important')
+      .map(row => ({
+        id: row.get('id'),
+        title: row.get('title'),
+        content: row.get('content'),
+        category: row.get('category'),
+        duration: row.get('duration') ? parseInt(row.get('duration')) : null,
+        expiresAt: row.get('expiresAt'),
+        createdAt: row.get('createdAt'),
+        updatedAt: row.get('updatedAt')
+      }));
     
     return NextResponse.json(importantUpdates);
   } catch (error) {
@@ -46,26 +49,42 @@ export async function POST(request: NextRequest) {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
     await doc.loadInfo();
     
-    const sheet = doc.sheetsByTitle['Important Updates'];
+    const sheet = doc.sheetsByTitle['Announcements'];
     if (!sheet) {
-      return NextResponse.json({ error: 'Important Updates sheet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Announcements sheet not found' }, { status: 404 });
     }
     
     const rows = await sheet.getRows();
-    const newId = (rows.length + 1).toString();
+    const announcementId = `ann_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     await sheet.addRow({
-      id: newId,
+      id: announcementId,
       title,
       content,
-      category: category || 'important',
+      category: 'important',
       duration: duration?.toString() || '',
       expiresAt: expiresAt || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  }),
+      updatedAt: new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  })
     });
     
-    return NextResponse.json({ message: 'Important update created successfully', id: newId });
+    return NextResponse.json({ message: 'Important update created successfully', id: announcementId });
   } catch (error) {
     console.error('Error creating important update:', error);
     return NextResponse.json({ error: 'Failed to create important update' }, { status: 500 });
@@ -84,9 +103,9 @@ export async function DELETE(request: NextRequest) {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
     await doc.loadInfo();
     
-    const sheet = doc.sheetsByTitle['Important Updates'];
+    const sheet = doc.sheetsByTitle['Announcements'];
     if (!sheet) {
-      return NextResponse.json({ error: 'Important Updates sheet not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Announcements sheet not found' }, { status: 404 });
     }
     
     const rows = await sheet.getRows();

@@ -50,7 +50,15 @@ export async function PUT(req: Request, context: any) {
     }
 
     const row = rows[rowIndex];
-    const now = new Date().toISOString();
+    const now = new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  });
 
     if (title !== undefined) row.set('title', title);
     if (description !== undefined) row.set('description', description);

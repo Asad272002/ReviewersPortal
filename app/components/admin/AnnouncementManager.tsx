@@ -36,10 +36,10 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await fetch('/api/admin/announcements');
+      const response = await fetch('/api/admin/all-announcements');
       if (response.ok) {
         const data = await response.json();
-        setAnnouncements(data.announcements || []);
+        setAnnouncements(Array.isArray(data) ? data : data.announcements || []);
       }
     } catch (error) {
       console.error('Error fetching announcements:', error);
@@ -56,6 +56,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
       : undefined;
 
     const announcementData = {
+      id: editingAnnouncement?.id || `ann_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...formData,
       expiresAt,
     };
@@ -219,8 +220,8 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
                 <label className="block font-montserrat text-[#9D9FA9] mb-2">Duration (days)</label>
                 <input
                   type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                  value={formData.duration || ''}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value ? parseInt(e.target.value) : 30 })}
                   min="1"
                   max="365"
                   className="w-full p-3 bg-[#0C021E] border border-[#9D9FA9] rounded text-white focus:outline-none focus:border-[#A96AFF]"

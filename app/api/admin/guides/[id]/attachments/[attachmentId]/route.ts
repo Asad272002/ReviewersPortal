@@ -75,7 +75,15 @@ export async function DELETE(_req: Request, context: any) {
     }
 
     row.set('attachments', JSON.stringify(updated));
-    row.set('updatedAt', new Date().toISOString());
+    row.set('updatedAt', new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  }));
     await row.save();
 
     return NextResponse.json({ message: 'Attachment removed successfully' });

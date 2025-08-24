@@ -84,19 +84,18 @@ export default function Announcements() {
           <Sidebar />
           
           <main className="flex-1 p-8">
-            {/* Admin Controls */}
-            {user?.role === 'admin' && (
+            {/* Admin/Coordinator Controls */}
+            {(user?.role === 'admin' || user?.role === 'coordinator') && (
               <div className="mb-6">
                 <button
                   onClick={() => setShowAdminPanel(!showAdminPanel)}
                   className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded transition-colors mb-4"
                 >
-                  {showAdminPanel ? 'Hide Admin Panel' : 'Show Admin Panel'}
+                  {showAdminPanel ? 'Hide Management Panel' : 'Show Management Panel'}
                 </button>
                 
                 {showAdminPanel && (
-                  <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6 mb-6">
-                    <h3 className="font-montserrat font-semibold text-lg text-white mb-4">Admin Controls</h3>
+                  <div className="mb-6">
                     <AnnouncementManager onAnnouncementUpdate={fetchAnnouncements} />
                   </div>
                 )}
@@ -210,12 +209,7 @@ export default function Announcements() {
           </main>
         </div>
         
-        {user?.role === 'admin' && (
-          <div className="p-8">
-            <h2 className="font-montserrat font-semibold text-2xl text-white mb-4">Manage Announcements</h2>
-            <AnnouncementManager />
-          </div>
-        )}
+
         
         <LogoutButton />
         <Footer />

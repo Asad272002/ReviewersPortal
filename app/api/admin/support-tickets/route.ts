@@ -82,7 +82,15 @@ export async function POST(request: NextRequest) {
     const sheet = await getSupportTicketsSheet(doc);
     
     const id = `ticket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date().toISOString();
+    const now = new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+    timeZoneName: 'short'
+  });
     
     await sheet.addRow({
       id,
