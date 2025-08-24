@@ -17,8 +17,11 @@ interface Process {
   content: string;
   category: string;
   order: number;
-  isPublished: boolean;
-  attachments: string[];
+  status: 'published' | 'draft' | 'archived';
+  attachments: {
+    links: { title: string; url: string }[];
+    files: { title: string; url: string; type: 'pdf' | 'doc' | 'other' }[];
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -101,7 +104,7 @@ export default function Processes() {
         throw new Error('Failed to fetch processes');
       }
       const data = await response.json();
-      setProcesses(data);
+      setProcesses(data.processes || []);
     } catch (err) {
       console.error('Error fetching processes:', err);
       setError('Failed to load processes');
@@ -110,7 +113,7 @@ export default function Processes() {
     }
   };
 
-  const publishedProcesses = Array.isArray(processes) ? processes.filter(process => process.isPublished).sort((a, b) => a.order - b.order) : [];
+  const publishedProcesses = Array.isArray(processes) ? processes.filter(process => process.status === 'published').sort((a, b) => a.order - b.order) : [];
 
   return (
     <ProtectedRoute>
@@ -165,16 +168,32 @@ export default function Processes() {
                               {process.content}
                             </div>
                           )}
-                          {process.attachments && process.attachments.length > 0 && (
+                          {process.attachments && (process.attachments.links.length > 0 || process.attachments.files.length > 0) && (
                             <div className="ml-9 mt-3">
-                              <p className="font-montserrat text-sm text-[#9D9FA9] mb-2">Attachments:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {process.attachments.map((attachment, idx) => (
-                                  <a key={idx} href={attachment} target="_blank" rel="noopener noreferrer" className="font-montserrat text-sm text-[#9050E9] hover:text-[#A96AFF] transition-colors bg-[rgba(144,80,233,0.1)] px-3 py-1 rounded border border-[#9050E9]">
-                                    📎 Attachment {idx + 1}
-                                  </a>
-                                ))}
-                              </div>
+                              {process.attachments.links.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="font-montserrat text-sm text-[#9D9FA9] mb-2">Related Links:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {process.attachments.links.map((link, idx) => (
+                                      <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="font-montserrat text-sm text-[#9050E9] hover:text-[#A96AFF] transition-colors bg-[rgba(144,80,233,0.1)] px-3 py-1 rounded border border-[#9050E9] flex items-center gap-1">
+                                        🔗 {link.title}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {process.attachments.files.length > 0 && (
+                                <div>
+                                  <p className="font-montserrat text-sm text-[#9D9FA9] mb-2">Files & Documents:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {process.attachments.files.map((file, idx) => (
+                                      <a key={idx} href={file.url} target="_blank" rel="noopener noreferrer" className="font-montserrat text-sm text-[#9050E9] hover:text-[#A96AFF] transition-colors bg-[rgba(144,80,233,0.1)] px-3 py-1 rounded border border-[#9050E9] flex items-center gap-1">
+                                        {file.type === 'pdf' ? '📄' : file.type === 'doc' ? '📝' : '📎'} {file.title}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                           <div className="ml-9 mt-3 text-xs text-[#9D9FA9] font-montserrat">

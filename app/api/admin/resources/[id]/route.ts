@@ -34,7 +34,8 @@ const getResourcesSheet = async (doc: GoogleSpreadsheet) => {
 // PUT - Update resource
 export async function PUT(req: Request, context: any) {
   try {
-    const { id } = (context?.params ?? {}) as { id?: string };
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id?: string };
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const body = await req.json();
@@ -93,7 +94,8 @@ export async function PUT(req: Request, context: any) {
 // DELETE - Delete resource
 export async function DELETE(_req: Request, context: any) {
   try {
-    const { id } = (context?.params ?? {}) as { id?: string };
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id?: string };
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const doc = await initializeGoogleSheets();

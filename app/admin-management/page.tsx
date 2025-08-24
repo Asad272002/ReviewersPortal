@@ -11,13 +11,13 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import Image from 'next/image';
 import AnnouncementManager from '../components/admin/AnnouncementManager';
 import ResourceManager from '../components/admin/ResourceManager';
-import GuideManager from '../components/admin/GuideManager';
+import ProcessManager from '../components/admin/ProcessManager';
 
 
 interface SheetData {
   announcements: any[];
   resources: any[];
-  guides: any[];
+  processes: any[];
   users: any[];
 }
 
@@ -27,7 +27,7 @@ export default function AdminManagement() {
   const [sheetData, setSheetData] = useState<SheetData>({
     announcements: [],
     resources: [],
-    guides: [],
+    processes: [],
     users: []
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -169,20 +169,20 @@ export default function AdminManagement() {
     setIsLoading(true);
     try {
       // Fetch data from all sheets
-      const [announcementsRes, resourcesRes, guidesRes] = await Promise.all([
+      const [announcementsRes, resourcesRes, processesRes] = await Promise.all([
         fetch('/api/admin/announcements'),
         fetch('/api/admin/resources'),
-        fetch('/api/admin/guides')
+        fetch('/api/admin/processes')
       ]);
 
       const announcements = announcementsRes.ok ? await announcementsRes.json() : [];
       const resources = resourcesRes.ok ? await resourcesRes.json() : [];
-      const guides = guidesRes.ok ? await guidesRes.json() : [];
+      const processes = processesRes.ok ? await processesRes.json() : [];
 
       setSheetData({
         announcements: announcements.data || [],
         resources: resources.data || [],
-        guides: guides.data || [],
+        processes: processes.data || [],
         users: [] // Will be populated when we add user management API
       });
     } catch (error) {
@@ -250,8 +250,8 @@ export default function AdminManagement() {
           </div>
           
           <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-            <h4 className="font-montserrat font-medium text-white mb-2">Guides</h4>
-            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.guides.length}</p>
+            <h4 className="font-montserrat font-medium text-white mb-2">Process Docs</h4>
+            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.processes.length}</p>
             <p className="text-sm text-[#9D9FA9]">Total entries</p>
           </div>
         </div>
@@ -277,11 +277,11 @@ export default function AdminManagement() {
           </button>
           
           <button
-            onClick={() => setActiveSection('guides')}
+            onClick={() => setActiveSection('processes')}
             className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
           >
-            <h4 className="font-montserrat font-medium text-white mb-2">📋 Manage Guides</h4>
-            <p className="text-sm text-[#9D9FA9]">Create, edit, delete guides with attachments and ordering</p>
+            <h4 className="font-montserrat font-medium text-white mb-2">📚 Manage Process Documentation</h4>
+            <p className="text-sm text-[#9D9FA9]">Create, edit, delete process documents, workflows, and procedures</p>
           </button>
           
 
@@ -412,12 +412,12 @@ export default function AdminManagement() {
             </div>
           </div>
         );
-      case 'guides':
+      case 'processes':
         return (
           <div className="space-y-6">
-            <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-6">
+            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">Guide Management</h3>
+                <h3 className="font-montserrat font-semibold text-xl text-white">Process Documentation Management</h3>
                 <button
                   onClick={() => setActiveSection('overview')}
                   className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
@@ -425,7 +425,7 @@ export default function AdminManagement() {
                   ← Back to Overview
                 </button>
               </div>
-              <GuideManager />
+              <ProcessManager />
             </div>
           </div>
         );

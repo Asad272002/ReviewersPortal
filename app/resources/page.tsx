@@ -218,9 +218,9 @@ export default function Resources() {
                 <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8">
                   <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Review Tools</h2>
                   <div className="space-y-6">
-                    {getResourcesByCategory('Review Tools').length > 0 ? (
-                      getResourcesByCategory('Review Tools').map((resource, index) => (
-                        <div key={resource.id} className={index < getResourcesByCategory('Review Tools').length - 1 ? "border-b border-white/20 pb-6" : ""}>
+                    {getResourcesByCategory('review-tools').length > 0 ? (
+                      getResourcesByCategory('review-tools').map((resource, index) => (
+                        <div key={resource.id} className={index < getResourcesByCategory('review-tools').length - 1 ? "border-b border-white/20 pb-6" : ""}>
                           <div className="flex items-center gap-4 mb-3">
                             <div className="p-3 bg-white/5 rounded-xl border border-[#9D9FA9]">
                               <Image src="/icons/resources-icon.svg" alt="Tool" width={24} height={24} />
@@ -264,9 +264,9 @@ export default function Resources() {
                 <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8">
                   <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Reference Materials</h2>
                   <div className="space-y-6">
-                    {getResourcesByCategory('Reference Materials').length > 0 ? (
-                      getResourcesByCategory('Reference Materials').map((resource, index) => (
-                        <div key={resource.id} className={index < getResourcesByCategory('Reference Materials').length - 1 ? "border-b border-white/20 pb-6" : ""}>
+                    {getResourcesByCategory('reference-materials').length > 0 ? (
+                      getResourcesByCategory('reference-materials').map((resource, index) => (
+                        <div key={resource.id} className={index < getResourcesByCategory('reference-materials').length - 1 ? "border-b border-white/20 pb-6" : ""}>
                           <div className="flex items-center gap-4 mb-3">
                             <div className="p-3 bg-white/5 rounded-xl border border-[#9D9FA9]">
                               <Image src="/icons/document-icon.svg" alt="Document" width={24} height={24} />
@@ -310,9 +310,9 @@ export default function Resources() {
                 <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8 md:col-span-2">
                   <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Training Materials</h2>
                   <div className="space-y-6">
-                    {getResourcesByCategory('Training Materials').length > 0 ? (
-                      getResourcesByCategory('Training Materials').map((resource, index) => (
-                        <div key={resource.id} className={index < getResourcesByCategory('Training Materials').length - 1 ? "border-b border-white/20 pb-6" : ""}>
+                    {getResourcesByCategory('training-materials').length > 0 ? (
+                      getResourcesByCategory('training-materials').map((resource, index) => (
+                        <div key={resource.id} className={index < getResourcesByCategory('training-materials').length - 1 ? "border-b border-white/20 pb-6" : ""}>
                           <div className="flex items-center gap-4 mb-3">
                             <div className="p-3 bg-white/5 rounded-xl border border-[#9D9FA9]">
                               <Image src="/icons/resources-icon.svg" alt="Training" width={24} height={24} />
