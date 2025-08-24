@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import * as THREE from 'three';
 
 interface Proposal {
   proposalId: string;
@@ -40,6 +41,10 @@ export default function VoteProposalsPage() {
   const [expandedProposals, setExpandedProposals] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'popular' | 'deadline'>('newest');
+  const mountRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const animationIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -53,6 +58,169 @@ export default function VoteProposalsPage() {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // Three.js setup
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+    mountRef.current.appendChild(renderer.domElement);
+    
+    sceneRef.current = scene;
+    rendererRef.current = renderer;
+
+    // Create voting-themed particles
+    const particleCount = 150;
+    const particles = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const sizes = new Float32Array(particleCount);
+
+    const votingColors = [
+      new THREE.Color(0x4ade80), // Green for upvotes
+      new THREE.Color(0xef4444), // Red for downvotes
+      new THREE.Color(0x8b5cf6), // Purple for neutral
+      new THREE.Color(0x06b6d4), // Cyan for active
+      new THREE.Color(0xf59e0b), // Amber for deadline
+    ];
+
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 100;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+      
+      const color = votingColors[Math.floor(Math.random() * votingColors.length)];
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+      
+      sizes[i] = Math.random() * 3 + 1;
+    }
+
+    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    particles.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    const particleMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0 }
+      },
+      vertexShader: `
+        attribute float size;
+        attribute vec3 color;
+        varying vec3 vColor;
+        uniform float time;
+        
+        void main() {
+          vColor = color;
+          vec3 pos = position;
+          pos.y += sin(time * 0.5 + position.x * 0.01) * 2.0;
+          pos.x += cos(time * 0.3 + position.z * 0.01) * 1.5;
+          
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        
+        void main() {
+          float dist = distance(gl_PointCoord, vec2(0.5));
+          if (dist > 0.5) discard;
+          
+          float alpha = 1.0 - (dist * 2.0);
+          gl_FragColor = vec4(vColor, alpha * 0.8);
+        }
+      `,
+      transparent: true,
+      vertexColors: true
+    });
+
+    const particleSystem = new THREE.Points(particles, particleMaterial);
+    scene.add(particleSystem);
+
+    // Create floating geometric shapes for voting theme
+    const geometries = [
+      new THREE.OctahedronGeometry(0.8),
+      new THREE.TetrahedronGeometry(1),
+      new THREE.IcosahedronGeometry(0.6),
+    ];
+
+    const shapes: THREE.Mesh[] = [];
+    for (let i = 0; i < 8; i++) {
+      const geometry = geometries[Math.floor(Math.random() * geometries.length)];
+      const material = new THREE.MeshBasicMaterial({
+        color: votingColors[Math.floor(Math.random() * votingColors.length)],
+        transparent: true,
+        opacity: 0.1,
+        wireframe: true
+      });
+      
+      const shape = new THREE.Mesh(geometry, material);
+      shape.position.set(
+        (Math.random() - 0.5) * 50,
+        (Math.random() - 0.5) * 50,
+        (Math.random() - 0.5) * 50
+      );
+      
+      shape.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+      
+      shapes.push(shape);
+      scene.add(shape);
+    }
+
+    camera.position.z = 30;
+
+    // Animation loop
+    const animate = () => {
+      animationIdRef.current = requestAnimationFrame(animate);
+      
+      const time = Date.now() * 0.001;
+      particleMaterial.uniforms.time.value = time;
+      
+      // Rotate shapes
+      shapes.forEach((shape, index) => {
+        shape.rotation.x += 0.005 + index * 0.001;
+        shape.rotation.y += 0.003 + index * 0.0005;
+        shape.position.y += Math.sin(time + index) * 0.01;
+      });
+      
+      renderer.render(scene, camera);
+    };
+    
+    animate();
+
+    // Handle resize
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+      }
+      if (mountRef.current && renderer.domElement) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
+      renderer.dispose();
+    };
+  }, []);
   
   // Add visibility change listener to refresh when tab becomes active
   useEffect(() => {
@@ -296,52 +464,61 @@ export default function VoteProposalsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#0A0A0A] text-white">
-        <Header />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-8">
-            <div className="max-w-6xl mx-auto">
-              {/* Header */}
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold font-montserrat mb-2">🗳️ Vote for Proposals</h1>
-                <p className="text-[#9D9FA9] font-montserrat">
-                  Review and vote on submitted proposals. Each user can cast one vote per proposal.
-                </p>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white relative overflow-hidden">
+        {/* Three.js Background */}
+        <div 
+          ref={mountRef} 
+          className="fixed inset-0 z-0"
+          style={{ pointerEvents: 'none' }}
+        />
+        
+        {/* Content */}
+        <div className="relative z-10">
+          <Header />
+          <div className="flex">
+            <Sidebar />
+            <main className="flex-1 p-8">
+              <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="mb-8 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-6">
+                  <h1 className="text-3xl font-bold font-montserrat mb-2 text-white">🗳️ Vote for Proposals</h1>
+                  <p className="text-gray-300 font-montserrat">
+                    Review and vote on submitted proposals. Each user can cast one vote per proposal.
+                  </p>
+                </div>
 
-              {/* Filters and Sorting */}
-              <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6 mb-6">
+                {/* Filters and Sorting */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-6 mb-6">
                 <div className="flex flex-wrap gap-4 items-center justify-between">
                   <div className="flex gap-4">
                     <div>
-                      <label className="block text-sm font-montserrat text-[#9D9FA9] mb-2">Filter by Status</label>
+                      <label className="block text-sm font-montserrat text-gray-300 mb-2">Filter by Status</label>
                       <select 
                         value={filter} 
                         onChange={(e) => setFilter(e.target.value as any)}
-                        className="bg-[#1A1A1A] border border-[#9D9FA9] rounded px-3 py-2 text-white font-montserrat"
+                        className="bg-white/10 border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-white/40 focus:bg-white/15"
                       >
-                        <option value="all">All Proposals</option>
-                        <option value="active">Active Voting</option>
-                        <option value="expired">Voting Ended</option>
+                        <option value="all" className="bg-gray-800 text-white">All Proposals</option>
+                        <option value="active" className="bg-gray-800 text-white">Active Voting</option>
+                        <option value="expired" className="bg-gray-800 text-white">Voting Ended</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-montserrat text-[#9D9FA9] mb-2">Sort by</label>
+                      <label className="block text-sm font-montserrat text-gray-300 mb-2">Sort by</label>
                       <select 
                         value={sortBy} 
                         onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-[#1A1A1A] border border-[#9D9FA9] rounded px-3 py-2 text-white font-montserrat"
+                        className="bg-white/10 border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-white/40 focus:bg-white/15"
                       >
-                        <option value="newest">Newest First</option>
-                        <option value="popular">Most Popular</option>
-                        <option value="deadline">Deadline Soon</option>
+                        <option value="newest" className="bg-gray-800 text-white">Newest First</option>
+                        <option value="popular" className="bg-gray-800 text-white">Most Popular</option>
+                        <option value="deadline" className="bg-gray-800 text-white">Deadline Soon</option>
                       </select>
                     </div>
                   </div>
                   <button
                     onClick={fetchProposals}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors"
+                    className="bg-white/10 hover:bg-white/20 border border-[#9D9FA9] hover:border-white/40 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300"
                   >
                     🔄 Refresh
                   </button>
@@ -351,24 +528,30 @@ export default function VoteProposalsPage() {
               {/* Proposals List */}
               {loading ? (
                 <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-                  <p className="text-[#9D9FA9] font-montserrat">Loading proposals...</p>
+                  <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-8 max-w-md mx-auto">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/50 mx-auto mb-4"></div>
+                    <p className="text-gray-300 font-montserrat">Loading proposals...</p>
+                  </div>
                 </div>
               ) : sortedProposals.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-[#9D9FA9] font-montserrat text-lg">No proposals found for the selected filter.</p>
+                  <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-8 max-w-md mx-auto">
+                    <div className="text-6xl mb-4">📝</div>
+                    <h3 className="text-xl font-montserrat mb-2 text-white">No Proposals Found</h3>
+                    <p className="text-gray-300 font-montserrat text-lg">No proposals found for the selected filter.</p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {sortedProposals.map((proposal) => (
-                    <div key={proposal.proposalId} className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
+                    <div key={proposal.proposalId} className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6 hover:border-white/40 hover:bg-white/15 transition-all duration-300">
                       {/* Proposal Header */}
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <h3 className="text-xl font-bold font-montserrat text-white mb-2">
                             {proposal.proposalTitle}
                           </h3>
-                          <div className="flex flex-wrap gap-4 text-sm text-[#9D9FA9] font-montserrat">
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-300 font-montserrat">
                             <span>👤 {proposal.reviewerName}</span>
                             <span>📂 {proposal.projectCategory}</span>
                             <span>👥 {proposal.teamSize} members</span>
@@ -377,9 +560,9 @@ export default function VoteProposalsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`px-3 py-1 rounded text-sm font-montserrat ${
-                            proposal.status === 'active' ? 'bg-green-600' :
-                            proposal.status === 'expired' ? 'bg-red-600' : 'bg-gray-600'
+                          <div className={`px-3 py-1 rounded-lg text-sm font-montserrat backdrop-blur-sm border ${
+                            proposal.status === 'active' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                            proposal.status === 'expired' ? 'bg-red-500/20 text-red-300 border-red-500/30' : 'bg-gray-500/20 text-gray-300 border-gray-500/30'
                           }`}>
                             {proposal.status === 'active' ? '🟢 Active' :
                              proposal.status === 'expired' ? '🔴 Expired' : '⚪ Completed'}
@@ -394,39 +577,43 @@ export default function VoteProposalsPage() {
 
                       {/* Proposal Content */}
                       <div className="mb-4">
-                        <h4 className="font-semibold font-montserrat text-white mb-2">Summary:</h4>
-                        <div className="mb-3">
-                          <ExpandableText 
-                            text={proposal.proposalSummary} 
-                            maxLength={200} 
-                            proposalId={proposal.proposalId} 
-                            field="summary" 
-                          />
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10 mb-4">
+                          <h4 className="font-semibold font-montserrat text-white mb-2">Summary:</h4>
+                          <div className="mb-3">
+                            <ExpandableText 
+                              text={proposal.proposalSummary} 
+                              maxLength={200} 
+                              proposalId={proposal.proposalId} 
+                              field="summary" 
+                            />
+                          </div>
                         </div>
                         
-                        <h4 className="font-semibold font-montserrat text-white mb-2">Technical Approach:</h4>
-                        <ExpandableText 
-                          text={proposal.technicalApproach} 
-                          maxLength={200} 
-                          proposalId={proposal.proposalId} 
-                          field="technical" 
-                        />
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <h4 className="font-semibold font-montserrat text-white mb-2">Technical Approach:</h4>
+                          <ExpandableText 
+                            text={proposal.technicalApproach} 
+                            maxLength={200} 
+                            proposalId={proposal.proposalId} 
+                            field="technical" 
+                          />
+                        </div>
                       </div>
 
                       {/* Voting Section */}
-                      <div className="flex items-center justify-between pt-4 border-t border-[#9D9FA9]">
+                      <div className="flex items-center justify-between pt-4 border-t border-white/20">
                         <div className="flex items-center gap-6">
                           {/* Vote Buttons */}
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleVote(proposal.proposalId, 'upvote')}
                               disabled={proposal.status !== 'active' || votingLoading === proposal.proposalId || proposal.userVote !== null}
-                              className={`flex items-center gap-1 px-3 py-2 rounded font-montserrat transition-colors ${
+                              className={`flex items-center gap-1 px-3 py-2 rounded-lg font-montserrat transition-all duration-300 border ${
                                 proposal.userVote === 'upvote' 
-                                  ? 'bg-green-600 text-white' 
+                                  ? 'bg-green-500/30 text-green-200 border-green-500/50' 
                                   : proposal.userVote !== null
-                                  ? 'bg-[#1A1A1A] text-[#9D9FA9] opacity-50 cursor-not-allowed'
-                                  : 'bg-[#1A1A1A] text-[#9D9FA9] hover:bg-green-600 hover:text-white'
+                                  ? 'bg-white/5 text-gray-400 opacity-50 cursor-not-allowed border-white/10'
+                                  : 'bg-white/5 text-gray-300 hover:bg-green-500/20 hover:text-green-300 hover:border-green-500/30 border-white/10'
                               } disabled:opacity-50 disabled:cursor-not-allowed`}
                               title={proposal.userVote !== null ? 'You have already voted on this proposal' : ''}
                             >
@@ -435,12 +622,12 @@ export default function VoteProposalsPage() {
                             <button
                               onClick={() => handleVote(proposal.proposalId, 'downvote')}
                               disabled={proposal.status !== 'active' || votingLoading === proposal.proposalId || proposal.userVote !== null}
-                              className={`flex items-center gap-1 px-3 py-2 rounded font-montserrat transition-colors ${
+                              className={`flex items-center gap-1 px-3 py-2 rounded-lg font-montserrat transition-all duration-300 border ${
                                 proposal.userVote === 'downvote' 
-                                  ? 'bg-red-600 text-white' 
+                                  ? 'bg-red-500/30 text-red-200 border-red-500/50' 
                                   : proposal.userVote !== null
-                                  ? 'bg-[#1A1A1A] text-[#9D9FA9] opacity-50 cursor-not-allowed'
-                                  : 'bg-[#1A1A1A] text-[#9D9FA9] hover:bg-red-600 hover:text-white'
+                                  ? 'bg-white/5 text-gray-400 opacity-50 cursor-not-allowed border-white/10'
+                                  : 'bg-white/5 text-gray-300 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/30 border-white/10'
                               } disabled:opacity-50 disabled:cursor-not-allowed`}
                               title={proposal.userVote !== null ? 'You have already voted on this proposal' : ''}
                             >
@@ -450,21 +637,25 @@ export default function VoteProposalsPage() {
 
                           {/* Vote Stats */}
                           <div className="flex items-center gap-4 text-sm font-montserrat">
-                            <span className={`font-semibold ${
-                              proposal.netScore > 0 ? 'text-green-400' :
-                              proposal.netScore < 0 ? 'text-red-400' : 'text-[#9D9FA9]'
-                            }`}>
-                              Net Score: {proposal.netScore > 0 ? '+' : ''}{proposal.netScore}
-                            </span>
-                            <span className="text-[#9D9FA9]">
-                              Total Voters: {proposal.voterCount}
-                            </span>
+                            <div className="bg-white/5 rounded-lg px-3 py-2 border border-[#9D9FA9]">
+                              <span className={`font-semibold ${
+                                proposal.netScore > 0 ? 'text-green-400' :
+                                proposal.netScore < 0 ? 'text-red-400' : 'text-gray-300'
+                              }`}>
+                                Net Score: {proposal.netScore > 0 ? '+' : ''}{proposal.netScore}
+                              </span>
+                            </div>
+                            <div className="bg-white/5 rounded-lg px-3 py-2 border border-[#9D9FA9]">
+                              <span className="text-gray-300">
+                                Total Voters: {proposal.voterCount}
+                              </span>
+                            </div>
                             {/* User Vote Status */}
                             {proposal.userVote && (
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              <span className={`px-3 py-2 rounded-lg text-xs font-semibold backdrop-blur-sm border ${
                                 proposal.userVote === 'upvote' 
-                                  ? 'bg-green-600/20 text-green-400 border border-green-600/30' 
-                                  : 'bg-red-600/20 text-red-400 border border-red-600/30'
+                                  ? 'bg-green-500/20 text-green-300 border-green-500/30' 
+                                  : 'bg-red-500/20 text-red-300 border-red-500/30'
                               }`}>
                                 You voted: {proposal.userVote === 'upvote' ? '👍 Up' : '👎 Down'}
                               </span>
@@ -484,8 +675,9 @@ export default function VoteProposalsPage() {
                   ))}
                 </div>
               )}
-            </div>
-          </main>
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </ProtectedRoute>

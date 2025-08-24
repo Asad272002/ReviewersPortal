@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
@@ -27,9 +28,69 @@ export default function Processes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { user } = useAuth();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     fetchProcesses();
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+
+    // Create floating particles
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesCount = 100;
+    const posArray = new Float32Array(particlesCount * 3);
+
+    for (let i = 0; i < particlesCount * 3; i++) {
+      posArray[i] = (Math.random() - 0.5) * 10;
+    }
+
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    
+    const particlesMaterial = new THREE.PointsMaterial({
+      size: 0.02,
+      color: 0x9050E9,
+      transparent: true,
+      opacity: 0.6
+    });
+
+    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particlesMesh);
+
+    camera.position.z = 3;
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      
+      particlesMesh.rotation.x += 0.001;
+      particlesMesh.rotation.y += 0.002;
+      
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      renderer.dispose();
+    };
   }, []);
 
   const fetchProcesses = async () => {
@@ -53,13 +114,19 @@ export default function Processes() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-[#0C021E]">
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+        {/* Three.js Canvas Background */}
+        <canvas 
+          ref={canvasRef}
+          className="fixed inset-0 w-full h-full pointer-events-none z-0"
+          style={{ background: 'transparent' }}
+        />
         <Header title="Process Documentation" />
         
-        <div className="flex flex-1">
+        <div className="flex flex-1 relative z-10">
           <Sidebar />
           
-          <main className="flex-1 p-8">
+          <main className="flex-1 p-8 relative z-10">
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="text-white font-montserrat">Loading processes...</div>
@@ -74,12 +141,12 @@ export default function Processes() {
                   <h1 className="font-montserrat font-bold text-4xl text-white mb-4">
                     Process Documentation
                   </h1>
-                  <p className="font-montserrat text-xl text-[#9D9FA9] max-w-3xl mx-auto">
+                  <p className="font-montserrat text-xl text-gray-200 max-w-3xl mx-auto">
                     Comprehensive documentation of our processes and procedures to help you understand our workflows and standards.
                   </p>
                 </div>
 
-                <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
+                <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6">
                   <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Process Documentation</h2>
                   <div className="space-y-6">
                     {publishedProcesses.length > 0 ? (

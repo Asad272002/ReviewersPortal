@@ -73,12 +73,7 @@ const Sidebar = () => {
         href="/resources"
         active={pathname === '/resources'} 
       />
-      <NavItem 
-        icon="guides-icon.svg" 
-        label="Guides" 
-        href="/guides"
-        active={pathname === '/guides'} 
-      />
+
       <NavItem 
         icon="vote-icon.svg" 
         label="Vote for Proposals" 

@@ -285,22 +285,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
           </button>
         </div>
       </form>
-      
-      <div className="mt-8 p-4 bg-background-light rounded-lg border border-border-color">
-        <h3 className="font-montserrat font-medium text-lg text-white mb-2">Google Sheets Integration</h3>
-        <p className="font-montserrat text-text-secondary mb-2">
-          This form will submit data to a Google Sheet. To set up the integration:
-        </p>
-        <ol className="list-decimal list-inside space-y-1 text-text-secondary">
-          <li>Create a Google Sheet with columns matching the form fields</li>
-          <li>Set up Google Apps Script to receive form submissions</li>
-          <li>Deploy the script as a web app and get the deployment URL</li>
-          <li>Update the form submission endpoint in the backend API</li>
-        </ol>
-        <p className="font-montserrat text-text-secondary mt-2">
-          For detailed instructions, please contact the development team.
-        </p>
-      </div>
+
     </div>
   );
 }
