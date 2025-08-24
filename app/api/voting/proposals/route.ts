@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
           });
         }
       } catch (writeError) {
-        console.warn('Warning: Could not create voting result entries due to quota limits:', writeError.message);
+        console.warn('Warning: Could not create voting result entries due to quota limits:', writeError instanceof Error ? writeError.message : String(writeError));
         // Continue without creating entries - the system will still work for reading
       }
     }
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
           await result.save();
         }
       } catch (updateError) {
-        console.warn('Warning: Could not update voting result status due to quota limits:', updateError.message);
+        console.warn('Warning: Could not update voting result status due to quota limits:', updateError instanceof Error ? updateError.message : String(updateError));
         // Continue - status will be updated on next successful request
       }
     }
