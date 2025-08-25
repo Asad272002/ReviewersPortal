@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { processes } from '../data';
-import { syncProcessesToSheets } from '../sync-helper';
+import { syncProcessesToSheets, loadProcessesFromSheets } from '../sync-helper';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -8,8 +7,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json();
     const { title, description, content, category, status, order, attachments } = body;
 
+    // Load current processes from Google Sheets
+    const currentProcesses = await loadProcessesFromSheets();
+
     // Find the process to update
-    const processIndex = processes.findIndex(p => p.id === id);
+    const processIndex = currentProcesses.findIndex(p => p.id === id);
     if (processIndex === -1) {
       return NextResponse.json(
         { success: false, error: 'Process document not found' },
@@ -26,29 +28,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Update the process
-    processes[processIndex] = {
-      ...processes[processIndex],
+    currentProcesses[processIndex] = {
+      ...currentProcesses[processIndex],
       title,
       description,
       content,
       category,
       status: status ?? 'draft',
       order: order ?? 0,
-      attachments: attachments ?? [],
+      attachments: attachments ?? { links: [], files: [] },
       updatedAt: new Date().toISOString()
     };
 
-    // Auto-sync to Google Sheets
+    // Sync updated processes to Google Sheets
     try {
-      await syncProcessesToSheets(processes);
+      await syncProcessesToSheets(currentProcesses);
     } catch (syncError) {
       console.error('Auto-sync to sheets failed:', syncError);
-      // Don't fail the main operation if sync fails
+      return NextResponse.json(
+        { success: false, error: 'Failed to save to Google Sheets' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ 
       success: true, 
-      process: processes[processIndex],
+      process: currentProcesses[processIndex],
       message: 'Process document updated successfully'
     });
   } catch (error) {
@@ -64,8 +69,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const { id } = await params;
 
+    // Load current processes from Google Sheets
+    const currentProcesses = await loadProcessesFromSheets();
+
     // Find the process to delete
-    const processIndex = processes.findIndex(p => p.id === id);
+    const processIndex = currentProcesses.findIndex(p => p.id === id);
     if (processIndex === -1) {
       return NextResponse.json(
         { success: false, error: 'Process document not found' },
@@ -74,14 +82,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     // Remove the process
-    const deletedProcess = processes.splice(processIndex, 1)[0];
+    const deletedProcess = currentProcesses.splice(processIndex, 1)[0];
 
-    // Auto-sync to Google Sheets
+    // Sync updated processes to Google Sheets
     try {
-      await syncProcessesToSheets(processes);
+      await syncProcessesToSheets(currentProcesses);
     } catch (syncError) {
       console.error('Auto-sync to sheets failed:', syncError);
-      // Don't fail the main operation if sync fails
+      return NextResponse.json(
+        { success: false, error: 'Failed to save to Google Sheets' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ 

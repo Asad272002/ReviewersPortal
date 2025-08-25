@@ -20,7 +20,7 @@ interface Process {
   status: 'published' | 'draft' | 'archived';
   attachments: {
     links: { title: string; url: string }[];
-    files: { title: string; url: string; type: 'pdf' | 'doc' | 'other' }[];
+    files: { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[];
   };
   createdAt: string;
   updatedAt: string;
@@ -188,7 +188,7 @@ export default function Processes() {
                                   <div className="flex flex-wrap gap-2">
                                     {process.attachments.files.map((file, idx) => (
                                       <a key={idx} href={file.url} target="_blank" rel="noopener noreferrer" className="font-montserrat text-sm text-[#9050E9] hover:text-[#A96AFF] transition-colors bg-[rgba(144,80,233,0.1)] px-3 py-1 rounded border border-[#9050E9] flex items-center gap-1">
-                                        {file.type === 'pdf' ? '📄' : file.type === 'doc' ? '📝' : '📎'} {file.title}
+                                        {file.type === 'pdf' ? '📄' : file.type === 'doc' ? '📝' : file.type === 'excel' ? '📊' : file.type === 'powerpoint' ? '📽️' : '📎'} {file.title}
                                       </a>
                                     ))}
                                   </div>

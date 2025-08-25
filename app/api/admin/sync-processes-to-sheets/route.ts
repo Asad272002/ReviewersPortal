@@ -12,7 +12,7 @@ interface ProcessDoc {
   status: 'published' | 'draft' | 'archived';
   attachments: {
     links: { title: string; url: string }[];
-    files: { title: string; url: string; type: string }[];
+    files: { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[];
   };
   createdAt: string;
   updatedAt: string;

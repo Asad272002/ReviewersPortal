@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { processes } from './data';
-import { syncProcessesToSheets } from './sync-helper';
+import { syncProcessesToSheets, loadProcessesFromSheets } from './sync-helper';
 
 export async function GET() {
   try {
+    // Load processes from Google Sheets
+    const processesData = await loadProcessesFromSheets();
+    
     return NextResponse.json({ 
       success: true, 
-      processes: processes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      processes: processesData.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     });
   } catch (error) {
     console.error('Error fetching processes:', error);
@@ -30,6 +32,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Load current processes from Google Sheets
+    const currentProcesses = await loadProcessesFromSheets();
+
     // Create new process
      const newProcess = {
        id: Date.now().toString(),
@@ -37,21 +42,25 @@ export async function POST(request: NextRequest) {
        description,
        content,
        category,
-       order: processes.length + 1,
+       order: currentProcesses.length + 1,
        status,
-       attachments,
+       attachments: attachments || { links: [], files: [] },
        createdAt: new Date().toISOString(),
        updatedAt: new Date().toISOString()
      };
 
-    processes.push(newProcess);
+    // Add to current processes
+    currentProcesses.push(newProcess);
 
-    // Auto-sync to Google Sheets
+    // Sync updated processes to Google Sheets
     try {
-      await syncProcessesToSheets(processes);
+      await syncProcessesToSheets(currentProcesses);
     } catch (syncError) {
       console.error('Auto-sync to sheets failed:', syncError);
-      // Don't fail the main operation if sync fails
+      return NextResponse.json(
+        { success: false, error: 'Failed to save to Google Sheets' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ 

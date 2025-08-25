@@ -175,14 +175,14 @@ export default function AdminManagement() {
         fetch('/api/admin/processes')
       ]);
 
-      const announcements = announcementsRes.ok ? await announcementsRes.json() : [];
-      const resources = resourcesRes.ok ? await resourcesRes.json() : [];
-      const processes = processesRes.ok ? await processesRes.json() : [];
+      const announcements = announcementsRes.ok ? await announcementsRes.json() : {};
+      const resources = resourcesRes.ok ? await resourcesRes.json() : {};
+      const processes = processesRes.ok ? await processesRes.json() : {};
 
       setSheetData({
-        announcements: announcements.data || [],
-        resources: resources.data || [],
-        processes: processes.data || [],
+        announcements: announcements.announcements || [],
+        resources: resources.resources || [],
+        processes: processes.processes || [],
         users: [] // Will be populated when we add user management API
       });
     } catch (error) {

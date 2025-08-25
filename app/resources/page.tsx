@@ -11,7 +11,6 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Image from "next/image";
 
 import { useAuth } from '../context/AuthContext';
-import ResourceManager from "../components/admin/ResourceManager";
 
 interface Resource {
   id: string;
@@ -357,14 +356,7 @@ export default function Resources() {
           </main>
         </div>
         
-        {user?.role === 'admin' && (
-          <div className="p-8">
-            <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8">
-              <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Admin Controls</h2>
-              <ResourceManager />
-            </div>
-          </div>
-        )}
+
         
         <LogoutButton />
   

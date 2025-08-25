@@ -13,7 +13,7 @@ interface ProcessDoc {
   status: 'published' | 'draft' | 'archived';
   attachments: {
     links: { title: string; url: string }[];
-    files: { title: string; url: string; type: 'pdf' | 'doc' | 'other' }[];
+    files: { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[];
   };
   createdAt: string;
   updatedAt: string;
@@ -33,7 +33,7 @@ export default function ProcessManager() {
     status: 'draft' as 'published' | 'draft' | 'archived',
     attachments: {
       links: [] as { title: string; url: string }[],
-      files: [] as { title: string; url: string; type: 'pdf' | 'doc' | 'other' }[]
+      files: [] as { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[]
     }
   });
   const [submitting, setSubmitting] = useState(false);
@@ -305,10 +305,10 @@ export default function ProcessManager() {
                   className="w-full bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
                   required
                 >
-                  <option value="workflow">Workflow</option>
-                  <option value="guidelines">Guidelines</option>
-                  <option value="procedures">Procedures</option>
-                  <option value="templates">Templates</option>
+                  <option value="workflow" className="bg-gray-800 text-white">Workflow</option>
+                  <option value="guidelines" className="bg-gray-800 text-white">Guidelines</option>
+                  <option value="procedures" className="bg-gray-800 text-white">Procedures</option>
+                  <option value="templates" className="bg-gray-800 text-white">Templates</option>
                 </select>
               </div>
             </div>
@@ -323,9 +323,9 @@ export default function ProcessManager() {
                 className="w-full bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
                 required
               >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                <option value="draft" className="bg-gray-800 text-white">Draft</option>
+                <option value="published" className="bg-gray-800 text-white">Published</option>
+                <option value="archived" className="bg-gray-800 text-white">Archived</option>
               </select>
             </div>
 
@@ -443,14 +443,15 @@ export default function ProcessManager() {
                       value={file.type}
                       onChange={(e) => {
                         const newFiles = [...formData.attachments.files];
-                        newFiles[index].type = e.target.value as 'pdf' | 'doc' | 'other';
+                        newFiles[index].type = e.target.value as 'pdf' | 'doc' | 'excel' | 'powerpoint';
                         setFormData({ ...formData, attachments: { ...formData.attachments, files: newFiles } });
                       }}
                       className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
                     >
-                      <option value="pdf">PDF</option>
-                      <option value="doc">Document</option>
-                      <option value="other">Other</option>
+                      <option value="pdf" className="bg-gray-800 text-white">PDF</option>
+                        <option value="doc" className="bg-gray-800 text-white">Document</option>
+                        <option value="excel" className="bg-gray-800 text-white">Excel</option>
+                        <option value="powerpoint" className="bg-gray-800 text-white">PowerPoint</option>
                     </select>
                     <button
                       type="button"
