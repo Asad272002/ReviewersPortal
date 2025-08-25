@@ -8,6 +8,7 @@ interface Announcement {
   title: string;
   content: string;
   category: 'important' | 'general';
+  status?: 'live' | 'expired' | 'upcoming';
   duration?: number; // Duration in days
   expiresAt?: string;
   createdAt: string;
@@ -27,6 +28,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
     title: '',
     content: '',
     category: 'general' as 'important' | 'general',
+    status: 'live' as 'live' | 'expired' | 'upcoming',
     duration: 30,
   });
 
@@ -51,8 +53,20 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Format expiresAt to match the expected format: "Month Day, Year at HH:MM AM UTC"
     const expiresAt = formData.duration 
-      ? new Date(Date.now() + formData.duration * 24 * 60 * 60 * 1000).toISOString()
+      ? (() => {
+          const expiresDate = new Date(Date.now() + formData.duration * 24 * 60 * 60 * 1000);
+          return expiresDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'UTC'
+          }).replace(' at ', ' at ') + ' UTC';
+        })()
       : undefined;
 
     const announcementData = {
@@ -94,6 +108,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
       title: announcement.title,
       content: announcement.content,
       category: announcement.category,
+      status: announcement.status || 'live',
       duration: announcement.duration || 30,
     });
     setShowForm(true);
@@ -125,6 +140,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
       title: '',
       content: '',
       category: 'general',
+      status: 'live',
       duration: 30,
     });
     setEditingAnnouncement(null);
@@ -203,7 +219,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block font-montserrat text-[#9D9FA9] mb-2">Category</label>
                 <select
@@ -213,6 +229,19 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
                 >
                   <option value="general">General</option>
                   <option value="important">Important Updates</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block font-montserrat text-[#9D9FA9] mb-2">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'live' | 'expired' | 'upcoming' })}
+                  className="w-full p-3 bg-[#0C021E] border border-[#9D9FA9] rounded text-white focus:outline-none focus:border-[#A96AFF]"
+                >
+                  <option value="live">Live</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="expired">Expired</option>
                 </select>
               </div>
               
@@ -298,15 +327,15 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
                       </span>
                     </td>
                     <td className="p-3">
-                      {isExpired(announcement.expiresAt) ? (
-                        <span className="px-2 py-1 rounded text-xs font-montserrat bg-red-500 text-white">
-                          Expired
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded text-xs font-montserrat bg-green-500 text-white">
-                          Active
-                        </span>
-                      )}
+                      <span className={`px-2 py-1 rounded text-xs font-montserrat ${
+                        announcement.status === 'live'
+                          ? 'bg-green-500 text-white'
+                          : announcement.status === 'upcoming'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-red-500 text-white'
+                      }`}>
+                        {announcement.status || 'live'}
+                      </span>
                     </td>
                     <td className="p-3 font-montserrat text-[#9D9FA9] text-sm">
                       {announcement.expiresAt 

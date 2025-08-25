@@ -36,7 +36,8 @@ const getGuidesSheet = async (doc: GoogleSpreadsheet) => {
 // PUT - Update guide
 export async function PUT(req: Request, context: any) {
   try {
-    const { id } = (context?.params ?? {}) as { id?: string };
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id?: string };
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const body = await req.json();
@@ -110,7 +111,8 @@ export async function PUT(req: Request, context: any) {
 // DELETE - Delete guide
 export async function DELETE(_req: Request, context: any) {
   try {
-    const { id } = (context?.params ?? {}) as { id?: string };
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id?: string };
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const doc = await initializeGoogleSheets();

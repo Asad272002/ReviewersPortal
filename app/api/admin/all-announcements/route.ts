@@ -22,16 +22,23 @@ export async function GET(_req: Request) {
     const rows = await sheet.getRows();
     
     // Return all announcements (both important and general) for management
-    const data = rows.map((r: any) => ({
-      id: r.get('id'),
-      title: r.get('title'),
-      content: r.get('content'),
-      category: r.get('category'),
-      duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
-      expiresAt: r.get('expiresAt') || undefined,
-      createdAt: r.get('createdAt'),
-      updatedAt: r.get('updatedAt'),
-    }));
+    const data = rows.map((r: any) => {
+      const expiresAt = r.get('expiresAt') || undefined;
+      const createdAt = r.get('createdAt');
+      const status = r.get('status') || 'live'; // Read status from sheets
+      
+      return {
+        id: r.get('id'),
+        title: r.get('title'),
+        content: r.get('content'),
+        category: r.get('category'),
+        status,
+        duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
+        expiresAt,
+        createdAt,
+        updatedAt: r.get('updatedAt'),
+      };
+    });
     
     return NextResponse.json({ announcements: data });
   } catch (e) {

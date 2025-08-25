@@ -28,6 +28,7 @@ export async function GET() {
         title: row.get('title'),
         content: row.get('content'),
         category: row.get('category'),
+        status: row.get('status') || 'live', // Read status from sheets
         duration: row.get('duration') ? parseInt(row.get('duration')) : null,
         expiresAt: row.get('expiresAt'),
         createdAt: row.get('createdAt'),
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
       title,
       content,
       category: 'important',
+      status: 'live', // Default status for new announcements
       duration: duration?.toString() || '',
       expiresAt: expiresAt || '',
       createdAt: new Date().toLocaleString('en-US', {

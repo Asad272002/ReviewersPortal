@@ -34,11 +34,12 @@ const getAnnouncementsSheet = async (doc: GoogleSpreadsheet) => {
 // PUT /api/admin/announcements/:id
 export async function PUT(req: Request, context: any) {
   try {
-    const { id } = (context?.params ?? {}) as { id: string };
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id: string };
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const body = await req.json();
-    const { title, content, category, duration, expiresAt } = body ?? {};
+    const { title, content, category, status, duration, expiresAt } = body ?? {};
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
@@ -63,6 +64,7 @@ export async function PUT(req: Request, context: any) {
     if (title !== undefined) row.set('title', title);
     if (content !== undefined) row.set('content', content);
     if (category !== undefined) row.set('category', category);
+    if (status !== undefined) row.set('status', status);
     if (duration !== undefined) row.set('duration', duration?.toString() || '');
     if (expiresAt !== undefined) row.set('expiresAt', expiresAt || '');
     row.set('updatedAt', now);
@@ -76,6 +78,7 @@ export async function PUT(req: Request, context: any) {
         title: row.get('title'),
         content: row.get('content'),
         category: row.get('category'),
+        status: row.get('status') || 'live',
         duration: row.get('duration') ? parseInt(row.get('duration')) : undefined,
         expiresAt: row.get('expiresAt') || undefined,
         createdAt: row.get('createdAt'),

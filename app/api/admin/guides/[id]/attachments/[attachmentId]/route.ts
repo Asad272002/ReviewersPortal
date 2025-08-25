@@ -34,8 +34,9 @@ const getGuidesSheet = async (doc: GoogleSpreadsheet) => {
 // DELETE - Remove attachment from guide
 export async function DELETE(_req: Request, context: any) {
   try {
+    const params = await context?.params;
     const { id, attachmentId } =
-      (context?.params ?? {}) as { id?: string; attachmentId?: string };
+      (params ?? {}) as { id?: string; attachmentId?: string };
 
     if (!id || !attachmentId) {
       return NextResponse.json({ error: 'Missing params' }, { status: 400 });

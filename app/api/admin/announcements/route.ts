@@ -30,16 +30,23 @@ export async function GET(_req: Request) {
     // Filter only general announcements to avoid duplicates with important updates
     const data = rows
       .filter((r: any) => r.get('category') === 'general')
-      .map((r: any) => ({
-        id: r.get('id'),
-        title: r.get('title'),
-        content: r.get('content'),
-        category: r.get('category'),
-        duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
-        expiresAt: r.get('expiresAt') || undefined,
-        createdAt: r.get('createdAt'),
-        updatedAt: r.get('updatedAt'),
-      }));
+      .map((r: any) => {
+        const expiresAt = r.get('expiresAt') || undefined;
+        const createdAt = r.get('createdAt');
+        const status = r.get('status') || 'live'; // Read status from sheets
+        
+        return {
+          id: r.get('id'),
+          title: r.get('title'),
+          content: r.get('content'),
+          category: r.get('category'),
+          status,
+          duration: r.get('duration') ? parseInt(r.get('duration')) : undefined,
+          expiresAt,
+          createdAt,
+          updatedAt: r.get('updatedAt'),
+        };
+      });
     return NextResponse.json({ announcements: data });
   } catch (e) {
     console.error('GET /announcements error:', e);
@@ -75,6 +82,7 @@ export async function POST(req: Request) {
       title,
       content,
       category,
+      status: 'live', // Default status for new announcements
       duration: duration?.toString() ?? '',
       expiresAt: expiresAt ?? '',
       createdAt: now,
