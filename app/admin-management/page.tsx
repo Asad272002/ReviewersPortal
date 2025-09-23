@@ -12,6 +12,8 @@ import Image from 'next/image';
 import AnnouncementManager from '../components/admin/AnnouncementManager';
 import ResourceManager from '../components/admin/ResourceManager';
 import ProcessManager from '../components/admin/ProcessManager';
+import AwardedTeamsManager from '../components/admin/AwardedTeamsManager';
+import SupportTicketManager from '../components/admin/SupportTicketManager';
 
 
 interface SheetData {
@@ -19,6 +21,7 @@ interface SheetData {
   resources: any[];
   processes: any[];
   users: any[];
+  supportTickets: any[];
 }
 
 export default function AdminManagement() {
@@ -169,21 +172,26 @@ export default function AdminManagement() {
     setIsLoading(true);
     try {
       // Fetch data from all sheets
-      const [announcementsRes, resourcesRes, processesRes] = await Promise.all([
+      const [announcementsRes, resourcesRes, processesRes, usersRes, supportTicketsRes] = await Promise.all([
         fetch('/api/admin/announcements'),
         fetch('/api/admin/resources'),
-        fetch('/api/admin/processes')
+        fetch('/api/admin/processes'),
+        fetch('/api/admin/users'),
+        fetch('/api/admin/support-tickets')
       ]);
 
       const announcements = announcementsRes.ok ? await announcementsRes.json() : {};
       const resources = resourcesRes.ok ? await resourcesRes.json() : {};
       const processes = processesRes.ok ? await processesRes.json() : {};
+      const users = usersRes.ok ? await usersRes.json() : {};
+      const supportTickets = supportTicketsRes.ok ? await supportTicketsRes.json() : {};
 
       setSheetData({
         announcements: announcements.announcements || [],
         resources: resources.resources || [],
         processes: processes.processes || [],
-        users: [] // Will be populated when we add user management API
+        users: users.data?.users || [],
+        supportTickets: supportTickets.tickets || []
       });
     } catch (error) {
       console.error('Error fetching sheet data:', error);
@@ -254,6 +262,12 @@ export default function AdminManagement() {
             <p className="text-2xl font-bold text-[#9050E9]">{sheetData.processes.length}</p>
             <p className="text-sm text-[#9D9FA9]">Total entries</p>
           </div>
+          
+          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+            <h4 className="font-montserrat font-medium text-white mb-2">Support Tickets</h4>
+            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.supportTickets.length}</p>
+            <p className="text-sm text-[#9D9FA9]">Total tickets</p>
+          </div>
         </div>
       </div>
       
@@ -284,6 +298,21 @@ export default function AdminManagement() {
             <p className="text-sm text-[#9D9FA9]">Create, edit, delete process documents, workflows, and procedures</p>
           </button>
           
+          <button
+            onClick={() => setActiveSection('awarded-teams')}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">🏆 Awarded Teams Connect</h4>
+            <p className="text-sm text-[#9D9FA9]">Manage team-reviewer assignments and chat connections</p>
+          </button>
+          
+          <button
+            onClick={() => setActiveSection('support-tickets')}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">🎫 Support Tickets Management</h4>
+            <p className="text-sm text-[#9D9FA9]">View, manage, and respond to user support tickets</p>
+          </button>
 
         </div>
       </div>
@@ -429,6 +458,25 @@ export default function AdminManagement() {
             </div>
           </div>
         );
+      case 'awarded-teams':
+        return (
+          <div className="space-y-6">
+            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-montserrat font-semibold text-xl text-white">Awarded Teams Connect Management</h3>
+                <button
+                  onClick={() => setActiveSection('overview')}
+                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
+                >
+                  ← Back to Overview
+                </button>
+              </div>
+              <AwardedTeamsManager onBack={() => setActiveSection('overview')} users={sheetData.users} />
+            </div>
+          </div>
+        );
+      case 'support-tickets':
+        return <SupportTicketManager />;
 
       default:
         return renderOverview();

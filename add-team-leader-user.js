@@ -2,9 +2,9 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 require('dotenv').config();
 
-async function addCoordinatorUser() {
+async function addTeamLeaderUser() {
   try {
-    console.log('Adding coordinator user to Google Sheets...');
+    console.log('Adding team leader user to Google Sheets...');
     
     // Initialize authentication
     const serviceAccountAuth = new JWT({
@@ -24,31 +24,31 @@ async function addCoordinatorUser() {
       return;
     }
     
-    // Check if coordinator user already exists
+    // Check if team leader user already exists
     const rows = await usersSheet.getRows();
-    const existingUser = rows.find(row => row.get('Username') === 'coordinator1');
+    const existingUser = rows.find(row => row.get('Username') === 'teamleader1');
     
     if (existingUser) {
-      console.log('Coordinator user already exists!');
+      console.log('Team leader user already exists!');
       return;
     }
     
-    // Add coordinator user
+    // Add team leader user
     await usersSheet.addRow({
-      'ID': 'user_004',
-      'Username': 'coordinator1',
-      'Password': 'coord123',
-      'Name': 'Project Coordinator',
-      'Role': 'coordinator'
+      'ID': (rows.length + 1).toString(),
+      'Username': 'teamleader1',
+      'Password': 'team123',
+      'Name': 'Project Team Leader',
+      'Role': 'team_leader'
     });
     
-    console.log('Coordinator user added successfully!');
-    console.log('Username: coordinator1');
-    console.log('Password: coord123');
+    console.log('Team leader user added successfully!');
+    console.log('Username: teamleader1');
+    console.log('Password: team123');
     
   } catch (error) {
-    console.error('Error adding coordinator user:', error);
+    console.error('Error adding team leader user:', error);
   }
 }
 
-addCoordinatorUser();
+addTeamLeaderUser();

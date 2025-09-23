@@ -37,7 +37,7 @@ app/
 ### User Roles
 - **Admin**: Full system access and management capabilities
 - **Reviewer**: Can review and vote on proposals
-- **Coordinator**: Special administrative privileges
+- **Team Leader**: Access to team dashboard for awarded teams only
 
 ### Authentication Flow
 1. **Login Process**: Users authenticate via `/login` page
@@ -55,8 +55,11 @@ app/
 ### 1. Announcement Manager
 - **Create/Edit**: Full CRUD operations for announcements
 - **Categories**: Support for general and important update categories
-- **Expiration**: Time-based announcement expiration
-- **API Endpoints**: `/api/admin/announcements`
+- **Status Management**: Live, upcoming, and expired announcement states with automatic status tracking
+- **Smart Display**: Upcoming announcements show only countdown timers ("Starts in:") while hiding posted date, duration, and expiration details
+- **Expiration**: Time-based announcement expiration with real-time countdown
+- **Google Sheets Integration**: Status column synchronization for live/expired/upcoming tracking
+- **API Endpoints**: `/api/admin/announcements`, `/api/admin/all-announcements`
 
 ### 2. Resource Manager
 - **Categories**: Review tools, reference materials, training materials
@@ -132,7 +135,7 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 - `google-auth-library`: ^10.2.0
 
 ### Sheet Structure
-- **Announcements**: General and important updates
+- **Announcements**: General and important updates with status column (live/expired/upcoming)
 - **Resources**: Categorized resource management
 - **Processes**: Process documentation with sync capability
 - **Guides**: User guides and documentation
@@ -242,6 +245,24 @@ npm start
 - **Logging**: Console logging for debugging and monitoring
 - **Data Backup**: Google Sheets provides automatic data backup
 - **Version Control**: Git-based version management
+
+## Recent Updates & Improvements
+
+### Next.js 15 Compatibility
+- **Async Parameter Handling**: Updated all dynamic API routes to properly await `context.params` for Next.js 15 compliance
+- **Route Fixes**: Applied async parameter fixes to `/api/admin/announcements/[id]`, `/api/admin/guides/[id]`, `/api/admin/resources/[id]`, and `/api/admin/guides/[id]/attachments/[attachmentId]`
+- **Compilation Warnings**: Eliminated all Next.js 15 async parameter warnings
+
+### Announcement System Enhancements
+- **Status Column Implementation**: Added automated status tracking (live/expired/upcoming) with Google Sheets integration
+- **Smart UI Display**: Upcoming announcements now show only countdown timers with "Starts in:" label
+- **Enhanced User Experience**: Conditional display logic hides irrelevant information for upcoming announcements
+- **Real-time Status Updates**: Dynamic status calculation and display based on current time
+
+### Technical Improvements
+- **Date Handling**: Improved date parsing and formatting throughout the application
+- **API Route Optimization**: Enhanced error handling and parameter validation
+- **Google Sheets Sync**: Automated status column management and synchronization
 
 ## Future Enhancements
 

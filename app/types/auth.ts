@@ -2,7 +2,7 @@ export interface User {
   id: string;
   username: string;
   name: string;
-  role: 'reviewer' | 'admin' | 'coordinator';
+  role: 'reviewer' | 'admin' | 'team_leader';
 }
 
 export interface AuthState {

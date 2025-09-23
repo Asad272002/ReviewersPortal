@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState } from '../types/auth';
-// We'll use the API route instead of local authentication
-// import { authenticateUser } from '../data/users';
 
 interface AuthContextType extends AuthState {
   login: (username: string, password: string) => Promise<boolean>;

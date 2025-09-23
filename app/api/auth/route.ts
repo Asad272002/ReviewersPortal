@@ -17,23 +17,11 @@ export async function POST(request: NextRequest) {
     
     // Check if environment variables are set
     if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-      console.warn('Google Sheets environment variables not set. Falling back to local authentication.');
-      // Fall back to local authentication
-      const { authenticateUser } = await import('@/app/data/users');
-      const user = authenticateUser(username, password);
-      
-      if (user) {
-        return NextResponse.json({
-          success: true,
-          message: 'Authentication successful',
-          user
-        });
-      } else {
-        return NextResponse.json(
-          { success: false, message: 'Invalid username or password' },
-          { status: 401 }
-        );
-      }
+      console.error('Google Sheets environment variables not set.');
+      return NextResponse.json(
+        { success: false, message: 'Authentication service not configured' },
+        { status: 500 }
+      );
     }
     
     // Initialize authentication with JWT
@@ -72,7 +60,7 @@ export async function POST(request: NextRequest) {
         id: userRow.get('ID'),
         username: userRow.get('Username'),
         name: userRow.get('Name'),
-        role: userRow.get('Role') as 'admin' | 'reviewer' | 'coordinator',
+        role: userRow.get('Role') as 'admin' | 'reviewer' | 'team_leader',
       };
       
       return NextResponse.json({

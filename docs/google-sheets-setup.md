@@ -53,7 +53,7 @@ node scripts/create-google-sheet.js
 This script will:
 
 1. Create a new Google Sheet titled "Proposal Submissions"
-2. Create two sheets within the document:
+2. Create seven sheets within the document:
    - **Proposals sheet** with the following headers:
      - Reviewer Name
      - Proposal Title
@@ -72,6 +72,44 @@ This script will:
      - Password
      - Name
      - Role
+   - **AwardedTeams sheet** with the following headers:
+     - ID
+     - Name
+     - Description
+     - Status
+     - CreatedAt
+   - **Reviewers sheet** with the following headers:
+     - ID
+     - Name
+     - Email
+     - Specialization
+     - Status
+     - CreatedAt
+   - **TeamReviewerAssignments sheet** with the following headers:
+     - ID
+     - TeamID
+     - ReviewerID
+     - Status
+     - AssignedAt
+     - ApprovedAt
+     - CompletedAt
+   - **ChatSessions sheet** with the following headers:
+     - ID
+     - AssignmentID
+     - TeamID
+     - ReviewerID
+     - Status
+     - CreatedAt
+     - LastActivity
+   - **ChatMessages sheet** with the following headers:
+     - ID
+     - SessionID
+     - SenderID
+     - SenderRole
+     - Content
+     - MessageType
+     - Timestamp
+     - FileData
 3. Add sample user accounts for testing:
    - Admin user
    - Reviewer users
@@ -280,7 +318,13 @@ export async function POST(request: NextRequest) {
    - Navigate to the Documents page
    - Click "Show Form" to display the proposal form
    - Fill out the form and submit
-4. Check your Google Sheet to verify that the data was added correctly to both sheets
+4. Test the Awarded Teams Connect feature:
+   - Log in as an admin
+   - Navigate to the Admin Management page
+   - Click on "Awarded Teams" to access the management interface
+   - Add teams and reviewers, then create assignments
+   - Approve assignments and test the chat functionality
+5. Check your Google Sheet to verify that the data was added correctly to all sheets
 
 ## Troubleshooting
 

@@ -327,8 +327,8 @@ export default function Announcements() {
           
           <main className="flex-1 p-8 relative">
             <div className="relative z-10">
-              {/* Admin/Coordinator Controls */}
-              {(user?.role === 'admin' || user?.role === 'coordinator') && (
+              {/* Admin/Team Leader Controls */}
+                {(user?.role === 'admin' || user?.role === 'team_leader') && (
                 <div className="mb-6">
                   <button
                     onClick={() => setShowAdminPanel(!showAdminPanel)}
@@ -458,26 +458,28 @@ export default function Announcements() {
                               {announcement.content}
                             </p>
                             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-300">
-                              <div className="flex items-center gap-2">
-                                <Image src="/icons/calendar-icon.svg" alt="Date" width={12} height={12} />
-                                <span>Posted: {formatDate(announcement.createdAt)}</span>
-                              </div>
+                              {announcement.status !== 'upcoming' && (
+                                <div className="flex items-center gap-2">
+                                  <Image src="/icons/calendar-icon.svg" alt="Date" width={12} height={12} />
+                                  <span>Posted: {formatDate(announcement.createdAt)}</span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2">
                                 <span className="px-2 py-1 bg-red-600/80 text-white rounded-lg text-xs font-medium border border-red-500/50">Important</span>
                               </div>
-                              {announcement.duration && (
+                              {announcement.status !== 'upcoming' && announcement.duration && (
                                 <div className="flex items-center gap-2">
                                   <span>⏱️ Duration: {announcement.duration} days</span>
                                 </div>
                               )}
-                              {announcement.expiresAt && (
+                              {announcement.status !== 'upcoming' && announcement.expiresAt && (
                                 <div className="flex items-center gap-2">
                                   <span>📅 Expires: {announcement.expiresAt ? formatDate(announcement.expiresAt) : 'No expiry'}</span>
                                 </div>
                               )}
                               {announcement.expiresAt && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-blue-400 font-medium">⏰ Time Left: {formatCountdown(getTimeRemaining(announcement.expiresAt))}</span>
+                                  <span className="text-blue-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : 'Time Left: '}{formatCountdown(getTimeRemaining(announcement.expiresAt))}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
@@ -517,26 +519,28 @@ export default function Announcements() {
                               {announcement.content}
                             </p>
                             <div className="flex flex-wrap items-center gap-4 text-xs text-gray-300">
-                              <div className="flex items-center gap-2">
-                                <Image src="/icons/calendar-icon.svg" alt="Date" width={12} height={12} />
-                                <span>Posted: {formatDate(announcement.createdAt)}</span>
-                              </div>
+                              {announcement.status !== 'upcoming' && (
+                                <div className="flex items-center gap-2">
+                                  <Image src="/icons/calendar-icon.svg" alt="Date" width={12} height={12} />
+                                  <span>Posted: {formatDate(announcement.createdAt)}</span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2">
                                 <span className="px-2 py-1 bg-blue-600/80 backdrop-blur-sm text-white rounded-lg text-xs font-medium border border-blue-500/50">General</span>
                               </div>
-                              {announcement.duration && (
+                              {announcement.status !== 'upcoming' && announcement.duration && (
                                 <div className="flex items-center gap-2">
                                   <span>⏱️ Duration: {announcement.duration} days</span>
                                 </div>
                               )}
-                              {announcement.expiresAt && (
+                              {announcement.status !== 'upcoming' && announcement.expiresAt && (
                                 <div className="flex items-center gap-2">
                                   <span>📅 Expires: {announcement.expiresAt ? formatDate(announcement.expiresAt) : 'No expiry'}</span>
                                 </div>
                               )}
                               {announcement.expiresAt && getTimeRemaining(announcement.expiresAt) && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-yellow-400 font-medium">⏰ {formatCountdown(getTimeRemaining(announcement.expiresAt)!)}</span>
+                                  <span className="text-yellow-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : ''}{formatCountdown(getTimeRemaining(announcement.expiresAt)!)}</span>
                                 </div>
                               )}
                             </div>

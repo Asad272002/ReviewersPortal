@@ -43,7 +43,10 @@ export async function loadProcessesFromSheets(): Promise<ProcessDoc[]> {
     // Convert rows to ProcessDoc objects
     const processesFromSheets = rows.map(row => {
       const attachmentsStr = row.get('Attachments') || '';
-      const attachments = {
+      const attachments: {
+        links: { title: string; url: string }[];
+        files: { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[];
+      } = {
         links: [],
         files: []
       };
@@ -69,7 +72,7 @@ export async function loadProcessesFromSheets(): Promise<ProcessDoc[]> {
                     fileExtension.includes('.xlsx') || fileExtension.includes('.ppt') || 
                     fileExtension.includes('.pptx')) {
                   // Determine the actual file type
-                  let fileType = 'pdf';
+                  let fileType: 'pdf' | 'doc' | 'excel' | 'powerpoint' = 'pdf';
                   if (fileExtension.includes('.doc')) fileType = 'doc';
                   else if (fileExtension.includes('.xls')) fileType = 'excel';
                   else if (fileExtension.includes('.ppt')) fileType = 'powerpoint';

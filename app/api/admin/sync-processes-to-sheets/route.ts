@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
     // Format the sheet
     await sheet.updateProperties({
       gridProperties: {
+        rowCount: 1000,
+        columnCount: 26,
         frozenRowCount: 1, // Freeze header row
       },
     });
