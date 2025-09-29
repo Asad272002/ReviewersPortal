@@ -170,7 +170,7 @@ export default function SupportTicketManager() {
 
   if (isLoading) {
     return (
-      <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
+      <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
         <p className="font-montserrat text-[#9D9FA9]">Loading support tickets...</p>
       </div>
     );
@@ -179,7 +179,7 @@ export default function SupportTicketManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
+      <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-montserrat font-semibold text-xl text-white">Support Tickets</h3>
           <div className="flex items-center gap-4">
@@ -231,7 +231,7 @@ export default function SupportTicketManager() {
       </div>
 
       {/* Tickets Table */}
-      <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
+      <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
         <h4 className="font-montserrat font-semibold text-lg text-white mb-4">Support Tickets</h4>
         
         {filteredTickets.length === 0 ? (
@@ -257,7 +257,7 @@ export default function SupportTicketManager() {
                 {filteredTickets
                   .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                   .map((ticket) => (
-                    <tr key={ticket.id} className="border-b border-[#9D9FA9]/30 hover:bg-[rgba(144,80,233,0.05)]">
+                    <tr key={ticket.id} className="border-b border-[#9D9FA9]/30 hover:bg-[#1A0B2E]">
                       <td className="font-montserrat text-white py-3 px-2 font-medium">
                         {ticket.name}
                       </td>

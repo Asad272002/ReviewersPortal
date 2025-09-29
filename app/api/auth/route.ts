@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { SignJWT } from 'jose';
 import { User } from '@/app/types/auth';
 
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
     
+    // Trim whitespace from username to fix login issues
+    const trimmedUsername = username?.trim();
+    
     // Validate required fields
-    if (!username || !password) {
+    if (!trimmedUsername || !password) {
       return NextResponse.json(
         { success: false, message: 'Username and password are required' },
         { status: 400 }
@@ -50,24 +54,52 @@ export async function POST(request: NextRequest) {
     
     // Find the user with matching username and password
     const userRow = rows.find(row => 
-      row.get('Username') === username && 
+      row.get('Username') === trimmedUsername && 
       row.get('Password') === password
     );
     
     if (userRow) {
       // User found, create user object
+      const userRole = userRow.get('Role');
+      // Normalize reviewer roles (merge "Reviewer" and "reviewer" into "reviewer")
+      const normalizedRole = userRole.toLowerCase() === 'reviewer' ? 'reviewer' : userRole;
+      
       const user: User = {
         id: userRow.get('ID'),
         username: userRow.get('Username'),
         name: userRow.get('Name'),
-        role: userRow.get('Role') as 'admin' | 'reviewer' | 'team_leader',
+        role: normalizedRole as 'admin' | 'reviewer' | 'team_leader',
       };
       
-      return NextResponse.json({
+      // Create JWT token
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
+      const token = await new SignJWT({ 
+        userId: user.id, 
+        username: user.username, 
+        role: normalizedRole 
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(secret);
+      
+      // Create response with user data
+      const response = NextResponse.json({
         success: true,
         message: 'Authentication successful',
         user
       });
+      
+      // Set HTTP-only cookie with the token
+      response.cookies.set('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60, // 24 hours
+        path: '/'
+      });
+      
+      return response;
     } else {
       // User not found or password incorrect
       return NextResponse.json(

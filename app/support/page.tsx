@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import LogoutButton from "../components/LogoutButton";
+import { validateInput, validateEmail, validateRequiredText } from "../utils/validation";
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import Image from "next/image";
@@ -19,6 +19,7 @@ export default function Support() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -94,16 +95,63 @@ export default function Support() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    // Validate name
+    const nameValidation = validateRequiredText(formData.name, 'Name', 2, 100);
+    if (!nameValidation.isValid) {
+      errors.name = nameValidation.error!;
+    }
+    
+    // Validate email
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.error!;
+    }
+    
+    // Validate category
+    if (!formData.category) {
+      errors.category = 'Category is required';
+    }
+    
+    // Validate message
+    const messageValidation = validateRequiredText(formData.message, 'Message', 10, 2000);
+    if (!messageValidation.isValid) {
+      errors.message = messageValidation.error!;
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitMessage('');
+
+    // Validate form before submission
+    if (!validateForm()) {
+      setIsSubmitting(false);
+      setSubmitMessage('Please fix the validation errors below.');
+      return;
+    }
 
     try {
       const response = await fetch('/api/admin/support-tickets', {
@@ -122,6 +170,7 @@ export default function Support() {
           category: '',
           message: ''
         });
+        setValidationErrors({});
       } else {
         const errorData = await response.json();
         setSubmitMessage(`Error: ${errorData.error || 'Failed to submit ticket'}`);
@@ -205,8 +254,15 @@ export default function Support() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full p-3 bg-[#0C021E] border border-[#9D9FA9] rounded-lg text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
+                      className={`w-full p-3 bg-[#0C021E] border rounded-lg text-white font-montserrat focus:outline-none ${
+                        validationErrors.name 
+                          ? 'border-red-500 focus:border-red-500' 
+                          : 'border-[#9D9FA9] focus:border-[#9050E9]'
+                      }`}
                     />
+                    {validationErrors.name && (
+                      <p className="mt-1 text-red-400 text-sm font-montserrat">{validationErrors.name}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -217,8 +273,15 @@ export default function Support() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full p-3 bg-[#0C021E] border border-[#9D9FA9] rounded-lg text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
+                      className={`w-full p-3 bg-[#0C021E] border rounded-lg text-white font-montserrat focus:outline-none ${
+                        validationErrors.email 
+                          ? 'border-red-500 focus:border-red-500' 
+                          : 'border-[#9D9FA9] focus:border-[#9050E9]'
+                      }`}
                     />
+                    {validationErrors.email && (
+                      <p className="mt-1 text-red-400 text-sm font-montserrat">{validationErrors.email}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -228,7 +291,11 @@ export default function Support() {
                       value={formData.category}
                       onChange={handleInputChange}
                       required
-                      className="w-full p-3 bg-[#0C021E] border border-[#9D9FA9] rounded-lg text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
+                      className={`w-full p-3 bg-[#0C021E] border rounded-lg text-white font-montserrat focus:outline-none ${
+                        validationErrors.category 
+                          ? 'border-red-500 focus:border-red-500' 
+                          : 'border-[#9D9FA9] focus:border-[#9050E9]'
+                      }`}
                     >
                       <option value="">Select a category</option>
                       <option value="technical">Technical Issue</option>
@@ -237,6 +304,9 @@ export default function Support() {
                       <option value="feature">Feature Request</option>
                       <option value="other">Other</option>
                     </select>
+                    {validationErrors.category && (
+                      <p className="mt-1 text-red-400 text-sm font-montserrat">{validationErrors.category}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -247,9 +317,16 @@ export default function Support() {
                       onChange={handleInputChange}
                       required
                       rows={5}
-                      className="w-full p-3 bg-[#0C021E] border border-[#9D9FA9] rounded-lg text-white font-montserrat focus:outline-none focus:border-[#9050E9] resize-none"
+                      className={`w-full p-3 bg-[#0C021E] border rounded-lg text-white font-montserrat focus:outline-none resize-none ${
+                        validationErrors.message 
+                          ? 'border-red-500 focus:border-red-500' 
+                          : 'border-[#9D9FA9] focus:border-[#9050E9]'
+                      }`}
                       placeholder="Please describe your issue or question in detail..."
                     />
+                    {validationErrors.message && (
+                      <p className="mt-1 text-red-400 text-sm font-montserrat">{validationErrors.message}</p>
+                    )}
                   </div>
                   
                   <button
@@ -295,7 +372,6 @@ export default function Support() {
           </main>
         </div>
         
-        <LogoutButton />
         <Footer />
       </div>
     </ProtectedRoute>

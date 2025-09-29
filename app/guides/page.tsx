@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import LogoutButton from "../components/LogoutButton";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Image from "next/image";
 import { useAuth } from '../context/AuthContext';
@@ -260,44 +259,44 @@ export default function Guides() {
           <div className="flex flex-1">
             <Sidebar />
 
-            <main className="flex-1 p-8">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
               {loading ? (
                 <div className="flex justify-center items-center h-64">
-                  <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl">
-                    <div className="text-white font-montserrat">Loading guides...</div>
+                  <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
+                    <div className="text-white font-montserrat text-sm sm:text-base">Loading guides...</div>
                   </div>
                 </div>
               ) : error ? (
-                <div className="bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-2xl p-4 text-red-300 shadow-2xl">
+                <div className="bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-2xl p-4 text-red-300 shadow-2xl text-sm sm:text-base">
                   Error: {error}
                 </div>
               ) : (
               <>
-                <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8 mb-8">
-                  <h2 className="font-montserrat font-semibold text-2xl text-white mb-4">Step-by-Step Review Overview</h2>
-                  <div className="space-y-6">
+                <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+                  <h2 className="font-montserrat font-semibold text-xl sm:text-2xl text-white mb-3 sm:mb-4">Step-by-Step Review Overview</h2>
+                  <div className="space-y-4 sm:space-y-6">
                     <div className="flex">
-                      <div className="flex flex-col items-center mr-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#9050E9] to-[#A96AFF] flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold">1</span>
+                      <div className="flex flex-col items-center mr-3 sm:mr-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#9050E9] to-[#A96AFF] flex items-center justify-center shadow-lg">
+                          <span className="text-white font-bold text-sm sm:text-base">1</span>
                         </div>
                         <div className="w-0.5 h-full bg-gradient-to-b from-[#9050E9] to-[#A96AFF] mt-2"></div>
                       </div>
                       <div>
-                        <h3 className="font-montserrat font-medium text-xl text-white mb-2">Initial Screening</h3>
-                        <p className="font-montserrat text-[#B8BAC4] mb-4">
+                        <h3 className="font-montserrat font-medium text-lg sm:text-xl text-white mb-2">Initial Screening</h3>
+                        <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4] mb-3 sm:mb-4">
                           Review proposals for completeness and adherence to basic requirements. Ensure all required sections are present and properly formatted.
                         </p>
-                        <div className="bg-[#9050E9]/10 p-4 rounded-xl border border-[#9050E9]/30 font-montserrat text-sm text-[#B8BAC4]">
+                        <div className="bg-[#9050E9]/10 p-3 sm:p-4 rounded-xl border border-[#9050E9]/30 font-montserrat text-xs sm:text-sm text-[#B8BAC4]">
                           <strong className="text-[#A96AFF]">Tip:</strong> Use the proposal checklist to ensure all required elements are present before proceeding with the detailed review.
                         </div>
                       </div>
                     </div>
 
                     <div className="flex">
-                      <div className="flex flex-col items-center mr-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#9050E9] to-[#A96AFF] flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold">2</span>
+                      <div className="flex flex-col items-center mr-3 sm:mr-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#9050E9] to-[#A96AFF] flex items-center justify-center shadow-lg">
+                          <span className="text-white font-bold text-sm sm:text-base">2</span>
                         </div>
                         <div className="w-0.5 h-full bg-gradient-to-b from-[#9050E9] to-[#A96AFF] mt-2"></div>
                       </div>
@@ -512,7 +511,6 @@ export default function Guides() {
 
         </div>
         
-        <LogoutButton />
         <Footer />
       </div>
     </ProtectedRoute>

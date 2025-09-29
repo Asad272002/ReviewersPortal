@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import Image from 'next/image';
+import { validateInput, validateRequiredText, validateNumber } from '../utils/validation';
 
 interface FormData {
   reviewerName: string;
@@ -37,19 +38,102 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
     success: boolean;
     message: string;
   } | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    // Validate reviewer name
+    const nameValidation = validateRequiredText(formData.reviewerName, 'Reviewer Name', 2, 100);
+    if (!nameValidation.isValid) {
+      errors.reviewerName = nameValidation.error!;
+    }
+    
+    // Validate proposal title
+    const titleValidation = validateRequiredText(formData.proposalTitle, 'Proposal Title', 5, 200);
+    if (!titleValidation.isValid) {
+      errors.proposalTitle = titleValidation.error!;
+    }
+    
+    // Validate project category
+    if (!formData.projectCategory) {
+      errors.projectCategory = 'Project Category is required';
+    }
+    
+    // Validate team size
+    const teamSizeValidation = validateNumber(formData.teamSize, 'Team Size', 1, 100);
+    if (!teamSizeValidation.isValid) {
+      errors.teamSize = teamSizeValidation.error!;
+    }
+    
+    // Validate budget estimate
+    const budgetValidation = validateNumber(formData.budgetEstimate, 'Budget Estimate', 0);
+    if (!budgetValidation.isValid) {
+      errors.budgetEstimate = budgetValidation.error!;
+    }
+    
+    // Validate timeline
+    const timelineValidation = validateNumber(formData.timelineWeeks, 'Timeline (weeks)', 1, 104);
+    if (!timelineValidation.isValid) {
+      errors.timelineWeeks = timelineValidation.error!;
+    }
+    
+    // Validate proposal summary
+    const summaryValidation = validateRequiredText(formData.proposalSummary, 'Proposal Summary', 50, 2000);
+    if (!summaryValidation.isValid) {
+      errors.proposalSummary = summaryValidation.error!;
+    }
+    
+    // Validate technical approach
+    const approachValidation = validateRequiredText(formData.technicalApproach, 'Technical Approach', 50, 2000);
+    if (!approachValidation.isValid) {
+      errors.technicalApproach = approachValidation.error!;
+    }
+    
+    // Validate additional notes (optional field)
+    if (formData.additionalNotes) {
+      const notesValidation = validateInput(formData.additionalNotes, 'Additional Notes');
+      if (!notesValidation.isValid) {
+        errors.additionalNotes = notesValidation.error!;
+      }
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus(null);
+
+    // Validate form before submission
+    if (!validateForm()) {
+      setIsSubmitting(false);
+      setSubmitStatus({
+        success: false,
+        message: 'Please fix the validation errors below.'
+      });
+      return;
+    }
 
     try {
       // Call the API endpoint to submit the form data to Google Sheets
@@ -85,6 +169,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
         technicalApproach: '',
         additionalNotes: ''
       });
+      setValidationErrors({});
       
       if (onSubmitSuccess) {
         onSubmitSuccess();

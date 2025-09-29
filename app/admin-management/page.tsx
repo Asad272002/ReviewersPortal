@@ -6,7 +6,6 @@ import * as THREE from 'three';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
-import LogoutButton from '../components/LogoutButton';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Image from 'next/image';
 import AnnouncementManager from '../components/admin/AnnouncementManager';
@@ -14,6 +13,7 @@ import ResourceManager from '../components/admin/ResourceManager';
 import ProcessManager from '../components/admin/ProcessManager';
 import AwardedTeamsManager from '../components/admin/AwardedTeamsManager';
 import SupportTicketManager from '../components/admin/SupportTicketManager';
+import VotingSettingsManager from '../components/admin/VotingSettingsManager';
 
 
 interface SheetData {
@@ -31,7 +31,8 @@ export default function AdminManagement() {
     announcements: [],
     resources: [],
     processes: [],
-    users: []
+    users: [],
+    supportTickets: []
   });
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<string>('overview');
@@ -224,7 +225,6 @@ export default function AdminManagement() {
               </div>
             </main>
           </div>
-          <LogoutButton />
           <Footer />
         </div>
       </ProtectedRoute>
@@ -312,6 +312,14 @@ export default function AdminManagement() {
           >
             <h4 className="font-montserrat font-medium text-white mb-2">🎫 Support Tickets Management</h4>
             <p className="text-sm text-[#9D9FA9]">View, manage, and respond to user support tickets</p>
+          </button>
+
+          <button
+            onClick={() => setActiveSection('voting-settings')}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">⚙️ Voting Settings</h4>
+            <p className="text-sm text-[#9D9FA9]">Configure voting duration, vote changes, and minimum votes</p>
           </button>
 
         </div>
@@ -478,6 +486,24 @@ export default function AdminManagement() {
       case 'support-tickets':
         return <SupportTicketManager />;
 
+      case 'voting-settings':
+        return (
+          <div className="space-y-6">
+            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-montserrat font-semibold text-xl text-white">Voting Settings Management</h3>
+                <button
+                  onClick={() => setActiveSection('overview')}
+                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
+                >
+                  ← Back to Overview
+                </button>
+              </div>
+              <VotingSettingsManager />
+            </div>
+          </div>
+        );
+
       default:
         return renderOverview();
     }
@@ -506,7 +532,6 @@ export default function AdminManagement() {
           </main>
         </div>
         
-        <LogoutButton />
         <Footer />
       </div>
     </ProtectedRoute>

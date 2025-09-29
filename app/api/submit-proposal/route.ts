@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Import the GoogleSpreadsheet class and JWT for authentication
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { getVotingDurationDays } from '../../lib/voting-settings';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,11 @@ export async function POST(request: NextRequest) {
         await doc.loadInfo();
         const sheet = doc.sheetsByIndex[0];
         
+        // Get current voting duration setting at the time of submission
+        const votingDurationDays = await getVotingDurationDays();
+        const submissionDate = new Date();
+        const votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+        
         // Add row to Google Sheet with properly mapped column names
         await sheet.addRow({
           'Reviewer Name': data.reviewerName,
@@ -61,7 +67,16 @@ export async function POST(request: NextRequest) {
           'Proposal Summary': data.proposalSummary,
           'Technical Approach': data.technicalApproach,
           'Additional Notes': data.additionalNotes || '',
-          'Submission Date': new Date().toLocaleString('en-US', {
+          'Submission Date': submissionDate.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC',
+            timeZoneName: 'short'
+          }),
+          'Voting Deadline': votingDeadline.toLocaleString('en-US', {
             year: 'numeric',
             month: 'long', 
             day: 'numeric',

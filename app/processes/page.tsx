@@ -5,10 +5,10 @@ import * as THREE from 'three';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import LogoutButton from "../components/LogoutButton";
 import ProtectedRoute from "../components/ProtectedRoute";
-import Image from "next/image";
 import { useAuth } from '../context/AuthContext';
+import ProcessManager from "../components/admin/ProcessManager";
+import Image from "next/image";
 
 interface Process {
   id: string;
@@ -129,42 +129,42 @@ export default function Processes() {
         <div className="flex flex-1 relative z-10">
           <Sidebar />
           
-          <main className="flex-1 p-8 relative z-10">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10">
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="text-white font-montserrat">Loading processes...</div>
+                <div className="text-white font-montserrat text-sm sm:text-base">Loading processes...</div>
               </div>
             ) : error ? (
               <div className="flex justify-center items-center h-64">
-                <div className="text-red-400 font-montserrat">{error}</div>
+                <div className="text-red-400 font-montserrat text-sm sm:text-base">{error}</div>
               </div>
             ) : (
               <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-12">
-                  <h1 className="font-montserrat font-bold text-4xl text-white mb-4">
+                <div className="text-center mb-8 sm:mb-12">
+                  <h1 className="font-montserrat font-bold text-2xl sm:text-3xl lg:text-4xl text-white mb-3 sm:mb-4">
                     Process Documentation
                   </h1>
-                  <p className="font-montserrat text-xl text-gray-200 max-w-3xl mx-auto">
+                  <p className="font-montserrat text-lg sm:text-xl text-gray-200 max-w-3xl mx-auto px-4">
                     Comprehensive documentation of our processes and procedures to help you understand our workflows and standards.
                   </p>
                 </div>
 
-                <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6">
-                  <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Process Documentation</h2>
-                  <div className="space-y-6">
+                <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-4 sm:p-6">
+                  <h2 className="font-montserrat font-semibold text-xl sm:text-2xl text-white mb-4 sm:mb-6">Process Documentation</h2>
+                  <div className="space-y-4 sm:space-y-6">
                     {publishedProcesses.length > 0 ? (
                       publishedProcesses.map((process, index) => (
-                        <div key={process.id} className={index < publishedProcesses.length - 1 ? "border-b border-[#9D9FA9] pb-6" : ""}>
-                          <div className="flex items-center gap-3 mb-3">
-                            <Image src="/icons/document-icon.svg" alt="Process" width={24} height={24} />
-                            <h3 className="font-montserrat font-medium text-xl text-white">{process.title}</h3>
+                        <div key={process.id} className={index < publishedProcesses.length - 1 ? "border-b border-[#9D9FA9] pb-4 sm:pb-6" : ""}>
+                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
+                            <Image src="/icons/document-icon.svg" alt="Process" width={20} height={20} className="sm:w-6 sm:h-6" />
+                            <h3 className="font-montserrat font-medium text-lg sm:text-xl text-white">{process.title}</h3>
                             <span className="bg-[#9050E9] text-white px-2 py-1 rounded text-xs font-montserrat">
                               {process.category}
                             </span>
                           </div>
-                          <p className="font-montserrat text-[#9D9FA9] mb-3 pl-9">{process.description}</p>
+                          <p className="font-montserrat text-sm sm:text-base text-[#9D9FA9] mb-2 sm:mb-3 pl-6 sm:pl-9">{process.description}</p>
                           {process.content && (
-                            <div className="font-montserrat text-[#B8BAC4] mb-3 pl-9 whitespace-pre-wrap">
+                            <div className="font-montserrat text-xs sm:text-sm text-[#B8BAC4] mb-2 sm:mb-3 pl-6 sm:pl-9 whitespace-pre-wrap">
                               {process.content}
                             </div>
                           )}

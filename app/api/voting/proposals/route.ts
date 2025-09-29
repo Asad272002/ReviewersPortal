@@ -1,75 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
-
-interface ProposalRow {
-  'Reviewer Name': string;
-  'Proposal Title': string;
-  'Project Category': string;
-  'Team Size': string;
-  'Budget Estimate': string;
-  'Timeline (Weeks)': string;
-  'Proposal Summary': string;
-  'Technical Approach': string;
-  'Additional Notes': string;
-}
-
-interface VoteRow {
-  'Proposal ID': string;
-  'User ID': string;
-  'Username': string;
-  'Vote Type': string;
-  'Vote Date': string;
-}
-
-interface VotingResultRow {
-  'Proposal ID': string;
-  'Proposal Title': string;
-  'Total Upvotes': string;
-  'Total Downvotes': string;
-  'Net Score': string;
-  'Voter Count': string;
-  'Voting Deadline': string;
-  'Status': string;
-  'Last Updated': string;
-}
+import { getVotingDurationDays } from '@/lib/voting-settings';
+import { googleSheetsService } from '@/lib/google-sheets-service';
+import { cache, CACHE_KEYS, CACHE_TTL } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || request.headers.get('x-user-id');
 
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
-    await doc.loadInfo();
-
-    // Get proposals from the RD (Requirement Documents) sheet
-    const proposalsSheet = doc.sheetsByTitle['RD'];
-    if (!proposalsSheet) {
-      return NextResponse.json({ success: false, message: 'RD (Requirement Documents) sheet not found' });
+    // Check if we have cached proposals with votes for this user
+    const cacheKey = CACHE_KEYS.PROPOSALS_WITH_VOTES(userId || undefined);
+    const cachedProposals = cache.get(cacheKey);
+    
+    if (cachedProposals) {
+      return NextResponse.json({ 
+        success: true, 
+        proposals: cachedProposals,
+        cached: true,
+        cacheStats: googleSheetsService.getCacheStats()
+      });
     }
 
-    // Get voting results
-    const votingResultsSheet = doc.sheetsByTitle['Voting Results'];
-    if (!votingResultsSheet) {
-      return NextResponse.json({ success: false, message: 'Voting Results sheet not found' });
-    }
+    // Get voting duration from settings
+    const votingDurationDays = await getVotingDurationDays();
 
-    // Get votes sheet for user vote status
-    const votesSheet = doc.sheetsByTitle['Votes'];
-    if (!votesSheet) {
-      return NextResponse.json({ success: false, message: 'Votes sheet not found' });
-    }
-
-    // Load all data
-    const proposalRows = await proposalsSheet.getRows() as any[];
-    const votingResultRows = await votingResultsSheet.getRows() as any[];
-    const voteRows = await votesSheet.getRows() as any[];
+    // Load data using the cached service
+    const [proposalRows, votingResultRows, voteRows] = await Promise.all([
+      googleSheetsService.getProposals(),
+      googleSheetsService.getVotingResults(),
+      googleSheetsService.getVotes()
+    ]);
 
     // Process proposals with voting data
     const proposals = proposalRows.map((proposalRow: any, index: number) => {
@@ -78,17 +38,20 @@ export async function GET(request: NextRequest) {
       
       // Find voting results for this proposal
       const votingResult = votingResultRows.find((row: any) => 
-        row.get('proposalId') === proposalId
+        row.proposalId === proposalId
       );
 
       // Find user's vote for this proposal
       const userVote = userId ? voteRows.find((row: any) => 
-        row.get('proposalId') === proposalId && row.get('userId') === userId
+        row.proposalId === proposalId && row.userId === userId
       ) : null;
 
-      // Get actual submission date from the RD sheet
-      const submissionDateStr = proposalRow.get('Submission Date');
+      // Get actual submission date and voting deadline from the RD sheet
+      const submissionDateStr = proposalRow.submissionDate;
+      const votingDeadlineStr = proposalRow.votingDeadline;
+      
       let submissionDate;
+      let votingDeadline;
       
       if (submissionDateStr) {
         // Try to parse the human-readable format: "August 24, 2025 at 12:15 PM UTC"
@@ -109,7 +72,27 @@ export async function GET(request: NextRequest) {
         submissionDate = new Date();
       }
       
-      const votingDeadline = new Date(submissionDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+      // Use stored voting deadline if available, otherwise calculate from submission date
+      if (votingDeadlineStr) {
+        // Try to parse the human-readable format: "August 24, 2025 at 12:15 PM UTC"
+        const humanReadableMatch = votingDeadlineStr.match(/^(\w+ \d+, \d+) at (\d+:\d+ (?:AM|PM)) UTC$/);
+        if (humanReadableMatch) {
+          const [, datePart, timePart] = humanReadableMatch;
+          votingDeadline = new Date(`${datePart} ${timePart} UTC`);
+        } else {
+          // Fallback to standard Date parsing
+          votingDeadline = new Date(votingDeadlineStr);
+        }
+        
+        // Handle invalid dates - fallback to calculated deadline
+        if (isNaN(votingDeadline.getTime())) {
+          votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+        }
+      } else {
+        // For older proposals without stored deadline, calculate from submission date
+        votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+      }
+      
       const now = new Date();
       const isExpired = now > votingDeadline;
 
@@ -117,19 +100,19 @@ export async function GET(request: NextRequest) {
       let totalUpvotes, totalDownvotes, voterCount;
       
       if (votingResult) {
-        totalUpvotes = parseInt(votingResult.get('totalUpvotes') || '0');
-        totalDownvotes = parseInt(votingResult.get('totalDownvotes') || '0');
-        voterCount = parseInt(votingResult.get('voterCount') || '0');
+        totalUpvotes = parseInt(votingResult.totalUpvotes || '0');
+        totalDownvotes = parseInt(votingResult.totalDownvotes || '0');
+        voterCount = parseInt(votingResult.voterCount || '0');
       } else {
         // Calculate directly from votes sheet for real-time display
         const proposalVotes = voteRows.filter((row: any) => 
-          row.get('proposalId') === proposalId
+          row.proposalId === proposalId
         );
-        totalUpvotes = proposalVotes.filter((row: any) => row.get('voteType') === 'upvote').length;
-        totalDownvotes = proposalVotes.filter((row: any) => row.get('voteType') === 'downvote').length;
+        totalUpvotes = proposalVotes.filter((row: any) => row.voteType === 'upvote').length;
+        totalDownvotes = proposalVotes.filter((row: any) => row.voteType === 'downvote').length;
         
         // Count unique voters
-        const uniqueVoters = new Set(proposalVotes.map((row: any) => row.get('userId')));
+        const uniqueVoters = new Set(proposalVotes.map((row: any) => row.userId));
         voterCount = uniqueVoters.size;
       }
       
@@ -137,14 +120,14 @@ export async function GET(request: NextRequest) {
 
       return {
         proposalId,
-        proposalTitle: proposalRow.get('Proposal Title') || '',
-        reviewerName: proposalRow.get('Reviewer Name') || '',
-        projectCategory: proposalRow.get('Project Category') || '',
-        teamSize: proposalRow.get('Team Size') || '',
-        budgetEstimate: proposalRow.get('Budget Estimate') || '',
-        timelineWeeks: proposalRow.get('Timeline (Weeks)') || '',
-        proposalSummary: proposalRow.get('Proposal Summary') || '',
-        technicalApproach: proposalRow.get('Technical Approach') || '',
+        proposalTitle: proposalRow.proposalTitle || '',
+        reviewerName: proposalRow.reviewerName || '',
+        projectCategory: proposalRow.projectCategory || '',
+        teamSize: proposalRow.teamSize || '',
+        budgetEstimate: proposalRow.budgetEstimate || '',
+        timelineWeeks: proposalRow.timelineWeeks || '',
+        proposalSummary: proposalRow.proposalSummary || '',
+        technicalApproach: proposalRow.technicalApproach || '',
         submissionDate: isNaN(submissionDate.getTime()) ? new Date().toISOString() : submissionDate.toISOString(),
         votingDeadline: isNaN(votingDeadline.getTime()) ? new Date().toISOString() : votingDeadline.toISOString(),
         status: isExpired ? 'expired' : 'active',
@@ -152,79 +135,29 @@ export async function GET(request: NextRequest) {
         totalDownvotes,
         netScore,
         voterCount,
-        userVote: userVote ? userVote.get('voteType') : null
+        userVote: userVote ? userVote.voteType : null
       };
     });
 
+    // Cache the processed proposals with votes for this user
+    if (userId) {
+      cache.set(`${CACHE_KEYS.PROPOSALS_WITH_VOTES}_${userId}`, proposals, CACHE_TTL.PROPOSALS);
+    }
+
     // Only update voting results if there are missing entries (reduce API calls)
     const missingResults = proposals.filter(proposal => 
-      !votingResultRows.find((row: any) => row.get('Proposal ID') === proposal.proposalId)
+      !votingResultRows.find((row: any) => row.proposalId === proposal.proposalId)
     );
     
     // Batch create missing voting result entries to reduce API calls
     if (missingResults.length > 0) {
       try {
-        for (const proposal of missingResults) {
-          await votingResultsSheet.addRow({
-            'Proposal ID': proposal.proposalId,
-            'Proposal Title': proposal.proposalTitle,
-            'Total Upvotes': '0',
-            'Total Downvotes': '0',
-            'Net Score': '0',
-            'Voter Count': '0',
-            'Voting Deadline': proposal.votingDeadline,
-            'Status': proposal.status,
-            'Last Updated': new Date().toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'UTC',
-      timeZoneName: 'short'
-    })
-          });
-        }
+        await googleSheetsService.updateVotingResults(missingResults);
+        // Invalidate cache after updating
+        cache.delete(CACHE_KEYS.VOTING_RESULTS);
       } catch (writeError) {
         console.warn('Warning: Could not create voting result entries due to quota limits:', writeError instanceof Error ? writeError.message : String(writeError));
         // Continue without creating entries - the system will still work for reading
-      }
-    }
-    
-    // Update status for existing entries only if status has changed (reduce writes)
-    const statusUpdates = [];
-    for (const proposal of proposals) {
-      const existingResult = votingResultRows.find((row: any) => 
-        row.get('Proposal ID') === proposal.proposalId
-      );
-      
-      if (existingResult) {
-        const currentStatus = existingResult.get('Status');
-        if (currentStatus !== proposal.status) {
-          statusUpdates.push({ result: existingResult, proposal });
-        }
-      }
-    }
-    
-    // Batch update status changes
-    if (statusUpdates.length > 0) {
-      try {
-        for (const { result, proposal } of statusUpdates) {
-          result.set('Status', proposal.status);
-          result.set('Last Updated', new Date().toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'UTC',
-      timeZoneName: 'short'
-    }));
-          await result.save();
-        }
-      } catch (updateError) {
-        console.warn('Warning: Could not update voting result status due to quota limits:', updateError instanceof Error ? updateError.message : String(updateError));
-        // Continue - status will be updated on next successful request
       }
     }
 

@@ -1,18 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import InfoCard from "./components/InfoCard";
 import Footer from "./components/Footer";
 import HeroSection from "./components/HeroSection";
-import LogoutButton from "./components/LogoutButton";
-import AwardedTeamsConnect from "./components/AwardedTeamsConnect";
-import ReviewerAssignmentView from "./components/ReviewerAssignmentView";
-import { useAuth } from "./context/AuthContext";
-
+import InfoCard from "./components/InfoCard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from './context/AuthContext';
+import Image from "next/image";
 
 export default function Home() {
   const { user } = useAuth();
@@ -49,18 +46,6 @@ export default function Home() {
       setIsCheckingTeamStatus(false);
     }
   };
-
-  // Show loading while checking team status for team leaders
-  if (user?.role === 'team_leader' && isCheckingTeamStatus) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9050E9] mx-auto mb-4"></div>
-          <p className="text-gray-300">Checking your team status...</p>
-        </div>
-      </div>
-    );
-  }
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -180,6 +165,18 @@ export default function Home() {
     };
   }, []);
 
+  // Show loading while checking team status for team leaders
+  if (user?.role === 'team_leader' && isCheckingTeamStatus) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9050E9] mx-auto mb-4"></div>
+          <p className="text-gray-300">Checking your team status...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
@@ -192,28 +189,87 @@ export default function Home() {
         <Header />
         
         <div className="flex flex-1 relative z-10">
-          {!(user?.role === 'team_leader' && isAwardedTeamMember) && user?.role !== 'reviewer' && <Sidebar />}
+          {!(user?.role === 'team_leader' && isAwardedTeamMember) && <Sidebar />}
           
-          <main className={`flex-1 p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team_leader' && isAwardedTeamMember) || user?.role === 'reviewer' ? 'max-w-4xl mx-auto' : ''}`}>
+          <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team_leader' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team_leader' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
             {user?.role === 'reviewer' ? (
-              // Reviewer Dashboard
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="w-full">
-                  <div className="text-center mb-8">
-                    <h1 className="font-montserrat font-bold text-4xl text-white mb-4">
-                      Welcome to Review Circle
-                    </h1>
-                    <p className="font-montserrat text-xl text-gray-300">
-                      Your reviewer assignments and responsibilities
-                    </p>
-                  </div>
+              // Default Dashboard for Reviewers with Sidebar
+              <>
+                <HeroSection />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 relative z-10">
+                  <InfoCard 
+                    title="Announcements" 
+                    icon="announcement-header-icon.svg"
+                    content={[
+                      "Important Updates",
+                      "Latest Posts"
+                    ]}
+                    linkText="See all announcements"
+                    linkHref="/announcements"
+                  />
                   
-                  {/* Reviewer Dashboard */}
-                  <div className="relative z-10">
-                    <ReviewerAssignmentView />
-                  </div>
+                  <InfoCard 
+                    title="Requirement Documents" 
+                    icon="requirement-header-icon.svg"
+                    content={[
+                      "Project Requirements",
+                      "Technical Specifications",
+                      "Guidelines"
+                    ]}
+                    linkText="View documents"
+                    linkHref="/documents"
+                  />
+                  
+                  <InfoCard 
+                    title="Resources" 
+                    icon="resources-icon.svg"
+                    content={[
+                      "Helpful Links",
+                      "Tools & Templates",
+                      "Reference Materials"
+                    ]}
+                    linkText="Browse resources"
+                    linkHref="/resources"
+                  />
+                  
+                  <InfoCard 
+                    title="Vote for Proposals" 
+                    icon="vote-icon.svg"
+                    content={[
+                      "Review Proposals",
+                      "Cast Your Vote",
+                      "View Results"
+                    ]}
+                    linkText="Vote now"
+                    linkHref="/vote-proposals"
+                  />
+                  
+                  <InfoCard 
+                    title="Process Documentation" 
+                    icon="process-header-icon.svg"
+                    content={[
+                      "Workflows",
+                      "Procedures",
+                      "Guidelines"
+                    ]}
+                    linkText="View processes"
+                    linkHref="/processes"
+                  />
+                  
+                  <InfoCard 
+                    title="Support" 
+                    icon="support-icon.svg"
+                    content={[
+                      "Get Help",
+                      "Submit Tickets",
+                      "FAQ"
+                    ]}
+                    linkText="Get support"
+                    linkHref="/support"
+                  />
                 </div>
-              </div>
+              </>
             ) : user?.role === 'team_leader' && isAwardedTeamMember ? (
               // Simplified Team Dashboard
               <div className="min-h-screen flex items-center justify-center">
@@ -333,8 +389,6 @@ export default function Home() {
           </main>
         </div>
         
-        <LogoutButton />
-  
         <Footer />
       </div>
     </ProtectedRoute>

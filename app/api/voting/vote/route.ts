@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+import { getVotingDurationDays } from '@/lib/voting-settings';
+import { googleSheetsService } from '@/lib/google-sheets-service';
+import { cache, CACHE_KEYS } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,25 +22,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
-    await doc.loadInfo();
+    // Get voting duration from settings
+    const votingDurationDays = await getVotingDurationDays();
 
-    // Get required sheets
-    const votesSheet = doc.sheetsByTitle['Votes'];
-    const votingResultsSheet = doc.sheetsByTitle['Voting Results'];
-    const proposalsSheet = doc.sheetsByTitle['RD'];
-
-    if (!votesSheet || !votingResultsSheet || !proposalsSheet) {
-      return NextResponse.json({
-        success: false,
-        message: 'Required sheets not found'
-      }, { status: 500 });
-    }
-
-    // Load data
-    const voteRows = await votesSheet.getRows();
-    const votingResultRows = await votingResultsSheet.getRows();
-    const proposalRows = await proposalsSheet.getRows();
+    // Load data using the service
+    const voteRows = await googleSheetsService.getVotes();
+    const proposalRows = await googleSheetsService.getProposals();
 
     // Extract proposal index from proposalId (e.g., PROP-001 -> index 0)
     const proposalMatch = proposalId.match(/PROP-(\d+)/);
@@ -66,10 +48,53 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Check if voting period is still active (30 days from submission date)
-    const submissionDateStr = proposal.get('Submission Date');
-    const submissionDate = submissionDateStr ? new Date(submissionDateStr) : new Date();
-    const votingDeadline = new Date(submissionDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+    // Check if voting period is still active using stored deadline
+    const submissionDateStr = proposal.submissionDate;
+    const votingDeadlineStr = proposal.votingDeadline;
+    
+    let submissionDate;
+    let votingDeadline;
+    
+    if (submissionDateStr) {
+      // Try to parse the human-readable format: "August 24, 2025 at 12:15 PM UTC"
+      const humanReadableMatch = submissionDateStr.match(/^(\w+ \d+, \d+) at (\d+:\d+ (?:AM|PM)) UTC$/);
+      if (humanReadableMatch) {
+        const [, datePart, timePart] = humanReadableMatch;
+        submissionDate = new Date(`${datePart} ${timePart} UTC`);
+      } else {
+        // Fallback to standard Date parsing
+        submissionDate = new Date(submissionDateStr);
+      }
+    } else {
+      submissionDate = new Date();
+    }
+    
+    // Handle invalid dates
+    if (isNaN(submissionDate.getTime())) {
+      submissionDate = new Date();
+    }
+    
+    // Use stored voting deadline if available, otherwise calculate from submission date
+    if (votingDeadlineStr) {
+      // Try to parse the human-readable format: "August 24, 2025 at 12:15 PM UTC"
+      const humanReadableMatch = votingDeadlineStr.match(/^(\w+ \d+, \d+) at (\d+:\d+ (?:AM|PM)) UTC$/);
+      if (humanReadableMatch) {
+        const [, datePart, timePart] = humanReadableMatch;
+        votingDeadline = new Date(`${datePart} ${timePart} UTC`);
+      } else {
+        // Fallback to standard Date parsing
+        votingDeadline = new Date(votingDeadlineStr);
+      }
+      
+      // Handle invalid dates - fallback to calculated deadline
+      if (isNaN(votingDeadline.getTime())) {
+        votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+      }
+    } else {
+      // For older proposals without stored deadline, calculate from submission date
+      votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+    }
+    
     const now = new Date();
 
     // Check if voting is still active based on actual submission date
@@ -84,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user has already voted on this proposal
     const existingVote = voteRows.find((row: any) => 
-      row.get('proposalId') === proposalId && row.get('userId') === userId
+      row.proposalId === proposalId && row.userId === userId
     );
 
     if (existingVote) {
@@ -94,140 +119,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Add new vote
-    const voteId = `VOTE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    await votesSheet.addRow({
-      'voteId': voteId,
-      'proposalId': proposalId,
-      'userId': userId,
-      'username': username,
-      'voteType': voteType,
-      'votedAt': new Date().toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC',
-        timeZoneName: 'short'
-      }),
-      'ipAddress': request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-      'userAgent': request.headers.get('user-agent') || 'unknown'
-    });
+    // Add new vote using the service
+    await googleSheetsService.addVote(proposalId, userId, username, voteType);
 
-    // Recalculate voting results (reload to include the new vote)
-    const updatedVoteRows = await votesSheet.getRows();
-    const allVotesForProposal = updatedVoteRows.filter((row: any) => 
-      row.get('proposalId') === proposalId
-    );
+    // Invalidate user-specific proposal cache
+    cache.delete(`${CACHE_KEYS.PROPOSALS_WITH_VOTES}_${userId}`);
 
-    // Count all votes for this proposal
-    let upvotes = 0;
-    let downvotes = 0;
-    const voterIds = new Set<string>();
-
-    allVotesForProposal.forEach((row: any) => {
-      const rowVoteType = row.get('voteType');
-      const rowUserId = row.get('userId');
-      
-      if (rowVoteType === 'upvote') {
-        upvotes++;
-      } else if (rowVoteType === 'downvote') {
-        downvotes++;
-      }
-      voterIds.add(rowUserId);
-    });
-
-    const netScore = upvotes - downvotes;
-    const voterCount = voterIds.size;
-
-    // Update or create voting results
-    let votingResult = votingResultRows.find((row: any) => 
-      row.get('proposalId') === proposalId
-    );
-
-    if (votingResult) {
-      // Update existing result
-      votingResult.set('totalUpvotes', upvotes.toString());
-      votingResult.set('totalDownvotes', downvotes.toString());
-      votingResult.set('netScore', netScore.toString());
-      votingResult.set('voterCount', voterCount.toString());
-      votingResult.set('updatedAt', new Date().toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-    timeZoneName: 'short'
-  }));
-      await votingResult.save();
-    } else {
-      // Create new result
-      await votingResultsSheet.addRow({
-        'proposalId': proposalId,
-        'proposalTitle': proposal.get('Proposal Title') || '',
-        'reviewerName': proposal.get('Reviewer Name') || '',
-        'projectCategory': proposal.get('Project Category') || '',
-        'teamSize': proposal.get('Team Size') || '',
-        'budgetEstimate': proposal.get('Budget Estimate') || '',
-        'timelineWeeks': proposal.get('Timeline (Weeks)') || '',
-        'proposalSummary': proposal.get('Proposal Summary') || '',
-        'technicalApproach': proposal.get('Technical Approach') || '',
-        'submissionDate': submissionDate.toISOString(),
-        'votingDeadline': votingDeadline.toISOString(),
-        'status': 'active',
-        'totalUpvotes': upvotes.toString(),
-        'totalDownvotes': downvotes.toString(),
-        'netScore': netScore.toString(),
-        'voterCount': voterCount.toString(),
-        'isWinner': 'FALSE',
-        'createdAt': new Date().toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-    timeZoneName: 'short'
-  }),
-        'updatedAt': new Date().toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-    timeZoneName: 'short'
-  })
-      });
-    }
-
-    // Return updated proposal data
-    const updatedProposal = {
-      proposalId,
-      proposalTitle: proposal.get('Proposal Title') || '',
-      reviewerName: proposal.get('Reviewer Name') || '',
-      projectCategory: proposal.get('Project Category') || '',
-      teamSize: proposal.get('Team Size') || '',
-      budgetEstimate: proposal.get('Budget Estimate') || '',
-      timelineWeeks: proposal.get('Timeline (Weeks)') || '',
-      proposalSummary: proposal.get('Proposal Summary') || '',
-      technicalApproach: proposal.get('Technical Approach') || '',
-      submissionDate: proposal.get('Submission Date') || '',
-      votingDeadline: votingDeadline.toISOString(),
-      status: 'active' as const,
-      totalUpvotes: upvotes,
-      totalDownvotes: downvotes,
-      netScore,
-      voterCount,
-      userVote: voteType as 'upvote' | 'downvote'
-    };
-
+    // Return success response - the service handles all the vote counting and result updates
     return NextResponse.json({
       success: true,
-      message: 'Vote submitted successfully',
-      proposal: updatedProposal
+      message: 'Vote submitted successfully'
     });
 
   } catch (error) {

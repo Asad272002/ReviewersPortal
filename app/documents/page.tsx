@@ -1,15 +1,15 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import LogoutButton from "../components/LogoutButton";
-
-import ProtectedRoute from "../components/ProtectedRoute";
 import ProposalForm from "../components/ProposalForm";
+import ProtectedRoute from "../components/ProtectedRoute";
+import { useAuth } from '../context/AuthContext';
+import DocumentManager from "../components/admin/DocumentManager";
 import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
-import * as THREE from 'three';
 
 export default function Documents() {
   const [showProposalForm, setShowProposalForm] = useState(false);
@@ -136,85 +136,85 @@ export default function Documents() {
         <div className="flex flex-1 relative z-10">
           <Sidebar />
           
-          <main className="flex-1 p-8">
-            <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8 mb-8">
-              <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Key Guidelines for Proposers</h2>
-              <div className="space-y-6">
-                <div className="border-b border-white/20 pb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 flex items-center justify-center bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-full shadow-lg">
-                      <span className="text-white font-semibold">1</span>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+              <h2 className="font-montserrat font-semibold text-xl sm:text-2xl text-white mb-4 sm:mb-6">Key Guidelines for Proposers</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="border-b border-white/20 pb-4 sm:pb-6">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-full shadow-lg">
+                      <span className="text-white font-semibold text-sm sm:text-base">1</span>
                     </div>
-                    <h3 className="font-montserrat font-medium text-xl text-white">Proposal Structure</h3>
+                    <h3 className="font-montserrat font-medium text-lg sm:text-xl text-white">Proposal Structure</h3>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4] pl-11">All proposals must follow the standard structure outlined in the template document.</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4] pl-8 sm:pl-11">All proposals must follow the standard structure outlined in the template document.</p>
                 </div>
                 
-                <div className="border-b border-white/20 pb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 flex items-center justify-center bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-full shadow-lg">
-                      <span className="text-white font-semibold">2</span>
+                <div className="border-b border-white/20 pb-4 sm:pb-6">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-full shadow-lg">
+                      <span className="text-white font-semibold text-sm sm:text-base">2</span>
                     </div>
-                    <h3 className="font-montserrat font-medium text-xl text-white">Budget Breakdown</h3>
+                    <h3 className="font-montserrat font-medium text-lg sm:text-xl text-white">Budget Breakdown</h3>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4] pl-11">Detailed budget breakdowns must be included with clear justification for all expenses.</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4] pl-8 sm:pl-11">Detailed budget breakdowns must be included with clear justification for all expenses.</p>
                 </div>
                 
                 <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 flex items-center justify-center bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-full shadow-lg">
-                      <span className="text-white font-semibold">3</span>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-full shadow-lg">
+                      <span className="text-white font-semibold text-sm sm:text-base">3</span>
                     </div>
-                    <h3 className="font-montserrat font-medium text-xl text-white">Timeline and Milestones</h3>
+                    <h3 className="font-montserrat font-medium text-lg sm:text-xl text-white">Timeline and Milestones</h3>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4] pl-11">Clearly defined milestones with specific deliverables and timeline must be provided.</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4] pl-8 sm:pl-11">Clearly defined milestones with specific deliverables and timeline must be provided.</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8 shadow-2xl">
-              <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Proposal Document Checklist</h2>
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5">
-                    <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 shadow-2xl">
+              <h2 className="font-montserrat font-semibold text-xl sm:text-2xl text-white mb-4 sm:mb-6">Proposal Document Checklist</h2>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4]">Executive Summary (max 500 words)</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4]">Executive Summary (max 500 words)</p>
                 </div>
                 
-                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5">
-                    <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4]">Problem Statement and Solution</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4]">Problem Statement and Solution</p>
                 </div>
                 
-                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5">
-                    <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4]">Technical Implementation Details</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4]">Technical Implementation Details</p>
                 </div>
                 
-                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm">
-                    <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4]">Team Background and Experience</p>
-                </div>
-                
-                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm">
-                    <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
-                  </div>
-                  <p className="font-montserrat text-[#B8BAC4]">Budget Breakdown with Justification</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4]">Team Background and Experience</p>
                 </div>
                 
                 <div className="flex items-start gap-4">
                   <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm">
                     <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
                   </div>
-                  <p className="font-montserrat text-[#B8BAC4]">Timeline with Milestones</p>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4]">Budget Breakdown with Justification</p>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-6 h-6 mt-1 border-2 border-[#9050E9] rounded-lg flex items-center justify-center bg-white/5 backdrop-blur-sm">
+                    <div className="w-3 h-3 bg-gradient-to-r from-[#9050E9] to-[#A96AFF] rounded-sm"></div>
+                  </div>
+                  <p className="font-montserrat text-sm sm:text-base text-[#B8BAC4]">Timeline with Milestones</p>
                 </div>
               </div>
             </div>
@@ -291,8 +291,6 @@ export default function Documents() {
           </main>
         </div>
         
-        <LogoutButton />
-  
         <Footer />
       </div>
     </ProtectedRoute>

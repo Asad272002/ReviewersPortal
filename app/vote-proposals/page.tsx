@@ -45,17 +45,35 @@ export default function VoteProposalsPage() {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const animationIdRef = useRef<number | null>(null);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isVotingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (user) {
       fetchProposals();
       
-      // Set up auto-refresh every 30 seconds for real-time updates
-      const interval = setInterval(() => {
-        fetchProposals();
-      }, 30000);
+      // Set up auto-refresh with smart timing to avoid conflicts with voting
+      const scheduleNextRefresh = () => {
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+        }
+        
+        refreshTimeoutRef.current = setTimeout(() => {
+          // Only refresh if not currently voting
+          if (!isVotingRef.current) {
+            fetchProposals();
+          }
+          scheduleNextRefresh(); // Schedule the next refresh
+        }, 2 * 60 * 1000); // 2 minutes
+      };
       
-      return () => clearInterval(interval);
+      scheduleNextRefresh();
+      
+      return () => {
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+        }
+      };
     }
   }, [user]);
 
@@ -224,11 +242,11 @@ export default function VoteProposalsPage() {
   // Add visibility change listener to refresh when tab becomes active
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && user) {
+      if (!document.hidden && user && !isVotingRef.current) {
         fetchProposals();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
@@ -237,24 +255,47 @@ export default function VoteProposalsPage() {
     try {
       setLoading(true);
       const url = user ? `/api/voting/proposals?userId=${user.id}` : '/api/voting/proposals';
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        // Add cache control headers for better performance
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.success) {
         setProposals(data.proposals);
+        
+        // Show cache status in console for debugging
+        if (data.cached) {
+          console.log('📦 Proposals loaded from cache');
+        } else {
+          console.log('🔄 Proposals loaded from Google Sheets');
+        }
       } else {
         console.error('Failed to fetch proposals:', data.message);
+        // Don't throw here, just log the error to avoid breaking the UI
       }
     } catch (error) {
       console.error('Error fetching proposals:', error);
+      // Set empty proposals array on error to prevent UI issues
+      setProposals([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVote = async (proposalId: string, voteType: 'upvote' | 'downvote') => {
-    if (!user) return;
+    if (!user || isVotingRef.current) return;
     
+    // Set voting flag to prevent conflicts with auto-refresh
+    isVotingRef.current = true;
     setVotingLoading(proposalId);
     
     try {
@@ -284,6 +325,10 @@ export default function VoteProposalsPage() {
       alert('Error submitting vote. Please try again.');
     } finally {
       setVotingLoading(null);
+      // Clear voting flag after a short delay to ensure UI updates complete
+      setTimeout(() => {
+        isVotingRef.current = false;
+      }, 1000);
     }
   };
 
@@ -517,9 +562,19 @@ export default function VoteProposalsPage() {
                   </div>
                   <button
                     onClick={fetchProposals}
-                    className="bg-white/10 hover:bg-white/20 border border-[#9D9FA9] hover:border-white/40 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300"
+                    disabled={loading}
+                    className="bg-white/10 hover:bg-white/20 border border-[#9D9FA9] hover:border-white/40 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    🔄 Refresh
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        🔄 Refresh
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -543,7 +598,8 @@ export default function VoteProposalsPage() {
               ) : (
                 <div className="space-y-6">
                   {sortedProposals.map((proposal) => (
-                    <div key={proposal.proposalId} className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6 hover:border-white/40 hover:bg-white/15 transition-all duration-300">
+                    <div key={proposal.proposalId} className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6">{/* Removed hover animation */}
+                      
                       {/* Proposal Header */}
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">

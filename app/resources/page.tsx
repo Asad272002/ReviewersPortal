@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import LogoutButton from "../components/LogoutButton";
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import Image from "next/image";
@@ -201,22 +200,22 @@ export default function Resources() {
         <div className="flex flex-1">
           <Sidebar />
           
-          <main className="flex-1 p-8 relative z-10">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10">
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="bg-[#0C021E] rounded-2xl border border-[#9D9FA9] p-8">
-                  <div className="text-white font-montserrat text-lg">Loading resources...</div>
+                <div className="bg-[#0C021E] rounded-2xl border border-[#9D9FA9] p-6 sm:p-8">
+                  <div className="text-white font-montserrat text-base sm:text-lg">Loading resources...</div>
                 </div>
               </div>
             ) : error ? (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-6 text-red-300">
+              <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-4 sm:p-6 text-red-300">
                 {error}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8">
-                  <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Review Tools</h2>
-                  <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-4 sm:p-6 lg:p-8">
+                  <h2 className="font-montserrat font-semibold text-xl sm:text-2xl text-white mb-4 sm:mb-6">Review Tools</h2>
+                  <div className="space-y-4 sm:space-y-6">
                     {getResourcesByCategory('review-tools').length > 0 ? (
                       getResourcesByCategory('review-tools').map((resource, index) => (
                         <div key={resource.id} className={index < getResourcesByCategory('review-tools').length - 1 ? "border-b border-white/20 pb-6" : ""}>
@@ -358,8 +357,6 @@ export default function Resources() {
         
 
         
-        <LogoutButton />
-  
         <Footer />
       </div>
     </ProtectedRoute>

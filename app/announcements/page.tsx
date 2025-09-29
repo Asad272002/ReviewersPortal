@@ -6,9 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
-import LogoutButton from "../components/LogoutButton";
 import ProtectedRoute from "../components/ProtectedRoute";
-import AnnouncementManager from "../components/admin/AnnouncementManager";
+
 import Image from "next/image";
 
 interface Announcement {
@@ -29,7 +28,6 @@ export default function Announcements() {
   const [importantUpdates, setImportantUpdates] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -327,107 +325,6 @@ export default function Announcements() {
           
           <main className="flex-1 p-8 relative">
             <div className="relative z-10">
-              {/* Admin/Team Leader Controls */}
-                {(user?.role === 'admin' || user?.role === 'team_leader') && (
-                <div className="mb-6">
-                  <button
-                    onClick={() => setShowAdminPanel(!showAdminPanel)}
-                    className="bg-[#0C021E] hover:bg-white/10 border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 mb-4"
-                  >
-                    {showAdminPanel ? 'Hide Management Panel' : 'Show Management Panel'}
-                  </button>
-                  
-                  {showAdminPanel && (
-                    <div className="mb-6 space-y-6">
-                      <AnnouncementManager onAnnouncementUpdate={fetchAnnouncements} />
-                      
-                      {/* Categorized Announcements View */}
-                      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-                        <h3 className="font-montserrat font-semibold text-xl text-white mb-4">📊 Announcements by Status</h3>
-                        
-                        {/* Live Announcements */}
-                        <div className="mb-6">
-                          <h4 className="font-montserrat font-medium text-lg text-green-400 mb-3 flex items-center gap-2">
-                            🟢 Live Announcements ({categorizedAnnouncements.live?.length || 0})
-                          </h4>
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {categorizedAnnouncements.live?.length > 0 ? (
-                              categorizedAnnouncements.live.map((announcement) => (
-                                <div key={announcement.id} className="bg-green-600/20 border border-green-500/30 rounded-lg p-3">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <h5 className="font-medium text-white text-sm">{announcement.title}</h5>
-                                      <p className="text-xs text-gray-300 mt-1">{announcement.category}</p>
-                                    </div>
-                                    <span className="text-xs text-green-400 font-medium">
-                                      {announcement.expiresAt ? formatCountdown(getTimeRemaining(announcement.expiresAt)) : 'No expiry'}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-gray-400 text-sm">No live announcements</p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Upcoming Announcements */}
-                        <div className="mb-6">
-                          <h4 className="font-montserrat font-medium text-lg text-blue-400 mb-3 flex items-center gap-2">
-                            🔵 Upcoming Announcements ({categorizedAnnouncements.upcoming?.length || 0})
-                          </h4>
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {categorizedAnnouncements.upcoming?.length > 0 ? (
-                              categorizedAnnouncements.upcoming.map((announcement) => (
-                                <div key={announcement.id} className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-3">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <h5 className="font-medium text-white text-sm">{announcement.title}</h5>
-                                      <p className="text-xs text-gray-300 mt-1">{announcement.category}</p>
-                                    </div>
-                                    <span className="text-xs text-blue-400 font-medium">
-                                      Starts: {formatDate(announcement.createdAt)}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-gray-400 text-sm">No upcoming announcements</p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Expired Announcements */}
-                        <div>
-                          <h4 className="font-montserrat font-medium text-lg text-gray-400 mb-3 flex items-center gap-2">
-                            ⚫ Expired Announcements ({categorizedAnnouncements.expired?.length || 0})
-                          </h4>
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {categorizedAnnouncements.expired?.length > 0 ? (
-                              categorizedAnnouncements.expired.map((announcement) => (
-                                <div key={announcement.id} className="bg-gray-600/20 border border-gray-500/30 rounded-lg p-3">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <h5 className="font-medium text-white text-sm">{announcement.title}</h5>
-                                      <p className="text-xs text-gray-300 mt-1">{announcement.category}</p>
-                                    </div>
-                                    <span className="text-xs text-gray-400 font-medium">
-                                      Expired: {announcement.expiresAt ? formatDate(announcement.expiresAt) : 'N/A'}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-gray-400 text-sm">No expired announcements</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {loading ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="text-white font-montserrat bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6">Loading announcements...</div>
@@ -559,7 +456,6 @@ export default function Announcements() {
           </main>
         </div>
         
-        <LogoutButton />
         <Footer />
       </div>
     </ProtectedRoute>
