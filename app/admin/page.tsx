@@ -42,8 +42,6 @@ export default function AdminPanel() {
               </div>
             </main>
           </div>
-          <LogoutButton />
-  
           <Footer />
         </div>
       </ProtectedRoute>
