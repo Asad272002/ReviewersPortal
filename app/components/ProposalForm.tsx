@@ -62,13 +62,13 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
     const errors: {[key: string]: string} = {};
     
     // Validate reviewer name
-    const nameValidation = validateRequiredText(formData.reviewerName, 'Reviewer Name', 2, 100);
+    const nameValidation = validateRequiredText(formData.reviewerName, 'Reviewer Name', 1, 100);
     if (!nameValidation.isValid) {
       errors.reviewerName = nameValidation.error!;
     }
     
     // Validate proposal title
-    const titleValidation = validateRequiredText(formData.proposalTitle, 'Proposal Title', 5, 200);
+    const titleValidation = validateRequiredText(formData.proposalTitle, 'Proposal Title', 1, 200);
     if (!titleValidation.isValid) {
       errors.proposalTitle = titleValidation.error!;
     }
@@ -97,13 +97,13 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
     }
     
     // Validate proposal summary
-    const summaryValidation = validateRequiredText(formData.proposalSummary, 'Proposal Summary', 50, 2000);
+    const summaryValidation = validateRequiredText(formData.proposalSummary, 'Proposal Summary', 1, 2000);
     if (!summaryValidation.isValid) {
       errors.proposalSummary = summaryValidation.error!;
     }
     
     // Validate technical approach
-    const approachValidation = validateRequiredText(formData.technicalApproach, 'Technical Approach', 50, 2000);
+    const approachValidation = validateRequiredText(formData.technicalApproach, 'Technical Approach', 1, 2000);
     if (!approachValidation.isValid) {
       errors.technicalApproach = approachValidation.error!;
     }
