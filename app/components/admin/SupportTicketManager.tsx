@@ -17,6 +17,28 @@ interface SupportTicket {
   notes?: string;
 }
 
+// Safe date utilities to handle both ISO and legacy locale strings
+const parseDateSafe = (s: string | undefined | null) => {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const formatDateShort = (s: string | undefined | null) => {
+  const d = parseDateSafe(s);
+  return d ? d.toLocaleDateString() : (s || '—');
+};
+
+const formatDateLong = (s: string | undefined | null) => {
+  const d = parseDateSafe(s);
+  return d ? d.toLocaleString() : (s || '—');
+};
+
+const getTimeSafe = (s: string | undefined | null) => {
+  const d = parseDateSafe(s);
+  return d ? d.getTime() : 0;
+};
+
 export default function SupportTicketManager() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -255,7 +277,8 @@ export default function SupportTicketManager() {
               </thead>
               <tbody>
                 {filteredTickets
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  // Robust sorting with fallback for invalid dates
+                  .sort((a, b) => getTimeSafe(b.createdAt) - getTimeSafe(a.createdAt))
                   .map((ticket) => (
                     <tr key={ticket.id} className="border-b border-[#9D9FA9]/30 hover:bg-[#1A0B2E]">
                       <td className="font-montserrat text-white py-3 px-2 font-medium">
@@ -283,7 +306,7 @@ export default function SupportTicketManager() {
                         </span>
                       </td>
                       <td className="font-montserrat text-[#9D9FA9] py-3 px-2 text-sm">
-                        {new Date(ticket.createdAt).toLocaleDateString()}
+                        {formatDateShort(ticket.createdAt)}
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex gap-2">
@@ -394,8 +417,8 @@ export default function SupportTicketManager() {
                 </div>
                 
                 <div className="text-sm font-montserrat text-[#9D9FA9] opacity-70">
-                  <p>Created: {new Date(selectedTicket.createdAt).toLocaleString()}</p>
-                  <p>Last Updated: {new Date(selectedTicket.updatedAt).toLocaleString()}</p>
+                  <p>Created: {formatDateLong(selectedTicket.createdAt)}</p>
+                  <p>Last Updated: {formatDateLong(selectedTicket.updatedAt)}</p>
                 </div>
               </div>
             </div>
