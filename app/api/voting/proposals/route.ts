@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getVotingDurationDays } from '@/lib/voting-settings';
+import { getVotingDurationDays, getVotingDurationDaysAt, hasVotingDurationHistory } from '@/lib/voting-settings';
 import { googleSheetsService } from '@/lib/google-sheets-service';
 import { cache, CACHE_KEYS, CACHE_TTL } from '@/lib/cache';
 
@@ -31,8 +31,15 @@ export async function GET(request: NextRequest) {
       googleSheetsService.getVotes()
     ]);
 
-    // Process proposals with voting data
-    const proposals = proposalRows.map((proposalRow: any, index: number) => {
+    // Track proposals needing backfill of Voting Deadline in RD sheet
+    const deadlineBackfills: { index: number; votingDeadlineISO: string }[] = [];
+    // Only persist backfills when we have a reliable history timeline
+    const canPersistBackfill = await hasVotingDurationHistory();
+
+    // Process proposals with voting data (async to allow duration lookup per submission)
+    const proposals: any[] = [];
+    for (let index = 0; index < proposalRows.length; index++) {
+      const proposalRow: any = proposalRows[index];
       // Generate proposal ID from row index + 1
       const proposalId = `PROP-${String(index + 1).padStart(3, '0')}`;
       
@@ -84,13 +91,21 @@ export async function GET(request: NextRequest) {
           votingDeadline = new Date(votingDeadlineStr);
         }
         
-        // Handle invalid dates - fallback to calculated deadline
+        // Handle invalid dates - fallback to calculated deadline AND backfill to lock for future
         if (isNaN(votingDeadline.getTime())) {
-          votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+          const durationAtSubmission = await getVotingDurationDaysAt(submissionDate);
+          votingDeadline = new Date(submissionDate.getTime() + (durationAtSubmission * 24 * 60 * 60 * 1000));
+          // Queue backfill even if a malformed value exists to ensure this proposal is locked going forward
+          deadlineBackfills.push({ index, votingDeadlineISO: votingDeadline.toISOString() });
         }
       } else {
-        // For older proposals without stored deadline, calculate from submission date
-        votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+        // For older proposals without stored deadline, calculate from submission date using duration effective then
+        const durationAtSubmission = await getVotingDurationDaysAt(submissionDate);
+        votingDeadline = new Date(submissionDate.getTime() + (durationAtSubmission * 24 * 60 * 60 * 1000));
+        // Queue backfill to persist computed deadline only if history exists
+        if (canPersistBackfill && !isNaN(submissionDate.getTime())) {
+          deadlineBackfills.push({ index, votingDeadlineISO: votingDeadline.toISOString() });
+        }
       }
       
       const now = new Date();
@@ -118,7 +133,7 @@ export async function GET(request: NextRequest) {
       
       const netScore = totalUpvotes - totalDownvotes;
 
-      return {
+      proposals.push({
         proposalId,
         proposalTitle: proposalRow.proposalTitle || '',
         reviewerName: proposalRow.reviewerName || '',
@@ -136,12 +151,21 @@ export async function GET(request: NextRequest) {
         netScore,
         voterCount,
         userVote: userVote ? userVote.voteType : null
-      };
-    });
+      });
+    }
 
     // Cache the processed proposals with votes for this user
     if (userId) {
       cache.set(`${CACHE_KEYS.PROPOSALS_WITH_VOTES}_${userId}`, proposals, CACHE_TTL.PROPOSALS);
+    }
+
+    // Persist computed deadlines for proposals missing stored values
+    if (canPersistBackfill && deadlineBackfills.length > 0) {
+      try {
+        await googleSheetsService.backfillProposalVotingDeadlines(deadlineBackfills);
+      } catch (deadlineError) {
+        console.warn('Warning: Could not backfill Voting Deadline due to quota or sheet error:', deadlineError instanceof Error ? deadlineError.message : String(deadlineError));
+      }
     }
 
     // Only update voting results if there are missing entries (reduce API calls)
