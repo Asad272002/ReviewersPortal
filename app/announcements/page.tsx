@@ -284,15 +284,17 @@ export default function Announcements() {
     }
   };
   
-  // Filter announcements based on status (automatically remove expired ones)
+  // Filter announcements based on status: show only items marked as live and not past expiry
   const liveAnnouncements = announcements.filter(a => {
+    if (a.status !== 'live') return false;
     if (!a.expiresAt) return true; // No expiration date means always live
     const timeRemaining = getTimeRemaining(a.expiresAt);
     return timeRemaining !== null; // Only show if not expired
   });
   
-  // Filter important updates based on expiration
+  // Filter important updates based on status and expiration
   const liveImportantUpdates = importantUpdates.filter(a => {
+    if (a.status !== 'live') return false;
     if (!a.expiresAt) return true; // No expiration date means always live
     const timeRemaining = getTimeRemaining(a.expiresAt);
     return timeRemaining !== null; // Only show if not expired
@@ -376,7 +378,7 @@ export default function Announcements() {
                               )}
                               {announcement.expiresAt && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-blue-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : 'Time Left: '}{formatCountdown(getTimeRemaining(announcement.expiresAt))}</span>
+                                  <span className="text-blue-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : 'Time Left: '}{announcement.status === 'expired' ? 'Expired' : formatCountdown(getTimeRemaining(announcement.expiresAt))}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
@@ -435,7 +437,7 @@ export default function Announcements() {
                                   <span>📅 Expires: {announcement.expiresAt ? formatDate(announcement.expiresAt) : 'No expiry'}</span>
                                 </div>
                               )}
-                              {announcement.expiresAt && getTimeRemaining(announcement.expiresAt) && (
+                              {announcement.expiresAt && announcement.status !== 'expired' && getTimeRemaining(announcement.expiresAt) && (
                                 <div className="flex items-center gap-2">
                                   <span className="text-yellow-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : ''}{formatCountdown(getTimeRemaining(announcement.expiresAt)!)}</span>
                                 </div>

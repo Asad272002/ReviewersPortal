@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { validateRequiredText, validateInput, sanitizeInput } from '../../../utils/validation';
 
 export const runtime = 'nodejs';
 
@@ -57,36 +58,53 @@ export async function GET(_req: Request) {
 // POST /api/admin/announcements (create)
 export async function POST(req: Request) {
   try {
-    const { id, title, content, category, duration, expiresAt } = await req.json();
+    const { id, title, content, category, duration, expiresAt, status } = await req.json();
 
     if (!title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 });
     }
+    if (!content) {
+      return NextResponse.json({ error: 'content is required' }, { status: 400 });
+    }
+
+    // Validate against formula injection and invalid inputs
+    const titleReq = validateRequiredText(title, 'Title', 1, 200);
+    if (!titleReq.isValid) return NextResponse.json({ error: titleReq.error }, { status: 400 });
+    const contentReq = validateRequiredText(content, 'Content', 1, 2000);
+    if (!contentReq.isValid) return NextResponse.json({ error: contentReq.error }, { status: 400 });
+    const titleInj = validateInput(title, 'Title');
+    if (!titleInj.isValid) return NextResponse.json({ error: titleInj.error }, { status: 400 });
+    const contentInj = validateInput(content, 'Content');
+    if (!contentInj.isValid) return NextResponse.json({ error: contentInj.error }, { status: 400 });
+
+    const safeTitle = sanitizeInput(title);
+    const safeContent = sanitizeInput(content);
 
     const announcementId = id || `ann_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const doc = await initializeGoogleSheets();
     const sheet = await getAnnouncementsSheet(doc);
-    const now = new Date().toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-    timeZoneName: 'short'
-  });
+
+    const nowISO = new Date().toISOString();
+    const allowedStatuses = ['live', 'expired', 'upcoming'];
+    const finalStatus = allowedStatuses.includes(status) ? status : 'live';
+
+    const expiresAtValue = expiresAt
+      ? String(expiresAt)
+      : duration
+        ? new Date(Date.now() + Number(duration) * 24 * 60 * 60 * 1000).toISOString()
+        : '';
 
     await sheet.addRow({
       id: announcementId,
-      title,
-      content,
+      title: safeTitle,
+      content: safeContent,
       category,
-      status: 'live', // Default status for new announcements
+      status: finalStatus,
       duration: duration?.toString() ?? '',
-      expiresAt: expiresAt ?? '',
-      createdAt: now,
-      updatedAt: now,
+      expiresAt: expiresAtValue,
+      createdAt: nowISO,
+      updatedAt: nowISO,
     });
 
     return NextResponse.json({ message: 'Announcement created' }, { status: 201 });

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       'Content': process.content.substring(0, 500) + (process.content.length > 500 ? '...' : ''), // Truncate long content
       'Category': process.category,
       'Order': process.order.toString(),
-      'Status': process.status.charAt(0).toUpperCase() + process.status.slice(1),
+      'Status': process.status.toLowerCase(),
       'Attachments': [
         ...process.attachments.links.map(link => `${link.title}: ${link.url}`),
         ...process.attachments.files.map(file => `${file.title}: ${file.url}`)

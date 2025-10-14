@@ -12,8 +12,7 @@ const protectedRoutes = [
   '/resources',
   '/support',
   '/vote-proposals',
-  '/chat',
-  '/admin'
+  '/chat'
 ]
 
 // Define public routes that don't require authentication
@@ -25,7 +24,7 @@ const publicRoutes = [
 
 // Define role-based route access
 const roleBasedRoutes = {
-  admin: ['/admin-management', '/admin'],
+  admin: ['/admin-management'],
   reviewer: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/chat'],
   team_leader: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/chat']
 }

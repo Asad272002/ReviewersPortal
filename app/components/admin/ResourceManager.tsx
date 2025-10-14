@@ -28,6 +28,8 @@ export default function ResourceManager() {
     file: null as File | null,
   });
   const [uploading, setUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchResources();
@@ -39,9 +41,12 @@ export default function ResourceManager() {
       if (response.ok) {
         const data = await response.json();
         setResources(data.resources || []);
+      } else {
+        setErrorMessage('Failed to fetch resources');
       }
     } catch (error) {
       console.error('Error fetching resources:', error);
+      setErrorMessage('Error fetching resources');
     } finally {
       setIsLoading(false);
     }
@@ -50,6 +55,8 @@ export default function ResourceManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
     
     try {
       let fileUrl = '';
@@ -70,7 +77,8 @@ export default function ResourceManager() {
           fileUrl = uploadData.url;
           fileName = uploadData.fileName;
         } else {
-          throw new Error('File upload failed');
+          const err = await uploadResponse.json().catch(() => ({}));
+          throw new Error(err?.error || 'File upload failed');
         }
       }
 
@@ -100,11 +108,14 @@ export default function ResourceManager() {
       if (response.ok) {
         await fetchResources();
         resetForm();
+        setSuccessMessage(editingResource ? 'Resource updated successfully' : 'Resource created successfully');
       } else {
-        console.error('Error saving resource');
+        const err = await response.json().catch(() => ({}));
+        setErrorMessage(err?.error || 'Error saving resource');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving resource:', error);
+      setErrorMessage(error?.message || 'Error saving resource');
     } finally {
       setUploading(false);
     }
@@ -211,6 +222,16 @@ export default function ResourceManager() {
           <h4 className="font-montserrat font-semibold text-lg text-white mb-4">
             {editingResource ? 'Edit Resource' : 'Create New Resource'}
           </h4>
+          {errorMessage && (
+            <div className="mb-4 p-3 rounded bg-red-600/20 border border-red-600 text-red-200 font-montserrat">
+              {errorMessage}
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-4 p-3 rounded bg-green-600/20 border border-green-600 text-green-200 font-montserrat">
+              {successMessage}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block font-montserrat text-[#9D9FA9] mb-2">Title</label>
@@ -362,7 +383,7 @@ export default function ResourceManager() {
                       </div>
                     </td>
                     <td className="font-montserrat text-[#9D9FA9] py-3 px-2 text-sm">
-                      {new Date(resource.createdAt).toLocaleDateString()}
+                      {resource.createdAt}
                     </td>
                     <td className="py-3 px-2">
                       <div className="flex gap-2">

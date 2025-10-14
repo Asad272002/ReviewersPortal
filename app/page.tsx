@@ -290,7 +290,7 @@ export default function Home() {
                 </div>
               </div>
             ) : user?.role === 'admin' ? (
-              // Admin Dashboard
+              // Admin Dashboard with seven section flyers
               <div className="min-h-screen flex items-center justify-center">
                 <div className="w-full">
                   <div className="text-center mb-8">
@@ -301,20 +301,8 @@ export default function Home() {
                       System administration and management
                     </p>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-                    <InfoCard 
-                      title="User Management" 
-                      icon="admin-icon.svg"
-                      content={[
-                        "Manage user accounts",
-                        "Role assignments",
-                        "System settings"
-                      ]}
-                      linkText="Manage Users"
-                      linkHref="/admin-management"
-                    />
-                    
                     <InfoCard 
                       title="Announcements" 
                       icon="announcement-header-icon.svg"
@@ -326,16 +314,76 @@ export default function Home() {
                       linkText="Manage Announcements"
                       linkHref="/announcements"
                     />
-                    
+
                     <InfoCard 
-                      title="System Overview" 
-                      icon="dashboard-icon.svg"
+                      title="Requirement Documents" 
+                      icon="requirement-header-icon.svg"
                       content={[
-                        "View system status",
-                        "Monitor activities",
-                        "Generate reports"
+                        "Project Requirements",
+                        "Technical Specifications",
+                        "Guidelines"
                       ]}
-                      linkText="Manage System"
+                      linkText="View documents"
+                      linkHref="/documents"
+                    />
+
+                    <InfoCard 
+                      title="Resources" 
+                      icon="resources-icon.svg"
+                      content={[
+                        "Helpful Links",
+                        "Tools & Templates",
+                        "Reference Materials"
+                      ]}
+                      linkText="Browse resources"
+                      linkHref="/resources"
+                    />
+
+                    <InfoCard 
+                      title="Vote for Proposals" 
+                      icon="vote-icon.svg"
+                      content={[
+                        "Review Proposals",
+                        "Cast Your Vote",
+                        "View Results"
+                      ]}
+                      linkText="Manage voting"
+                      linkHref="/vote-proposals"
+                    />
+
+                    <InfoCard 
+                      title="Process Documentation" 
+                      icon="process-header-icon.svg"
+                      content={[
+                        "Workflows",
+                        "Procedures",
+                        "Guidelines"
+                      ]}
+                      linkText="View processes"
+                      linkHref="/processes"
+                    />
+
+                    <InfoCard 
+                      title="Contact & Support" 
+                      icon="support-icon.svg"
+                      content={[
+                        "Get Help",
+                        "Submit Tickets",
+                        "FAQ"
+                      ]}
+                      linkText="Manage support"
+                      linkHref="/support"
+                    />
+
+                    <InfoCard 
+                      title="Admin Management" 
+                      icon="admin-icon.svg"
+                      content={[
+                        "Manage user accounts",
+                        "Role assignments",
+                        "System settings"
+                      ]}
+                      linkText="Go to Admin Management"
                       linkHref="/admin-management"
                     />
                   </div>

@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { validateRequiredText, validateUrl, sanitizeInput } from '../../../../utils/validation';
 
 export const runtime = 'nodejs';
 
@@ -39,7 +40,35 @@ export async function PUT(req: Request, context: any) {
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
     const body = await req.json();
-    const { title, description, category, url, fileUrl, fileName } = body ?? {};
+    let { title, description, category, url, fileUrl, fileName } = body ?? {};
+
+    // Validate fields if provided
+    if (title !== undefined) {
+      const v = validateRequiredText(title, 'Title', 3, 200);
+      if (!v.isValid) return NextResponse.json({ error: v.error }, { status: 400 });
+    }
+    if (description !== undefined) {
+      const v = validateRequiredText(description, 'Description', 3, 2000);
+      if (!v.isValid) return NextResponse.json({ error: v.error }, { status: 400 });
+    }
+    if (category !== undefined) {
+      const allowedCategories = ['review-tools', 'reference-materials', 'training-materials'];
+      if (!allowedCategories.includes(category)) {
+        return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
+      }
+    }
+    if (url !== undefined) {
+      const v = validateUrl(url);
+      if (!v.isValid) return NextResponse.json({ error: v.error }, { status: 400 });
+    }
+
+    // Sanitize
+    title = title !== undefined ? sanitizeInput(String(title).trim()) : undefined;
+    description = description !== undefined ? sanitizeInput(String(description).trim()) : undefined;
+    category = category !== undefined ? sanitizeInput(String(category).trim()) : undefined;
+    url = url !== undefined ? sanitizeInput(String(url).trim()) : undefined;
+    fileUrl = fileUrl !== undefined ? sanitizeInput(String(fileUrl).trim()) : undefined;
+    fileName = fileName !== undefined ? sanitizeInput(String(fileName).trim()) : undefined;
 
     const doc = await initializeGoogleSheets();
     const sheet = await getResourcesSheet(doc);

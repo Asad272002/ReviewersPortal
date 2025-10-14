@@ -27,6 +27,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       );
     }
 
+    // Normalize and validate status
+    const allowedStatuses = ['published', 'draft', 'archived'] as const;
+    const normalizedStatus = typeof status === 'string' && allowedStatuses.includes(status.toLowerCase() as any)
+      ? (status.toLowerCase() as typeof allowedStatuses[number])
+      : 'draft';
+
     // Update the process
     currentProcesses[processIndex] = {
       ...currentProcesses[processIndex],
@@ -34,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       description,
       content,
       category,
-      status: status ?? 'draft',
+      status: normalizedStatus,
       order: order ?? 0,
       attachments: attachments ?? { links: [], files: [] },
       updatedAt: new Date().toISOString()

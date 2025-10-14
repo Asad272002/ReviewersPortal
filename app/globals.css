@@ -199,3 +199,14 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
 }
+
+/* Gentle floating animation for dashboard flyers */
+@keyframes floatY {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+
+.animate-float-slow {
+  animation: floatY 6s ease-in-out infinite;
+}

@@ -103,6 +103,10 @@ export async function loadProcessesFromSheets(): Promise<ProcessDoc[]> {
       const rawCategory = row.get('Category') || 'workflow';
       const mappedCategory = categoryMapping[rawCategory] || 'workflow';
       
+      const statusRaw = (row.get('Status') || 'draft').toString().toLowerCase();
+      const allowedStatuses = ['published', 'draft', 'archived'] as const;
+      const normalizedStatus = allowedStatuses.includes(statusRaw as any) ? (statusRaw as typeof allowedStatuses[number]) : 'draft';
+      
       return {
         id: row.get('ID') || '',
         title: row.get('Title') || '',
@@ -110,7 +114,7 @@ export async function loadProcessesFromSheets(): Promise<ProcessDoc[]> {
         content: row.get('Content') || '',
         category: mappedCategory,
         order: parseInt(row.get('Order') || '0'),
-        status: (row.get('Status') || 'draft') as 'published' | 'draft' | 'archived',
+        status: normalizedStatus,
         attachments,
         createdAt: row.get('Created At') || new Date().toISOString(),
         updatedAt: row.get('Updated At') || new Date().toISOString()

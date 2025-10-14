@@ -32,6 +32,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize and validate status
+    const allowedStatuses = ['published', 'draft', 'archived'] as const;
+    const normalizedStatus = typeof status === 'string' && allowedStatuses.includes(status.toLowerCase() as any)
+      ? (status.toLowerCase() as typeof allowedStatuses[number])
+      : 'draft';
+
     // Load current processes from Google Sheets
     const currentProcesses = await loadProcessesFromSheets();
 
@@ -43,7 +49,7 @@ export async function POST(request: NextRequest) {
        content,
        category,
        order: currentProcesses.length + 1,
-       status,
+       status: normalizedStatus,
        attachments: attachments || { links: [], files: [] },
        createdAt: new Date().toISOString(),
        updatedAt: new Date().toISOString()

@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import Image from 'next/image';
-import { validateInput, validateRequiredText, validateNumber } from '../utils/validation';
+import { validateInput, validateRequiredText, validateNumber, sanitizeInput } from '../utils/validation';
 
 interface FormData {
   reviewerName: string;
@@ -76,12 +76,21 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
     // Validate project category
     if (!formData.projectCategory) {
       errors.projectCategory = 'Project Category is required';
+    } else {
+      const allowedCategories = new Set(['development','research','infrastructure','community','other']);
+      if (!allowedCategories.has(formData.projectCategory)) {
+        errors.projectCategory = 'Please select a valid project category';
+      }
     }
     
-    // Validate team size
-    const teamSizeValidation = validateNumber(formData.teamSize, 'Team Size', 1, 100);
-    if (!teamSizeValidation.isValid) {
-      errors.teamSize = teamSizeValidation.error!;
+    // Validate team size (selection categories)
+    if (!formData.teamSize) {
+      errors.teamSize = 'Team Size is required';
+    } else {
+      const allowedTeamSizes = new Set(['1','2-5','6-10','11+']);
+      if (!allowedTeamSizes.has(formData.teamSize)) {
+        errors.teamSize = 'Please select a valid team size';
+      }
     }
     
     // Validate budget estimate
@@ -136,13 +145,26 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
     }
 
     try {
+      // Build sanitized payload
+      const payload = {
+        reviewerName: sanitizeInput(formData.reviewerName).trim(),
+        proposalTitle: sanitizeInput(formData.proposalTitle).trim(),
+        projectCategory: formData.projectCategory,
+        teamSize: formData.teamSize,
+        budgetEstimate: formData.budgetEstimate.trim(),
+        timelineWeeks: formData.timelineWeeks.trim(),
+        proposalSummary: sanitizeInput(formData.proposalSummary).trim(),
+        technicalApproach: sanitizeInput(formData.technicalApproach).trim(),
+        additionalNotes: sanitizeInput(formData.additionalNotes || '').trim(),
+      };
+
       // Call the API endpoint to submit the form data to Google Sheets
       const response = await fetch('/api/submit-proposal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       
       const result = await response.json();
@@ -199,7 +221,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
           <div className="flex items-center gap-3">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center ${submitStatus.success ? 'bg-success' : 'bg-error'}`}>
               {submitStatus.success ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               ) : (

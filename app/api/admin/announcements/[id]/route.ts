@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { validateRequiredText, validateInput, sanitizeInput } from '../../../../utils/validation';
 
 // Ensure Node.js runtime (google-* needs Node APIs)
 export const runtime = 'nodejs';
@@ -51,23 +52,30 @@ export async function PUT(req: Request, context: any) {
     }
 
     const row = rows[rowIndex];
-    const now = new Date().toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'UTC',
-    timeZoneName: 'short'
-  });
+    const nowISO = new Date().toISOString();
 
-    if (title !== undefined) row.set('title', title);
-    if (content !== undefined) row.set('content', content);
+    if (title !== undefined) {
+      const titleReq = validateRequiredText(title, 'Title', 1, 200);
+      if (!titleReq.isValid) return NextResponse.json({ error: titleReq.error }, { status: 400 });
+      const titleInj = validateInput(title, 'Title');
+      if (!titleInj.isValid) return NextResponse.json({ error: titleInj.error }, { status: 400 });
+      row.set('title', sanitizeInput(title));
+    }
+    if (content !== undefined) {
+      const contentReq = validateRequiredText(content, 'Content', 1, 2000);
+      if (!contentReq.isValid) return NextResponse.json({ error: contentReq.error }, { status: 400 });
+      const contentInj = validateInput(content, 'Content');
+      if (!contentInj.isValid) return NextResponse.json({ error: contentInj.error }, { status: 400 });
+      row.set('content', sanitizeInput(content));
+    }
     if (category !== undefined) row.set('category', category);
-    if (status !== undefined) row.set('status', status);
+    if (status !== undefined) {
+      const allowedStatuses = ['live', 'expired', 'upcoming'];
+      row.set('status', allowedStatuses.includes(status) ? status : row.get('status') || 'live');
+    }
     if (duration !== undefined) row.set('duration', duration?.toString() || '');
     if (expiresAt !== undefined) row.set('expiresAt', expiresAt || '');
-    row.set('updatedAt', now);
+    row.set('updatedAt', nowISO);
 
     await row.save();
 

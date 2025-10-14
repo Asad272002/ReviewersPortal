@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getVotingDurationDays } from '@/lib/voting-settings';
+import { getVotingDurationDays, getVotingDurationDaysAt } from '@/lib/voting-settings';
 import { googleSheetsService } from '@/lib/google-sheets-service';
 import { cache, CACHE_KEYS } from '@/lib/cache';
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get voting duration from settings
+    // Get voting duration from settings (used only when history is unavailable)
     const votingDurationDays = await getVotingDurationDays();
 
     // Load data using the service
@@ -86,13 +86,15 @@ export async function POST(request: NextRequest) {
         votingDeadline = new Date(votingDeadlineStr);
       }
       
-      // Handle invalid dates - fallback to calculated deadline
+      // Handle invalid dates - fallback to calculated deadline using historical duration
       if (isNaN(votingDeadline.getTime())) {
-        votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+        const durationAtSubmission = await getVotingDurationDaysAt(submissionDate);
+        votingDeadline = new Date(submissionDate.getTime() + (durationAtSubmission * 24 * 60 * 60 * 1000));
       }
     } else {
-      // For older proposals without stored deadline, calculate from submission date
-      votingDeadline = new Date(submissionDate.getTime() + (votingDurationDays * 24 * 60 * 60 * 1000));
+      // For older proposals without stored deadline, calculate from submission date using historical duration
+      const durationAtSubmission = await getVotingDurationDaysAt(submissionDate);
+      votingDeadline = new Date(submissionDate.getTime() + (durationAtSubmission * 24 * 60 * 60 * 1000));
     }
     
     const now = new Date();

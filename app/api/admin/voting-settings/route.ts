@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import { invalidateVotingSettingsCache } from '@/lib/voting-settings';
 
 // Initialize Google Sheets client
 const serviceAccountAuth = new JWT({
@@ -140,10 +141,77 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Capture old value for history (only for voting_duration_days changes)
+    const oldValue = String(settingRow.get('settingValue') || '');
+
+    // If changing voting_duration_days, append a history record first
+    if (settingKey === 'voting_duration_days' && oldValue !== String(settingValue)) {
+      let historySheet = doc.sheetsByTitle['Voting Settings History'];
+      if (!historySheet) {
+        historySheet = await doc.addSheet({
+          title: 'Voting Settings History',
+          headerValues: ['settingKey', 'oldValue', 'newValue', 'effectiveAt', 'updatedAt']
+        });
+      }
+
+      const historyRowData = {
+        'settingKey': 'voting_duration_days',
+        'oldValue': oldValue,
+        'newValue': String(settingValue),
+        'effectiveAt': new Date().toISOString(),
+        'updatedAt': new Date().toISOString()
+      };
+
+      // Retry addRow with exponential backoff to handle Google Sheets write quota (429)
+      {
+        const maxRetries = 5;
+        let attempt = 0;
+        while (true) {
+          try {
+            await historySheet.addRow(historyRowData);
+            break;
+          } catch (err: any) {
+            const status = err?.response?.status || err?.status || err?.code;
+            const msg = String(err?.message || '');
+            const isRateLimited = status === 429 || msg.includes('Quota exceeded') || String(err).includes('429');
+            attempt++;
+            if (!isRateLimited || attempt >= maxRetries) {
+              throw err;
+            }
+            const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000) + Math.floor(Math.random() * 250);
+            await new Promise(res => setTimeout(res, delayMs));
+          }
+        }
+      }
+    }
+
     // Update the setting
     settingRow.set('settingValue', settingValue);
     settingRow.set('updatedAt', new Date().toISOString());
-    await settingRow.save();
+    // Retry with exponential backoff to handle Google Sheets write quota (429)
+    {
+      const maxRetries = 5;
+      let attempt = 0;
+      while (true) {
+        try {
+          await settingRow.save();
+          break;
+        } catch (err: any) {
+          const status = err?.response?.status || err?.status || err?.code;
+          const msg = String(err?.message || '');
+          const isRateLimited = status === 429 || msg.includes('Quota exceeded') || String(err).includes('429');
+          attempt++;
+          if (!isRateLimited || attempt >= maxRetries) {
+            throw err;
+          }
+          const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000) + Math.floor(Math.random() * 250);
+          await new Promise(res => setTimeout(res, delayMs));
+        }
+      }
+    }
+
+    // Invalidate cache so new submissions use updated settings immediately
+    invalidateVotingSettingsCache();
 
     return NextResponse.json({
       success: true,
@@ -152,9 +220,12 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Error updating voting setting:', error);
+    const status = (error as any)?.response?.status || (error as any)?.status || (error as any)?.code;
+    const msg = String((error as any)?.message || '');
+    const isRateLimited = status === 429 || msg.includes('Quota exceeded') || String(error).includes('429');
     return NextResponse.json(
-      { success: false, message: 'Failed to update voting setting' },
-      { status: 500 }
+      { success: false, message: isRateLimited ? 'Rate limit: Google Sheets write quota exceeded. Please retry shortly.' : 'Failed to update voting setting' },
+      { status: isRateLimited ? 429 : 500 }
     );
   }
 }

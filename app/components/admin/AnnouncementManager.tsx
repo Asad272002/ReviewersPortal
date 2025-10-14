@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { validateRequiredText, validateInput, sanitizeInput } from '../../utils/validation';
 
 interface Announcement {
   id: string;
@@ -31,6 +32,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
     status: 'live' as 'live' | 'expired' | 'upcoming',
     duration: 30,
   });
+  const [formError, setFormError] = useState<string>('');
 
   useEffect(() => {
     fetchAnnouncements();
@@ -52,26 +54,36 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Format expiresAt to match the expected format: "Month Day, Year at HH:MM AM UTC"
-    const expiresAt = formData.duration 
-      ? (() => {
-          const expiresDate = new Date(Date.now() + formData.duration * 24 * 60 * 60 * 1000);
-          return expiresDate.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-            timeZone: 'UTC'
-          }).replace(' at ', ' at ') + ' UTC';
-        })()
+
+    // Clear any previous error
+    setFormError('');
+
+    // Frontend validation to prevent formula injection and invalid inputs
+    const titleReq = validateRequiredText(formData.title, 'Title', 1, 200);
+    if (!titleReq.isValid) { setFormError(titleReq.error || 'Invalid Title'); return; }
+    const contentReq = validateRequiredText(formData.content, 'Content', 1, 2000);
+    if (!contentReq.isValid) { setFormError(contentReq.error || 'Invalid Content'); return; }
+    const titleInj = validateInput(formData.title, 'Title');
+    if (!titleInj.isValid) { setFormError(titleInj.error || 'Invalid Title'); return; }
+    const contentInj = validateInput(formData.content, 'Content');
+    if (!contentInj.isValid) { setFormError(contentInj.error || 'Invalid Content'); return; }
+
+    // Sanitize to avoid spreadsheet formula interpretation
+    const safeTitle = sanitizeInput(formData.title);
+    const safeContent = sanitizeInput(formData.content);
+
+    // Store expiresAt as ISO string for consistency
+    const expiresAt = formData.duration
+      ? new Date(Date.now() + formData.duration * 24 * 60 * 60 * 1000).toISOString()
       : undefined;
 
     const announcementData = {
       id: editingAnnouncement?.id || `ann_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...formData,
+      title: safeTitle,
+      content: safeContent,
+      category: formData.category,
+      status: formData.status,
+      duration: formData.duration,
       expiresAt,
     };
 
@@ -79,14 +91,10 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
       const url = editingAnnouncement 
         ? `/api/admin/announcements/${editingAnnouncement.id}`
         : '/api/admin/announcements';
-      
       const method = editingAnnouncement ? 'PUT' : 'POST';
-      
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(announcementData),
       });
 
@@ -95,9 +103,11 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
         onAnnouncementUpdate?.();
         resetForm();
       } else {
-        console.error('Error saving announcement');
+        const err = await response.json().catch(() => ({}));
+        setFormError(err?.error || 'Error saving announcement');
       }
     } catch (error) {
+      setFormError('Error saving announcement');
       console.error('Error saving announcement:', error);
     }
   };
@@ -339,7 +349,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
                     </td>
                     <td className="p-3 font-montserrat text-[#9D9FA9] text-sm">
                       {announcement.expiresAt 
-                        ? new Date(announcement.expiresAt).toLocaleDateString()
+                        ? formatDateShort(announcement.expiresAt)
                         : 'Never'}
                     </td>
                     <td className="p-3">
@@ -370,3 +380,26 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
     </div>
   );
 }
+
+const parseCustomDate = (dateString: string): Date | null => {
+  if (!dateString) return null;
+  try {
+    if (dateString.includes(' at ') && dateString.includes(' UTC')) {
+      const cleanedDate = dateString.replace(' UTC', '').replace(' at ', ' ');
+      const date = new Date(cleanedDate);
+      if (!isNaN(date.getTime())) return date;
+    }
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) return date;
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const formatDateShort = (dateString?: string) => {
+  if (!dateString) return 'Never';
+  const d = parseCustomDate(dateString);
+  if (!d) return 'Invalid Date';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
