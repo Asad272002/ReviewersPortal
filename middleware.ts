@@ -31,6 +31,32 @@ const roleBasedRoutes = {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Special-case: if user hits /login and already has a valid session, redirect to dashboard
+  if (pathname === '/login') {
+    const token = request.cookies.get('token')?.value
+    if (token) {
+      try {
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key')
+        const { payload } = await jwtVerify(token, secret)
+        const userRole = (payload.role as string) || ''
+        const normalizedRole = userRole.toLowerCase() === 'reviewer' ? 'reviewer' : userRole
+        // Choose a sensible dashboard per role
+        let redirectPath = '/'
+        if (normalizedRole === 'admin') {
+          redirectPath = '/admin-management'
+        } else if (normalizedRole === 'reviewer' || normalizedRole === 'team_leader') {
+          redirectPath = '/'
+        }
+        return NextResponse.redirect(new URL(redirectPath, request.url))
+      } catch {
+        // Invalid token: allow access to login
+        return NextResponse.next()
+      }
+    }
+    // No token: allow access to login
+    return NextResponse.next()
+  }
   
   // Allow access to public routes and API routes (except protected ones)
   if (publicRoutes.includes(pathname) || 

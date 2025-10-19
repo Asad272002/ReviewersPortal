@@ -496,10 +496,26 @@ export default function VoteProposalsPage() {
 
   const sortedProposals = [...filteredProposals].sort((a, b) => {
     switch (sortBy) {
-      case 'popular':
-        return b.netScore - a.netScore;
-      case 'deadline':
-        return new Date(a.votingDeadline).getTime() - new Date(b.votingDeadline).getTime();
+      case 'popular': {
+        // Sort by netScore desc, then voterCount desc, then newest submission
+        if (b.netScore !== a.netScore) return b.netScore - a.netScore;
+        if (b.voterCount !== a.voterCount) return b.voterCount - a.voterCount;
+        return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime();
+      }
+      case 'deadline': {
+        // Move active proposals with valid deadlines to the top, soonest first; expired or invalid go last
+        const aTime = new Date(a.votingDeadline).getTime();
+        const bTime = new Date(b.votingDeadline).getTime();
+        const aInvalid = isNaN(aTime);
+        const bInvalid = isNaN(bTime);
+        const aExpired = a.status === 'expired';
+        const bExpired = b.status === 'expired';
+        if (aInvalid && !bInvalid) return 1;
+        if (!aInvalid && bInvalid) return -1;
+        if (aExpired && !bExpired) return 1;
+        if (!aExpired && bExpired) return -1;
+        return aTime - bTime;
+      }
       case 'newest':
       default:
         return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime();

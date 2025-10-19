@@ -301,7 +301,12 @@ export default function Announcements() {
   });
   
   const importantAnnouncements = liveImportantUpdates;
-  const generalAnnouncements = liveAnnouncements;
+  // Show general announcements that are either live (and not expired) or upcoming
+  const generalAnnouncements = announcements.filter(a => {
+    const isUpcoming = a.status === 'upcoming';
+    const isLive = a.status === 'live' && (!a.expiresAt || getTimeRemaining(a.expiresAt) !== null);
+    return isUpcoming || isLive;
+  });
   
   // Categorize announcements by status for admin view (combine both general and important)
   const allAnnouncements = [...announcements, ...importantUpdates];
