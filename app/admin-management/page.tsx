@@ -13,6 +13,7 @@ import ResourceManager from '../components/admin/ResourceManager';
 import ProcessManager from '../components/admin/ProcessManager';
 import AwardedTeamsManager from '../components/admin/AwardedTeamsManager';
 import SupportTicketManager from '../components/admin/SupportTicketManager';
+import UserManager from '../components/admin/UserManager';
 import VotingSettingsManager from '../components/admin/VotingSettingsManager';
 
 
@@ -305,6 +306,14 @@ export default function AdminManagement() {
             <h4 className="font-montserrat font-medium text-white mb-2">🏆 Awarded Teams Connect</h4>
             <p className="text-sm text-[#9D9FA9]">Manage team-reviewer assignments and chat connections</p>
           </button>
+
+          <button
+            onClick={() => setActiveSection('users')}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">👤 Manage Users</h4>
+            <p className="text-sm text-[#9D9FA9]">Add, update, delete users; reviewer-specific fields</p>
+          </button>
           
           <button
             onClick={() => setActiveSection('support-tickets')}
@@ -480,6 +489,23 @@ export default function AdminManagement() {
                 </button>
               </div>
               <AwardedTeamsManager onBack={() => setActiveSection('overview')} users={sheetData.users} />
+            </div>
+          </div>
+        );
+      case 'users':
+        return (
+          <div className="space-y-6">
+            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-montserrat font-semibold text-xl text-white">User Management</h3>
+                <button
+                  onClick={() => setActiveSection('overview')}
+                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
+                >
+                  ← Back to Overview
+                </button>
+              </div>
+              <UserManager />
             </div>
           </div>
         );

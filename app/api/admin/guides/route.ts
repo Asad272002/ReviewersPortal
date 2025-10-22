@@ -20,18 +20,9 @@ const initializeGoogleSheets = async () => {
   return doc;
 };
 
-// Get or create Guides sheet
+// Get Guides sheet if it exists (no auto-create)
 const getGuidesSheet = async (doc: GoogleSpreadsheet) => {
-  let sheet = doc.sheetsByTitle['Guides'];
-  
-  if (!sheet) {
-    sheet = await doc.addSheet({
-      title: 'Guides',
-      headerValues: ['id', 'title', 'description', 'content', 'order', 'isPublished', 'attachments', 'createdAt', 'updatedAt']
-    });
-  }
-  
-  return sheet;
+  return doc.sheetsByTitle['Guides'] ?? null;
 };
 
 // GET - Fetch all guides
@@ -39,6 +30,10 @@ export async function GET() {
   try {
     const doc = await initializeGoogleSheets();
     const sheet = await getGuidesSheet(doc);
+
+    if (!sheet) {
+      return NextResponse.json({ guides: [] });
+    }
     
     const rows = await sheet.getRows();
     const guides = rows.map(row => {
@@ -90,6 +85,10 @@ export async function POST(request: NextRequest) {
 
     const doc = await initializeGoogleSheets();
     const sheet = await getGuidesSheet(doc);
+
+    if (!sheet) {
+      return NextResponse.json({ error: 'Guides sheet not found' }, { status: 404 });
+    }
     
     const id = `guide_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toLocaleString('en-US', {
