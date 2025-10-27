@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { syncProcessesToSheets, loadProcessesFromSheets } from '../sync-helper';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
+    const { id } = params;
+    const numericId = isNaN(Number(id)) ? id : Number(id);
     const body = await request.json();
     const { title, description, content, category, status, order, attachments } = body;
-
-    // Load current processes from Google Sheets
-    const currentProcesses = await loadProcessesFromSheets();
-
-    // Find the process to update
-    const processIndex = currentProcesses.findIndex(p => p.id === id);
-    if (processIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Process document not found' },
-        { status: 404 }
-      );
-    }
 
     // Validate required fields
     if (!title || !description || !content || !category) {
@@ -27,39 +16,81 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       );
     }
 
-    // Normalize and validate status
+    // Check if process exists
+    const { data: existingRows, error: fetchError } = await supabaseAdmin
+      .from('processes')
+      .select('*')
+      .eq('ID', numericId)
+      .limit(1);
+
+    if (fetchError) {
+      console.error('Supabase processes fetch error:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch process' },
+        { status: 500 }
+      );
+    }
+
+    const existing = existingRows && existingRows[0];
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Process document not found' },
+        { status: 404 }
+      );
+    }
+
     const allowedStatuses = ['published', 'draft', 'archived'] as const;
     const normalizedStatus = typeof status === 'string' && allowedStatuses.includes(status.toLowerCase() as any)
       ? (status.toLowerCase() as typeof allowedStatuses[number])
       : 'draft';
 
-    // Update the process
-    currentProcesses[processIndex] = {
-      ...currentProcesses[processIndex],
-      title,
-      description,
-      content,
-      category,
-      status: normalizedStatus,
-      order: order ?? 0,
-      attachments: attachments ?? { links: [], files: [] },
-      updatedAt: new Date().toISOString()
+    const serializeAttachments = (att: any): string => {
+      if (!att) return '';
+      if (typeof att === 'string') return att;
+      const links = Array.isArray(att.links) ? att.links : [];
+      const files = Array.isArray(att.files) ? att.files : [];
+      const parts: string[] = [];
+      for (const l of links) {
+        if (l?.title && l?.url) parts.push(`${l.title}: ${l.url}`);
+      }
+      for (const f of files) {
+        if (f?.title && f?.url) parts.push(`${f.title}: ${f.url}`);
+      }
+      return parts.join(', ');
     };
 
-    // Sync updated processes to Google Sheets
-    try {
-      await syncProcessesToSheets(currentProcesses);
-    } catch (syncError) {
-      console.error('Auto-sync to sheets failed:', syncError);
+    const now = new Date().toISOString();
+
+    const payload: any = {
+      Title: title,
+      Description: description,
+      Content: content,
+      Category: category,
+      Status: normalizedStatus,
+      Order: order ?? 0,
+      Attachments: serializeAttachments(attachments),
+      UpdatedAt: now,
+    };
+
+    const { error: updateError } = await supabaseAdmin
+      .from('processes')
+      .update(payload)
+      .eq('ID', numericId);
+
+    if (updateError) {
+      console.error('Supabase processes update error:', updateError);
       return NextResponse.json(
-        { success: false, error: 'Failed to save to Google Sheets' },
+        { success: false, error: 'Failed to update process' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      process: currentProcesses[processIndex],
+    return NextResponse.json({
+      success: true,
+      process: {
+        ...existing,
+        ...payload,
+      },
       message: 'Process document updated successfully'
     });
   } catch (error) {
@@ -71,39 +102,50 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
+    const { id } = params;
+    const numericId = isNaN(Number(id)) ? id : Number(id);
 
-    // Load current processes from Google Sheets
-    const currentProcesses = await loadProcessesFromSheets();
+    // Fetch existing for return value
+    const { data: existingRows, error: fetchError } = await supabaseAdmin
+      .from('processes')
+      .select('*')
+      .eq('ID', numericId)
+      .limit(1);
 
-    // Find the process to delete
-    const processIndex = currentProcesses.findIndex(p => p.id === id);
-    if (processIndex === -1) {
+    if (fetchError) {
+      console.error('Supabase processes fetch error:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch process' },
+        { status: 500 }
+      );
+    }
+
+    const existing = existingRows && existingRows[0];
+    if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Process document not found' },
         { status: 404 }
       );
     }
 
-    // Remove the process
-    const deletedProcess = currentProcesses.splice(processIndex, 1)[0];
+    const { error: deleteError } = await supabaseAdmin
+      .from('processes')
+      .delete()
+      .eq('ID', numericId);
 
-    // Sync updated processes to Google Sheets
-    try {
-      await syncProcessesToSheets(currentProcesses);
-    } catch (syncError) {
-      console.error('Auto-sync to sheets failed:', syncError);
+    if (deleteError) {
+      console.error('Supabase processes delete error:', deleteError);
       return NextResponse.json(
-        { success: false, error: 'Failed to save to Google Sheets' },
+        { success: false, error: 'Failed to delete process' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      process: deletedProcess,
+    return NextResponse.json({
+      success: true,
+      process: existing,
       message: 'Process document deleted successfully'
     });
   } catch (error) {

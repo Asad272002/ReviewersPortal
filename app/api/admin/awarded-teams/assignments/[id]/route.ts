@@ -1,89 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-
-const jwt = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: SCOPES,
-});
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, jwt);
+export const runtime = 'nodejs';
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const { action, adminId, notes } = body;
+    const { action, adminId, notes } = body as { action: string; adminId?: string; notes?: string };
 
-    await doc.loadInfo();
-    
-    let assignmentsSheet = doc.sheetsByTitle['TeamReviewerAssignments'];
-    if (!assignmentsSheet) {
-      return NextResponse.json(
-        { success: false, message: 'Assignments sheet not found' },
-        { status: 404 }
-      );
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'Missing id param' }, { status: 400 });
+    }
+    if (!action) {
+      return NextResponse.json({ success: false, message: 'Missing action in body' }, { status: 400 });
     }
 
-    const rows = await assignmentsSheet.getRows();
-    const assignmentRow = rows.find(row => row.get('ID') === id);
-    
-    if (!assignmentRow) {
-      return NextResponse.json(
-        { success: false, message: 'Assignment not found' },
-        { status: 404 }
-      );
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('team_reviewer_assignments')
+      .select('*')
+      .eq('id', id)
+      .limit(1);
+
+    if (fetchErr) {
+      console.error('Supabase select assignment error:', fetchErr);
+      return NextResponse.json({ success: false, message: 'Failed to fetch assignment' }, { status: 500 });
     }
 
-    const currentTime = new Date().toISOString();
+    const row = (existing ?? [])[0];
+    if (!row) {
+      return NextResponse.json({ success: false, message: 'Assignment not found' }, { status: 404 });
+    }
+
+    const now = new Date().toISOString();
+    const updates: Record<string, any> = { updatedAt: now };
 
     switch (action) {
       case 'approve':
-        assignmentRow.set('Status', 'approved');
-        assignmentRow.set('ApprovedAt', currentTime);
+        updates.status = 'approved';
+        updates.approvedAt = now;
+        if (adminId) updates.approvedBy = adminId;
         break;
-
       case 'activate':
-        if (assignmentRow.get('Status') !== 'approved') {
+        if (row.status !== 'approved') {
           return NextResponse.json(
             { success: false, message: 'Assignment must be approved before activation' },
             { status: 400 }
           );
         }
-        assignmentRow.set('Status', 'active');
+        updates.status = 'active';
         break;
-
       case 'revoke':
-        assignmentRow.set('Status', 'revoked');
+        updates.status = 'revoked';
+        updates.revokedAt = now;
+        if (adminId) updates.revokedBy = adminId;
         break;
-
       case 'complete':
-        assignmentRow.set('Status', 'completed');
-        assignmentRow.set('CompletedAt', currentTime);
+        updates.status = 'completed';
+        updates.completedAt = now;
         break;
-
+      case 'update_notes':
+      case 'notes':
+        if (typeof notes === 'string') {
+          updates.notes = notes;
+        } else {
+          return NextResponse.json({ success: false, message: 'Notes must be a string' }, { status: 400 });
+        }
+        break;
       default:
-        return NextResponse.json(
-          { success: false, message: 'Invalid action' },
-          { status: 400 }
-        );
+        return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
     }
 
-    await assignmentRow.save();
+    const { data: updatedRows, error: updateErr } = await supabaseAdmin
+      .from('team_reviewer_assignments')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .limit(1);
+
+    if (updateErr) {
+      console.error('Supabase update assignment error:', updateErr);
+      return NextResponse.json({ success: false, message: 'Failed to update assignment' }, { status: 500 });
+    }
+
+    const updated = (updatedRows ?? [])[0] ?? { id, status: updates.status, updatedAt: now };
 
     return NextResponse.json({
       success: true,
       message: `Assignment ${action}d successfully`,
       data: {
-        id: assignmentRow.get('ID'),
-        status: assignmentRow.get('Status'),
-        updatedAt: assignmentRow.get('CompletedAt') || assignmentRow.get('ApprovedAt') || assignmentRow.get('AssignedAt')
-      }
+        id: updated.id,
+        status: updated.status,
+        updatedAt: updated.updatedAt ?? now,
+      },
     });
-
   } catch (error) {
     console.error('Error updating assignment:', error);
     return NextResponse.json(
@@ -93,37 +103,22 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
   }
 }
 
-export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    if (!id) return NextResponse.json({ success: false, message: 'Missing id param' }, { status: 400 });
 
-    await doc.loadInfo();
-    
-    let assignmentsSheet = doc.sheetsByTitle['TeamReviewerAssignments'];
-    if (!assignmentsSheet) {
-      return NextResponse.json(
-        { success: false, message: 'Assignments sheet not found' },
-        { status: 404 }
-      );
+    const { error: deleteErr } = await supabaseAdmin
+      .from('team_reviewer_assignments')
+      .delete()
+      .eq('id', id);
+
+    if (deleteErr) {
+      console.error('Supabase delete assignment error:', deleteErr);
+      return NextResponse.json({ success: false, message: 'Failed to delete assignment' }, { status: 500 });
     }
 
-    const rows = await assignmentsSheet.getRows();
-    const assignmentRow = rows.find(row => row.get('ID') === id);
-    
-    if (!assignmentRow) {
-      return NextResponse.json(
-        { success: false, message: 'Assignment not found' },
-        { status: 404 }
-      );
-    }
-
-    await assignmentRow.delete();
-
-    return NextResponse.json({
-      success: true,
-      message: 'Assignment deleted successfully'
-    });
-
+    return NextResponse.json({ success: true, message: 'Assignment deleted successfully' });
   } catch (error) {
     console.error('Error deleting assignment:', error);
     return NextResponse.json(

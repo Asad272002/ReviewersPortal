@@ -1,21 +1,11 @@
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-
-// Initialize Google Sheets client
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 // Cache for settings to avoid frequent API calls
 let settingsCache: { [key: string]: string } = {};
 let lastCacheUpdate = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Cache for Voting Settings History to reduce read requests and avoid 429s
+// Cache for Voting Settings History to reduce read requests
 type DurationHistoryEntry = { effectiveAtMs: number; oldValue: string; newValue: string };
 let historyCache: { entries: DurationHistoryEntry[]; lastCacheUpdate: number } = { entries: [], lastCacheUpdate: 0 };
 const HISTORY_CACHE_TTL = 60 * 1000; // 60 seconds
@@ -29,65 +19,35 @@ export function invalidateVotingSettingsCache() {
 export async function getVotingSetting(settingKey: string, defaultValue: string = ''): Promise<string> {
   try {
     const now = Date.now();
-    
-    // Check if cache is still valid
+
+    // Serve from cache if fresh
     if (now - lastCacheUpdate < CACHE_DURATION && settingsCache[settingKey]) {
       return settingsCache[settingKey];
     }
 
-    await doc.loadInfo();
-    
-    // Get Voting Settings sheet
-    let votingSettingsSheet = doc.sheetsByTitle['Voting Settings'];
-    if (!votingSettingsSheet) {
-      // Create sheet with default settings if it doesn't exist
-      votingSettingsSheet = await doc.addSheet({
-        title: 'Voting Settings',
-        headerValues: ['settingKey', 'settingValue', 'description', 'updatedAt']
-      });
-      
-      const defaultSettings = [
-        {
-          'settingKey': 'voting_duration_days',
-          'settingValue': '30',
-          'description': 'Number of days a proposal remains open for voting',
-          'updatedAt': new Date().toISOString()
-        },
-        {
-          'settingKey': 'allow_vote_changes',
-          'settingValue': 'TRUE',
-          'description': 'Allow users to change their votes on proposals',
-          'updatedAt': new Date().toISOString()
-        },
-        {
-          'settingKey': 'min_votes_required',
-          'settingValue': '5',
-          'description': 'Minimum number of votes required for a proposal to be considered',
-          'updatedAt': new Date().toISOString()
-        }
-      ];
-      
-      await votingSettingsSheet.addRows(defaultSettings);
+    const { data, error } = await supabaseAdmin
+      .from('voting_setting')
+      .select('*');
+
+    if (error) {
+      console.error('Supabase getVotingSetting error:', error);
+      return settingsCache[settingKey] || defaultValue;
     }
 
-    const rows = await votingSettingsSheet.getRows();
-    
     // Update cache with all settings
     settingsCache = {};
-    rows.forEach(row => {
-      const key = row.get('settingKey');
-      const value = row.get('settingValue');
+    (data || []).forEach((row: any) => {
+      const key = row.setting_key ?? row.settingKey;
+      const value = row.setting_value ?? row.settingValue;
       if (key && value !== undefined) {
-        settingsCache[key] = value;
+        settingsCache[String(key)] = String(value);
       }
     });
-    
     lastCacheUpdate = now;
-    
-    return settingsCache[settingKey] || defaultValue;
 
-  } catch (error) {
-    console.error('Error fetching voting setting:', error);
+    return settingsCache[settingKey] || defaultValue;
+  } catch (err) {
+    console.error('Error fetching voting setting:', err);
     return defaultValue;
   }
 }
@@ -95,31 +55,27 @@ export async function getVotingSetting(settingKey: string, defaultValue: string 
 // Fresh (no-cache) fetch for settings
 export async function getVotingSettingFresh(settingKey: string, defaultValue: string = ''): Promise<string> {
   try {
-    await doc.loadInfo();
-    
-    let votingSettingsSheet = doc.sheetsByTitle['Voting Settings'];
-    if (!votingSettingsSheet) {
-      votingSettingsSheet = await doc.addSheet({
-        title: 'Voting Settings',
-        headerValues: ['settingKey', 'settingValue', 'description', 'updatedAt']
-      });
+    const { data, error } = await supabaseAdmin
+      .from('voting_setting')
+      .select('*');
+
+    if (error) {
+      console.error('Supabase getVotingSettingFresh error:', error);
+      return defaultValue;
     }
 
-    const rows = await votingSettingsSheet.getRows();
-
-    // Build a temporary map instead of using cache
     const tempMap: { [key: string]: string } = {};
-    rows.forEach(row => {
-      const key = row.get('settingKey');
-      const value = row.get('settingValue');
+    (data || []).forEach((row: any) => {
+      const key = row.setting_key ?? row.settingKey;
+      const value = row.setting_value ?? row.settingValue;
       if (key && value !== undefined) {
-        tempMap[key] = value;
+        tempMap[String(key)] = String(value);
       }
     });
 
     return tempMap[settingKey] || defaultValue;
-  } catch (error) {
-    console.error('Error fetching voting setting (fresh):', error);
+  } catch (err) {
+    console.error('Error fetching voting setting (fresh):', err);
     return defaultValue;
   }
 }
@@ -139,7 +95,7 @@ export async function getVotingDurationDaysFresh(): Promise<number> {
 
 export async function getAllowVoteChanges(): Promise<boolean> {
   const allowStr = await getVotingSetting('allow_vote_changes', 'TRUE');
-  return allowStr.toUpperCase() === 'TRUE';
+  return String(allowStr).toUpperCase() === 'TRUE';
 }
 
 export async function getMinVotesRequired(): Promise<number> {
@@ -148,7 +104,7 @@ export async function getMinVotesRequired(): Promise<number> {
   return isNaN(min) ? 5 : Math.max(1, Math.min(100, min));
 }
 
-// Internal: Load and cache history entries with TTL and graceful fallback on 429
+// Internal: Load and cache history entries with TTL
 async function getDurationHistoryEntries(): Promise<DurationHistoryEntry[]> {
   const now = Date.now();
   // Serve from cache if fresh
@@ -157,34 +113,39 @@ async function getDurationHistoryEntries(): Promise<DurationHistoryEntry[]> {
   }
 
   try {
-    await doc.loadInfo();
-    const historySheet = doc.sheetsByTitle['Voting Settings History'];
+    const { data, error } = await supabaseAdmin
+      .from('voting_setting_history')
+      .select('*');
 
-    if (!historySheet) {
-      // Cache empty to avoid repeated load attempts
+    if (error) {
+      console.error('Supabase getDurationHistoryEntries error:', error);
+      // Return cached entries if available, else empty
+      if (historyCache.entries.length > 0) return historyCache.entries;
       historyCache = { entries: [], lastCacheUpdate: now };
       return historyCache.entries;
     }
 
-    const rows = await historySheet.getRows();
-    const entries: DurationHistoryEntry[] = rows
-      .filter(row => String(row.get('settingKey') || '').trim() === 'voting_duration_days')
-      .map(row => {
-        const effStr = String(row.get('effectiveAt') || row.get('updatedAt') || '');
+    const filtered = (data || []).filter((row: any) => {
+      const key = row.setting_key ?? row.settingKey;
+      return String(key) === 'voting_duration_days';
+    });
+
+    const entries: DurationHistoryEntry[] = filtered
+      .map((row: any) => {
+        const effStr = String(row.effective_at || row.effectiveAt || row.updated_at || row.updatedAt || '');
         const eff = new Date(effStr);
         return {
           effectiveAtMs: isNaN(eff.getTime()) ? 0 : eff.getTime(),
-          oldValue: String(row.get('oldValue') || ''),
-          newValue: String(row.get('newValue') || '')
+          oldValue: String(row.old_value ?? row.oldValue ?? ''),
+          newValue: String(row.new_value ?? row.newValue ?? ''),
         };
       })
-      .filter(e => e.effectiveAtMs > 0)
+      .filter((e) => e.effectiveAtMs > 0)
       .sort((a, b) => a.effectiveAtMs - b.effectiveAtMs);
 
     historyCache = { entries, lastCacheUpdate: now };
     return entries;
-  } catch (error) {
-    // On rate limit or error, return cached entries if available, otherwise empty
+  } catch (err) {
     if (historyCache.entries.length > 0) {
       return historyCache.entries;
     }
@@ -192,14 +153,12 @@ async function getDurationHistoryEntries(): Promise<DurationHistoryEntry[]> {
   }
 }
 
-
 export async function getVotingDurationDaysAt(at: Date): Promise<number> {
   try {
     const entries = await getDurationHistoryEntries();
 
     // No entries recorded yet -> assume current or cached setting has been effective
     if (entries.length === 0) {
-      // Prefer cached value if available to avoid extra loads
       const cached = settingsCache['voting_duration_days'];
       const cachedVal = parseInt(cached || '');
       if (!isNaN(cachedVal)) {
@@ -212,7 +171,7 @@ export async function getVotingDurationDaysAt(at: Date): Promise<number> {
     const target = at.getTime();
 
     // Find the first change after the target date; before that, the oldValue was effective
-    const firstAfter = entries.find(e => e.effectiveAtMs > target);
+    const firstAfter = entries.find((e) => e.effectiveAtMs > target);
     if (firstAfter) {
       const oldVal = parseInt(firstAfter.oldValue);
       if (!isNaN(oldVal)) {

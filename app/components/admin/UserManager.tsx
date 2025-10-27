@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { 
   validateRequiredText,
   validateEmail,
@@ -38,6 +38,13 @@ export default function UserManager() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // List controls
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'reviewer' | 'team_leader'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUser, setNewUser] = useState<AdminUser & { password?: string }>({
@@ -77,6 +84,11 @@ export default function UserManager() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Reset to first page when filters or search change
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter]);
 
   const resetForm = () => {
     setNewUser({
@@ -302,6 +314,27 @@ export default function UserManager() {
     }
   };
 
+  // Derived list: search + filters + pagination
+  const filteredUsers = users
+    .filter((u) => {
+      const q = search.trim().toLowerCase();
+      if (q) {
+        const hay = `${u.name || ''} ${u.username || ''} ${u.email || ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (roleFilter !== 'all' && (u.role || '') !== roleFilter) return false;
+      if (statusFilter !== 'all' && (u.status || 'active') !== statusFilter) return false;
+      return true;
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const pageStart = (page - 1) * pageSize;
+  const visibleUsers = filteredUsers.slice(pageStart, pageStart + pageSize);
+
+  const toggleExpand = (id: string) => {
+    setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -492,206 +525,322 @@ export default function UserManager() {
         </div>
       )}
 
-      {/* Users list */}
+      {/* Users list: controls + table */}
       <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6">
-        {users.length === 0 ? (
-          <p className="font-montserrat text-gray-300">No users found.</p>
+        <div className="flex flex-col md:flex-row gap-3 md:items-end md:justify-between mb-4">
+          <div className="flex-1">
+            <label className="block text-white font-montserrat mb-1">Search</label>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+              placeholder="Search by name, username, or email"
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-white font-montserrat mb-1">Role</label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as any)}
+                className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+              >
+                <option value="all">All</option>
+                <option value="admin">Admin</option>
+                <option value="reviewer">Reviewer</option>
+                <option value="team_leader">Team Leader</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-white font-montserrat mb-1">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-white font-montserrat mb-1">Rows per page</label>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {filteredUsers.length === 0 ? (
+          <p className="font-montserrat text-gray-300">No users match your filters.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {users.map((u) => (
-              <div key={u.id} className="bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-semibold text-white font-montserrat">{u.name}</h4>
-                    <p className="text-[#9D9FA9] font-montserrat text-sm">{u.username} • {u.role}</p>
-                    {u.email && (
-                      <p className="text-[#9D9FA9] font-montserrat text-sm">{u.email}</p>
-                    )}
-                    {u.role === 'reviewer' && (
-                      <div className="mt-2 text-sm font-montserrat text-[#D1D2D7] space-y-1">
-                        {u.expertise && <p><strong>Expertise:</strong> {u.expertise}</p>}
-                        {u.cvLink && (
-                          <p>
-                            <strong>CV:</strong> <a href={u.cvLink} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline break-all">{u.cvLink}</a>
-                          </p>
-                        )}
-                        {u.organization && <p><strong>Org:</strong> {u.organization}</p>}
-                        {u.yearsExperience && <p><strong>Experience:</strong> {u.yearsExperience} years</p>}
-                        {u.linkedinUrl && (
-                          <p>
-                            <strong>LinkedIn:</strong> <a href={u.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline break-all">{u.linkedinUrl}</a>
-                          </p>
-                        )}
-                        {u.githubIds && <p><strong>GitHub IDs:</strong> {u.githubIds}</p>}
-                        {u.mattermostId && <p><strong>Mattermost ID:</strong> {u.mattermostId}</p>}
-                        <p><strong>Other circle:</strong> {u.otherCircle ? 'Yes' : 'No'}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                        onClick={() => startEdit(u)}
-                        className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat py-1 px-3 rounded"
-                      >
-                      Edit
-                    </button>
-                    <button
-                        onClick={() => deleteUser(u.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white font-montserrat py-1 px-3 rounded"
-                      >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                {/* Editing form inline */}
-                {editingUser?.id === u.id && editForm && (
-                  <div className="mt-4 border-t border-[#9D9FA9] pt-4">
-                    <h5 className="text-white font-montserrat mb-2">Edit User</h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-white font-montserrat mb-1">Name</label>
-                        <input
-                          type="text"
-                          value={editForm.name || ''}
-                          onChange={(e) => setEditForm({ ...(editForm as any), name: e.target.value })}
-                          className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-white font-montserrat mb-1">Email</label>
-                        <input
-                          type="email"
-                          value={editForm.email || ''}
-                          onChange={(e) => setEditForm({ ...(editForm as any), email: e.target.value })}
-                          className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-white font-montserrat mb-1">Role</label>
-                        <select
-                          value={editForm.role}
-                          onChange={(e) => setEditForm({ ...(editForm as any), role: e.target.value as any })}
-                          className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="reviewer">Reviewer</option>
-                          <option value="team_leader">Team Leader</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-white font-montserrat mb-1">Status</label>
-                        <select
-                          value={editForm.status || 'active'}
-                          onChange={(e) => setEditForm({ ...(editForm as any), status: e.target.value })}
-                          className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                        </select>
-                      </div>
-
-                      {(editForm.role === 'reviewer') && (
-                        <>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">Expertise</label>
-                            <input
-                              type="text"
-                              value={editForm.expertise || ''}
-                              onChange={(e) => setEditForm({ ...(editForm as any), expertise: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto">
+              <thead>
+                <tr className="text-left bg-[#2A1A4A]">
+                  <th className="px-4 py-3 text-white font-montserrat">Name</th>
+                  <th className="px-4 py-3 text-white font-montserrat">Role</th>
+                  <th className="px-4 py-3 text-white font-montserrat">Email</th>
+                  <th className="px-4 py-3 text-white font-montserrat">Status</th>
+                  <th className="px-4 py-3 text-white font-montserrat">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleUsers.map((u) => {
+                  const roleBadge =
+                    u.role === 'admin' ? 'bg-indigo-600' :
+                    u.role === 'reviewer' ? 'bg-emerald-600' :
+                    u.role === 'team_leader' ? 'bg-amber-600' : 'bg-slate-600';
+                  const statusBadge = (u.status || 'active') === 'active' ? 'bg-emerald-700' : 'bg-slate-700';
+                  return (
+                    <Fragment key={u.id}>
+                      <tr className="border-t border-[#9D9FA9]">
+                        <td className="px-4 py-3 align-top">
+                          <div className="text-white font-montserrat font-medium">{u.name}</div>
+                          <div className="text-[#9D9FA9] font-montserrat text-sm">{u.username}</div>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <span className={`inline-block text-white font-montserrat text-xs px-2 py-1 rounded ${roleBadge}`}>{u.role}</span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="text-[#D1D2D7] font-montserrat text-sm break-all">{u.email || '-'}</div>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <span className={`inline-block text-white font-montserrat text-xs px-2 py-1 rounded ${statusBadge}`}>{u.status || 'active'}</span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => toggleExpand(u.id)}
+                              className="bg-[#2A1A4A] hover:bg-[#3B2567] border border-[#9D9FA9] text-white font-montserrat text-sm py-1 px-3 rounded"
+                            >
+                              {expandedRows[u.id] ? 'Hide' : 'View'}
+                            </button>
+                            <button
+                              onClick={() => startEdit(u)}
+                              className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat text-sm py-1 px-3 rounded"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteUser(u.id)}
+                              className="bg-red-600 hover:bg-red-700 text-white font-montserrat text-sm py-1 px-3 rounded"
+                            >
+                              Delete
+                            </button>
                           </div>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">CV Link</label>
-                            <input
-                              type="url"
-                              value={editForm.cvLink || ''}
-                              onChange={(e) => setEditForm({ ...(editForm as any), cvLink: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">Organization</label>
-                            <input
-                              type="text"
-                              value={editForm.organization || ''}
-                              onChange={(e) => setEditForm({ ...(editForm as any), organization: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">Years of Experience</label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={String(editForm.yearsExperience || '')}
-                              onChange={(e) => setEditForm({ ...(editForm as any), yearsExperience: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">LinkedIn URL</label>
-                            <input
-                              type="url"
-                              value={editForm.linkedinUrl || ''}
-                              onChange={(e) => setEditForm({ ...(editForm as any), linkedinUrl: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">GitHub IDs (comma-separated)</label>
-                            <input
-                              type="text"
-                              value={editForm.githubIds || ''}
-                              onChange={(e) => setEditForm({ ...(editForm as any), githubIds: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-white font-montserrat mb-1">Mattermost ID</label>
-                            <input
-                              type="text"
-                              value={editForm.mattermostId || ''}
-                              onChange={(e) => setEditForm({ ...(editForm as any), mattermostId: e.target.value })}
-                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={!!editForm.otherCircle}
-                              onChange={(e) => setEditForm({ ...(editForm as any), otherCircle: e.target.checked })}
-                              className="h-4 w-4"
-                            />
-                            <label className="text-white font-montserrat">Part of another circle</label>
-                          </div>
-                        </>
+                        </td>
+                      </tr>
+                      {expandedRows[u.id] && (
+                        <tr className="border-t border-[#9D9FA9]">
+                          <td className="px-4 py-3" colSpan={5}>
+                            <div className="bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-4 text-sm font-montserrat text-[#D1D2D7] grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {u.expertise && <div><span className="text-white">Expertise:</span> {u.expertise}</div>}
+                              {u.organization && <div><span className="text-white">Organization:</span> {u.organization}</div>}
+                              {u.yearsExperience && <div><span className="text-white">Experience:</span> {u.yearsExperience} years</div>}
+                              {u.githubIds && <div><span className="text-white">GitHub IDs:</span> {u.githubIds}</div>}
+                              {u.mattermostId && <div><span className="text-white">Mattermost ID:</span> {u.mattermostId}</div>}
+                              <div><span className="text-white">Other circle:</span> {u.otherCircle ? 'Yes' : 'No'}</div>
+                              {u.cvLink && (
+                                <div>
+                                  <span className="text-white">CV:</span> <a className="text-blue-300 underline break-all" target="_blank" rel="noopener noreferrer" href={u.cvLink}>{u.cvLink}</a>
+                                </div>
+                              )}
+                              {u.linkedinUrl && (
+                                <div>
+                                  <span className="text-white">LinkedIn:</span> <a className="text-blue-300 underline break-all" target="_blank" rel="noopener noreferrer" href={u.linkedinUrl}>{u.linkedinUrl}</a>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </div>
-                    <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={saveEdit}
-                        className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded"
-                        disabled={loading}
-                      >
-                        {loading ? 'Saving...' : 'Save'}
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat py-2 px-4 rounded"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-[#D1D2D7] font-montserrat text-sm">Page {page} of {totalPages} • {filteredUsers.length} users</div>
+          <div className="flex gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="bg-[#2A1A4A] hover:bg-[#3B2567] disabled:opacity-50 border border-[#9D9FA9] text-white font-montserrat py-1 px-3 rounded"
+            >
+              Prev
+            </button>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="bg-[#2A1A4A] hover:bg-[#3B2567] disabled:opacity-50 border border-[#9D9FA9] text-white font-montserrat py-1 px-3 rounded"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Edit modal */}
+      {editingUser && editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-3xl bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h5 className="text-white font-montserrat text-lg">Edit User</h5>
+              <button onClick={cancelEdit} className="text-white font-montserrat bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] px-3 py-1 rounded">Close</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-white font-montserrat mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editForm.name || ''}
+                  onChange={(e) => setEditForm({ ...(editForm as any), name: e.target.value })}
+                  className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-white font-montserrat mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email || ''}
+                  onChange={(e) => setEditForm({ ...(editForm as any), email: e.target.value })}
+                  className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-white font-montserrat mb-1">Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...(editForm as any), role: e.target.value as any })}
+                  className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="team_leader">Team Leader</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-white font-montserrat mb-1">Status</label>
+                <select
+                  value={editForm.status || 'active'}
+                  onChange={(e) => setEditForm({ ...(editForm as any), status: e.target.value })}
+                  className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              {(editForm.role === 'reviewer') && (
+                <>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Expertise</label>
+                    <input
+                      type="text"
+                      value={editForm.expertise || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), expertise: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">CV Link</label>
+                    <input
+                      type="url"
+                      value={editForm.cvLink || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), cvLink: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Organization</label>
+                    <input
+                      type="text"
+                      value={editForm.organization || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), organization: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Years of Experience</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={String(editForm.yearsExperience || '')}
+                      onChange={(e) => setEditForm({ ...(editForm as any), yearsExperience: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">LinkedIn URL</label>
+                    <input
+                      type="url"
+                      value={editForm.linkedinUrl || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), linkedinUrl: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">GitHub IDs (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={editForm.githubIds || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), githubIds: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Mattermost ID</label>
+                    <input
+                      type="text"
+                      value={editForm.mattermostId || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), mattermostId: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!editForm.otherCircle}
+                      onChange={(e) => setEditForm({ ...(editForm as any), otherCircle: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    <label className="text-white font-montserrat">Part of another circle</label>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex gap-2 mt-4 justify-end">
+              <button
+                onClick={saveEdit}
+                className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat py-2 px-4 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
      </div>
    );

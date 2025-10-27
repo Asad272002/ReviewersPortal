@@ -59,7 +59,7 @@ async function testVotingSystem() {
     if (proposalRows.length > 0) {
       console.log('\n   Recent Proposals:');
       proposalRows.slice(0, 3).forEach((row, index) => {
-        const proposalId = `PROP-${String(index + 1).padStart(3, '0')}`;
+        const proposalId = row.get('ID') || `PROP-${String(index + 1).padStart(3, '0')}`;
         const title = row.get('Proposal Title') || 'N/A';
         const reviewer = row.get('Reviewer Name') || 'N/A';
         const category = row.get('Project Category') || 'N/A';

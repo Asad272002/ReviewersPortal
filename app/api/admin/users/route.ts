@@ -1,98 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
-// Initialize auth with JWT
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+export const runtime = 'nodejs';
 
-const BASE_HEADERS = ['ID', 'Username', 'Password', 'Name', 'Role', 'Email', 'Status', 'CreatedAt'];
-const REVIEWER_HEADERS = ['Expertise', 'CVLink', 'Organization', 'YearsExperience', 'LinkedInURL', 'GitHubIDs', 'OtherCircle', 'MattermostId'];
-
-async function getOrCreateUsersSheet(doc: GoogleSpreadsheet) {
-  let usersSheet = doc.sheetsByTitle['Users'];
-  if (!usersSheet) {
-    usersSheet = await doc.addSheet({
-      title: 'Users',
-      headerValues: [...BASE_HEADERS, ...REVIEWER_HEADERS, 'UpdatedAt']
-    });
-  } else {
-    // Load current header row before reading headerValues
-    await usersSheet.loadHeaderRow();
-    const existingHeaders = usersSheet.headerValues ?? [];
-    // Ensure ALL expected columns exist (base + reviewer + UpdatedAt)
-    const desiredHeaders = Array.from(new Set([
-      ...existingHeaders,
-      ...BASE_HEADERS,
-      ...REVIEWER_HEADERS,
-      'UpdatedAt'
-    ]));
-    // Only rewrite if there's a change
-    const needsUpdate = desiredHeaders.length !== existingHeaders.length || desiredHeaders.some(h => !existingHeaders.includes(h));
-    if (needsUpdate) {
-      await usersSheet.setHeaderRow(desiredHeaders);
-      await usersSheet.loadHeaderRow();
-    }
+function getFirst(row: any, keys: string[]): any {
+  for (const k of keys) {
+    const v = row?.[k];
+    if (v !== undefined && v !== null && String(v).length > 0) return v;
   }
-  return usersSheet;
+  return undefined;
 }
 
-function parseBoolean(val: any): boolean {
-  const s = String(val || '').trim().toLowerCase();
-  return s === 'true' || s === 'yes' || s === '1' || s === 'y';
+function normalizeRole(roleRaw: any): 'admin' | 'reviewer' | 'team_leader' {
+  const roleNorm = String(roleRaw || '')
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+  if (roleNorm === 'admin') return 'admin';
+  if (roleNorm === 'team_leader') return 'team_leader';
+  return 'reviewer';
 }
 
-export async function GET(request: NextRequest) {
+function toUser(row: any) {
+  const role = normalizeRole(getFirst(row, ['role', 'Role', 'user_role', 'userRole']));
+  const base: any = {
+    id: getFirst(row, ['id', 'ID', 'user_id', 'userId']) || '',
+    username: getFirst(row, ['username', 'user_name', 'Username', 'User Name']) || '',
+    name: getFirst(row, ['name', 'Name', 'full_name', 'Full Name', 'displayName']) || '',
+    role,
+    email: getFirst(row, ['email', 'Email']) || '',
+    status: getFirst(row, ['status', 'Status']) || 'active',
+    createdAt: getFirst(row, ['createdAt', 'CreatedAt', 'created_at']) || ''
+  };
+
+  if (role === 'reviewer') {
+    base.expertise = getFirst(row, ['expertise', 'Expertise']) || '';
+    base.cvLink = getFirst(row, ['cvLink', 'CVLink']) || '';
+    base.organization = getFirst(row, ['organization', 'Organization']) || '';
+    base.yearsExperience = getFirst(row, ['yearsExperience', 'YearsExperience']) || '';
+    base.linkedinUrl = getFirst(row, ['linkedinUrl', 'LinkedInURL']) || '';
+    base.githubIds = getFirst(row, ['githubIds', 'GitHubIDs']) || '';
+    base.mattermostId = getFirst(row, ['mattermostId', 'MattermostId']) || '';
+    base.otherCircle = String(getFirst(row, ['otherCircle', 'OtherCircle'] || ''))
+      .trim()
+      .toLowerCase() === 'yes';
+  }
+  return base;
+}
+
+export async function GET(_request: NextRequest) {
   try {
-    // Initialize the sheet
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
-    await doc.loadInfo();
+    const { data, error } = await supabaseAdmin
+      .from('user_app')
+      .select('*')
+      .limit(2000);
 
-    // Get or create Users sheet
-    const usersSheet = await getOrCreateUsersSheet(doc);
+    if (error) {
+      console.error('Supabase users select error:', error);
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch users' },
+        { status: 500 }
+      );
+    }
 
-    // Get all rows
-    const rows = await usersSheet.getRows();
-    
-    // Map rows to user objects (excluding passwords for security)
-    const users = rows.map(row => {
-      const role = row.get('Role') || '';
-      const base = {
-        id: row.get('ID') || '',
-        username: row.get('Username') || '',
-        name: row.get('Name') || '',
-        role,
-        email: row.get('Email') || '',
-        status: row.get('Status') || 'active',
-        createdAt: row.get('CreatedAt') || ''
-      };
+    const users = (data || []).map(toUser);
 
-      if (role === 'reviewer') {
-        return {
-          ...base,
-          expertise: row.get('Expertise') || '',
-          cvLink: row.get('CVLink') || '',
-          organization: row.get('Organization') || '',
-          yearsExperience: row.get('YearsExperience') || '',
-          linkedinUrl: row.get('LinkedInURL') || '',
-          githubIds: row.get('GitHubIDs') || '',
-          mattermostId: row.get('MattermostId') || '',
-          otherCircle: parseBoolean(row.get('OtherCircle'))
-        };
-      }
-      return base;
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        users
-      }
-    });
-
+    return NextResponse.json({ success: true, data: { users } });
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
@@ -105,7 +77,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, password, name, role, email } = body;
+    const { username, password, name, role, email } = body || {};
 
     if (!username || !password || !name || !role) {
       return NextResponse.json(
@@ -114,90 +86,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize the sheet
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
-    await doc.loadInfo();
-
-    // Get Users sheet
-    const usersSheet = await getOrCreateUsersSheet(doc);
-
-    // Check if user already exists
-    const rows = await usersSheet.getRows();
-    const existingUser = rows.find(row => row.get('Username') === username);
-    
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, message: 'User with this username already exists' },
-        { status: 400 }
-      );
-    }
-
-    // Generate unique ID
     const userId = `user_${Date.now()}`;
-    
-    // Prepare row data
-    const rowData: Record<string, any> = {
-      'ID': userId,
-      'Username': username,
-      'Password': password,
-      'Name': name,
-      'Role': role,
-      'Email': email || '',
-      'Status': 'active',
-      'CreatedAt': new Date().toISOString()
+    const nowISO = new Date().toISOString();
+    const normalizedRole = normalizeRole(role);
+
+    // Align insert keys with Supabase column names for user_app
+    const row: Record<string, any> = {
+      ID: userId,
+      Username: username,
+      Password: password,
+      Name: name,
+      Role: normalizedRole,
+      Email: email || '',
+      Status: 'active',
+      CreatedAt: nowISO,
+      UpdatedAt: nowISO,
     };
 
-    if (role === 'reviewer') {
-      const {
-        expertise = '',
-        cvLink = '',
-        organization = '',
-        yearsExperience = '',
-        linkedinUrl = '',
-        githubIds = '',
-        mattermostId = '',
-        otherCircle = false
-      } = body;
-
-      rowData['Expertise'] = expertise;
-      rowData['CVLink'] = cvLink;
-      rowData['Organization'] = organization;
-      rowData['YearsExperience'] = yearsExperience;
-      rowData['LinkedInURL'] = linkedinUrl;
-      rowData['GitHubIDs'] = githubIds;
-      rowData['MattermostId'] = mattermostId;
-      rowData['OtherCircle'] = otherCircle ? 'Yes' : 'No';
+    if (normalizedRole === 'reviewer') {
+      row.Expertise = body?.expertise ?? '';
+      row.CVLink = body?.cvLink ?? '';
+      row.Organization = body?.organization ?? '';
+      row.YearsExperience = body?.yearsExperience ?? '';
+      row.LinkedInURL = body?.linkedinUrl ?? '';
+      row.GitHubIDs = body?.githubIds ?? '';
+      row.MattermostId = body?.mattermostId ?? '';
+      // Store as 'yes'/'no' to match text column, toUser maps it to boolean
+      row.OtherCircle = body?.otherCircle ? 'yes' : 'no';
     }
-    
-    // Add new user
-    await usersSheet.addRow(rowData);
+
+    const { error } = await supabaseAdmin.from('user_app').insert(row);
+    if (error) {
+      console.error('Supabase users insert error:', error);
+      return NextResponse.json(
+        { success: false, message: 'Failed to create user' },
+        { status: 500 }
+      );
+    }
 
     const responseData: any = {
       id: userId,
       username,
       name,
-      role,
+      role: normalizedRole,
       email: email || '',
       status: 'active'
     };
 
-    if (role === 'reviewer') {
-      responseData.expertise = rowData['Expertise'] || '';
-      responseData.cvLink = rowData['CVLink'] || '';
-      responseData.organization = rowData['Organization'] || '';
-      responseData.yearsExperience = rowData['YearsExperience'] || '';
-      responseData.linkedinUrl = rowData['LinkedInURL'] || '';
-      responseData.githubIds = rowData['GitHubIDs'] || '';
-      responseData.mattermostId = rowData['MattermostId'] || '';
-      responseData.otherCircle = rowData['OtherCircle'] === 'Yes';
+    if (normalizedRole === 'reviewer') {
+      responseData.expertise = row.Expertise;
+      responseData.cvLink = row.CVLink;
+      responseData.organization = row.Organization;
+      responseData.yearsExperience = row.YearsExperience;
+      responseData.linkedinUrl = row.LinkedInURL;
+      responseData.githubIds = row.GitHubIDs;
+      responseData.mattermostId = row.MattermostId;
+      responseData.otherCircle = String(row.OtherCircle).toLowerCase() === 'yes';
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'User created successfully',
-      data: responseData
-    });
-
+    return NextResponse.json({ success: true, message: 'User created successfully', data: responseData });
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(

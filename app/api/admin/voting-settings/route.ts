@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
 import { invalidateVotingSettingsCache } from '@/lib/voting-settings';
-
-// Initialize Google Sheets client
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, serviceAccountAuth);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 interface VotingSetting {
   settingKey: string;
@@ -22,54 +12,64 @@ interface VotingSetting {
 // GET - Fetch voting settings
 export async function GET() {
   try {
-    await doc.loadInfo();
-    
-    // Get or create Voting Settings sheet
-    let votingSettingsSheet = doc.sheetsByTitle['Voting Settings'];
-    if (!votingSettingsSheet) {
-      votingSettingsSheet = await doc.addSheet({
-        title: 'Voting Settings',
-        headerValues: ['settingKey', 'settingValue', 'description', 'updatedAt']
-      });
-      
-      // Add default settings
-      const defaultSettings = [
-        {
-          'settingKey': 'voting_duration_days',
-          'settingValue': '30',
-          'description': 'Number of days a proposal remains open for voting',
-          'updatedAt': new Date().toISOString()
-        },
-        {
-          'settingKey': 'allow_vote_changes',
-          'settingValue': 'TRUE',
-          'description': 'Allow users to change their votes on proposals',
-          'updatedAt': new Date().toISOString()
-        },
-        {
-          'settingKey': 'min_votes_required',
-          'settingValue': '5',
-          'description': 'Minimum number of votes required for a proposal to be considered',
-          'updatedAt': new Date().toISOString()
-        }
-      ];
-      
-      await votingSettingsSheet.addRows(defaultSettings);
+    const { data, error } = await supabaseAdmin
+      .from('voting_setting')
+      .select('*');
+
+    if (error) {
+      console.error('Supabase fetch voting settings error:', error);
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch voting settings' },
+        { status: 500 }
+      );
     }
 
-    const rows = await votingSettingsSheet.getRows();
-    const settings: VotingSetting[] = rows.map(row => ({
-      settingKey: row.get('settingKey') || '',
-      settingValue: row.get('settingValue') || '',
-      description: row.get('description') || '',
-      updatedAt: row.get('updatedAt') || new Date().toISOString()
+    let rows = data || [];
+
+    // Seed defaults if table is empty
+    if (rows.length === 0) {
+      const now = new Date().toISOString();
+      const defaults: VotingSetting[] = [
+        {
+          settingKey: 'voting_duration_days',
+          settingValue: '30',
+          description: 'Number of days a proposal remains open for voting',
+          updatedAt: now
+        },
+        {
+          settingKey: 'allow_vote_changes',
+          settingValue: 'TRUE',
+          description: 'Allow users to change their votes on proposals',
+          updatedAt: now
+        },
+        {
+          settingKey: 'min_votes_required',
+          settingValue: '5',
+          description: 'Minimum number of votes required for a proposal to be considered',
+          updatedAt: now
+        }
+      ];
+      const { error: insertError } = await supabaseAdmin
+        .from('voting_setting')
+        .insert(defaults);
+      if (insertError) {
+        console.error('Supabase seed voting settings error:', insertError);
+      } else {
+        rows = defaults as any[];
+      }
+    }
+
+    const settings: VotingSetting[] = rows.map((row: any) => ({
+      settingKey: row.settingKey ?? row.setting_key ?? '',
+      settingValue: row.settingValue ?? row.setting_value ?? '',
+      description: row.description ?? '',
+      updatedAt: row.updatedAt ?? row.updated_at ?? new Date().toISOString()
     }));
 
     return NextResponse.json({
       success: true,
       settings
     });
-
   } catch (error) {
     console.error('Error fetching voting settings:', error);
     return NextResponse.json(
@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
 
     // Validate setting values
     if (settingKey === 'voting_duration_days') {
-      const days = parseInt(settingValue);
+      const days = parseInt(String(settingValue));
       if (isNaN(days) || days < 1 || days > 365) {
         return NextResponse.json(
           { success: false, message: 'Voting duration must be between 1 and 365 days' },
@@ -103,7 +103,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (settingKey === 'min_votes_required') {
-      const votes = parseInt(settingValue);
+      const votes = parseInt(String(settingValue));
       if (isNaN(votes) || votes < 1 || votes > 100) {
         return NextResponse.json(
           { success: false, message: 'Minimum votes must be between 1 and 100' },
@@ -113,7 +113,8 @@ export async function PUT(request: NextRequest) {
     }
 
     if (settingKey === 'allow_vote_changes') {
-      if (!['TRUE', 'FALSE'].includes(settingValue.toUpperCase())) {
+      const val = String(settingValue).toUpperCase();
+      if (!['TRUE', 'FALSE'].includes(val)) {
         return NextResponse.json(
           { success: false, message: 'Allow vote changes must be TRUE or FALSE' },
           { status: 400 }
@@ -121,92 +122,70 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    await doc.loadInfo();
-    const votingSettingsSheet = doc.sheetsByTitle['Voting Settings'];
-    
-    if (!votingSettingsSheet) {
-      return NextResponse.json(
-        { success: false, message: 'Voting Settings sheet not found' },
-        { status: 404 }
-      );
+    const nowISO = new Date().toISOString();
+
+    // Fetch current setting
+    const { data: currentRows, error: fetchError } = await supabaseAdmin
+      .from('voting_setting')
+      .select('*')
+      .eq('settingKey', settingKey)
+      .limit(1);
+    if (fetchError) {
+      console.error('Supabase fetch setting error:', fetchError);
     }
+    const current = currentRows?.[0];
+    const oldValue = current?.settingValue ?? '';
 
-    const rows = await votingSettingsSheet.getRows();
-    const settingRow = rows.find(row => row.get('settingKey') === settingKey);
-
-    if (!settingRow) {
-      return NextResponse.json(
-        { success: false, message: 'Setting not found' },
-        { status: 404 }
-      );
-    }
-
-    // Capture old value for history (only for voting_duration_days changes)
-    const oldValue = String(settingRow.get('settingValue') || '');
-
-    // If changing voting_duration_days, append a history record first
-    if (settingKey === 'voting_duration_days' && oldValue !== String(settingValue)) {
-      let historySheet = doc.sheetsByTitle['Voting Settings History'];
-      if (!historySheet) {
-        historySheet = await doc.addSheet({
-          title: 'Voting Settings History',
-          headerValues: ['settingKey', 'oldValue', 'newValue', 'effectiveAt', 'updatedAt']
-        });
-      }
-
-      const historyRowData = {
-        'settingKey': 'voting_duration_days',
-        'oldValue': oldValue,
-        'newValue': String(settingValue),
-        'effectiveAt': new Date().toISOString(),
-        'updatedAt': new Date().toISOString()
-      };
-
-      // Retry addRow with exponential backoff to handle Google Sheets write quota (429)
-      {
-        const maxRetries = 5;
-        let attempt = 0;
-        while (true) {
-          try {
-            await historySheet.addRow(historyRowData);
-            break;
-          } catch (err: any) {
-            const status = err?.response?.status || err?.status || err?.code;
-            const msg = String(err?.message || '');
-            const isRateLimited = status === 429 || msg.includes('Quota exceeded') || String(err).includes('429');
-            attempt++;
-            if (!isRateLimited || attempt >= maxRetries) {
-              throw err;
-            }
-            const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000) + Math.floor(Math.random() * 250);
-            await new Promise(res => setTimeout(res, delayMs));
-          }
-        }
+    // If changing voting_duration_days, append a history record
+    if (settingKey === 'voting_duration_days' && String(oldValue) !== String(settingValue)) {
+      const { error: histError } = await supabaseAdmin
+        .from('voting_setting_history')
+        .insert([{
+          settingKey: 'voting_duration_days',
+          oldValue: oldValue ? Number(oldValue) : null,
+          newValue: Number(settingValue),
+          effectiveAt: nowISO,
+          updatedAt: nowISO
+        }]);
+      if (histError) {
+        console.error('Supabase insert history error:', histError);
       }
     }
 
-    // Update the setting
-    settingRow.set('settingValue', settingValue);
-    settingRow.set('updatedAt', new Date().toISOString());
-    // Retry with exponential backoff to handle Google Sheets write quota (429)
-    {
-      const maxRetries = 5;
-      let attempt = 0;
-      while (true) {
-        try {
-          await settingRow.save();
-          break;
-        } catch (err: any) {
-          const status = err?.response?.status || err?.status || err?.code;
-          const msg = String(err?.message || '');
-          const isRateLimited = status === 429 || msg.includes('Quota exceeded') || String(err).includes('429');
-          attempt++;
-          if (!isRateLimited || attempt >= maxRetries) {
-            throw err;
-          }
-          const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000) + Math.floor(Math.random() * 250);
-          await new Promise(res => setTimeout(res, delayMs));
-        }
+    const defaultDescriptions: Record<string, string> = {
+      'voting_duration_days': 'Number of days a proposal remains open for voting',
+      'allow_vote_changes': 'Allow users to change their votes on proposals',
+      'min_votes_required': 'Minimum number of votes required for a proposal to be considered'
+    };
+
+    // Upsert setting value
+    if (current) {
+      const { error: updateError } = await supabaseAdmin
+        .from('voting_setting')
+        .update({ settingValue: String(settingValue), updatedAt: nowISO })
+        .eq('settingKey', settingKey);
+      if (updateError) {
+        console.error('Supabase update setting error:', updateError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to update voting setting' },
+          { status: 500 }
+        );
+      }
+    } else {
+      const { error: insertError } = await supabaseAdmin
+        .from('voting_setting')
+        .insert([{ 
+          settingKey, 
+          settingValue: String(settingValue), 
+          description: defaultDescriptions[settingKey] || '', 
+          updatedAt: nowISO 
+        }]);
+      if (insertError) {
+        console.error('Supabase insert setting error:', insertError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to update voting setting' },
+          { status: 500 }
+        );
       }
     }
 
@@ -220,12 +199,9 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Error updating voting setting:', error);
-    const status = (error as any)?.response?.status || (error as any)?.status || (error as any)?.code;
-    const msg = String((error as any)?.message || '');
-    const isRateLimited = status === 429 || msg.includes('Quota exceeded') || String(error).includes('429');
     return NextResponse.json(
-      { success: false, message: isRateLimited ? 'Rate limit: Google Sheets write quota exceeded. Please retry shortly.' : 'Failed to update voting setting' },
-      { status: isRateLimited ? 429 : 500 }
+      { success: false, message: 'Failed to update voting setting' },
+      { status: 500 }
     );
   }
 }

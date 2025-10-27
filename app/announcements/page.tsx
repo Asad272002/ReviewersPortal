@@ -29,6 +29,7 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showExpired, setShowExpired] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -207,26 +208,27 @@ export default function Announcements() {
   // Helper function to parse custom date format from API
   const parseCustomDate = (dateString: string): Date | null => {
     if (!dateString) return null;
-    
     try {
       // Handle format: "August 25, 2025 at 06:00 AM UTC"
       if (dateString.includes(' at ') && dateString.includes(' UTC')) {
-        // Remove " UTC" and replace " at " with " "
         const cleanedDate = dateString.replace(' UTC', '').replace(' at ', ' ');
-        const date = new Date(cleanedDate);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
+        const d = new Date(cleanedDate);
+        if (!isNaN(d.getTime())) return d;
       }
-      
+
+      // Normalize common Supabase timestamptz formats like "YYYY-MM-DD HH:mm:ss(.ms)+00"
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(dateString)) {
+        let normalized = dateString.replace(' ', 'T');
+        // Ensure timezone has minutes: convert +00 -> +00:00
+        normalized = normalized.replace(/([+-]\d{2})(?!:)/, '$1:00');
+        const d = new Date(normalized);
+        if (!isNaN(d.getTime())) return d;
+      }
+
       // Fallback to standard Date parsing
-      const date = new Date(dateString);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-      
-      return null;
-    } catch (error) {
+      const d2 = new Date(dateString);
+      return isNaN(d2.getTime()) ? null : d2;
+    } catch {
       return null;
     }
   };
@@ -292,20 +294,26 @@ export default function Announcements() {
     return timeRemaining !== null; // Only show if not expired
   });
   
-  // Filter important updates based on status and expiration
-  const liveImportantUpdates = importantUpdates.filter(a => {
-    if (a.status !== 'live') return false;
-    if (!a.expiresAt) return true; // No expiration date means always live
-    const timeRemaining = getTimeRemaining(a.expiresAt);
-    return timeRemaining !== null; // Only show if not expired
+  // Show important updates that are either live or upcoming, but not time-expired
+  const importantAnnouncements = importantUpdates.filter(a => {
+    const notExpiredByTime = !a.expiresAt || getTimeRemaining(a.expiresAt) !== null;
+    const isUpcoming = a.status === 'upcoming' && notExpiredByTime;
+    const isLive = a.status === 'live' && notExpiredByTime;
+    return isUpcoming || isLive;
+  });
+  // Show general announcements that are either live or upcoming, but not time-expired
+  const generalAnnouncements = announcements.filter(a => {
+    const notExpiredByTime = !a.expiresAt || getTimeRemaining(a.expiresAt) !== null;
+    const isUpcoming = a.status === 'upcoming' && notExpiredByTime;
+    const isLive = a.status === 'live' && notExpiredByTime;
+    return isUpcoming || isLive;
   });
   
-  const importantAnnouncements = liveImportantUpdates;
-  // Show general announcements that are either live (and not expired) or upcoming
-  const generalAnnouncements = announcements.filter(a => {
-    const isUpcoming = a.status === 'upcoming';
-    const isLive = a.status === 'live' && (!a.expiresAt || getTimeRemaining(a.expiresAt) !== null);
-    return isUpcoming || isLive;
+  // Collect expired announcements (from both important and general)
+  const expiredAnnouncements = [...announcements, ...importantUpdates].filter(a => {
+    const statusExpired = a.status === 'expired';
+    const expiredByTime = a.expiresAt ? getTimeRemaining(a.expiresAt) === null : false;
+    return statusExpired || expiredByTime;
   });
   
   // Categorize announcements by status for admin view (combine both general and important)
@@ -351,8 +359,8 @@ export default function Announcements() {
                     </div>
                   
                     <div className="space-y-4">
-                      {importantUpdates.length > 0 ? (
-                        importantUpdates.map((announcement) => (
+                      {importantAnnouncements.length > 0 ? (
+                        importantAnnouncements.map((announcement) => (
                           <div key={announcement.id} className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 hover:bg-red-500/20 transition-all duration-300">
                             <div className="flex items-start justify-between mb-2">
                               <h3 className="font-montserrat font-medium text-lg text-white">{announcement.title}</h3>
@@ -381,9 +389,9 @@ export default function Announcements() {
                                   <span>📅 Expires: {announcement.expiresAt ? formatDate(announcement.expiresAt) : 'No expiry'}</span>
                                 </div>
                               )}
-                              {announcement.expiresAt && (
+                              {announcement.expiresAt && announcement.status !== 'expired' && getTimeRemaining(announcement.expiresAt) && (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-blue-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : 'Time Left: '}{announcement.status === 'expired' ? 'Expired' : formatCountdown(getTimeRemaining(announcement.expiresAt))}</span>
+                                  <span className="text-blue-400 font-medium">⏰ {announcement.status === 'upcoming' ? 'Starts in: ' : 'Time Left: '}{formatCountdown(getTimeRemaining(announcement.expiresAt)!)}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
@@ -453,6 +461,73 @@ export default function Announcements() {
                       ) : (
                         <div className="text-gray-300 font-montserrat text-center py-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                           No general announcements at this time.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Expired Announcements Dropdown */}
+                  <div className="lg:col-span-2 mt-6">
+                    <div className="bg-[#0C021E] rounded-xl border border-red-500/50 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-red-600/70 shadow-lg shadow-red-500/40 flex items-center justify-center border border-red-400/70">
+                            <Image src="/icons/alert-icon.svg" alt="Expired" width={16} height={16} />
+                          </div>
+                          <h2 className="font-montserrat font-semibold text-2xl text-white">Expired Announcements</h2>
+                          <span className="ml-2 text-xs px-2 py-1 rounded bg-red-500/30 text-red-200 border border-red-400/40">
+                            {expiredAnnouncements.length}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setShowExpired(prev => !prev)}
+                          className="bg-red-600 hover:bg-red-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors"
+                        >
+                          {showExpired ? 'Hide' : 'Show'} Expired
+                        </button>
+                      </div>
+                      {showExpired && (
+                        <div className="space-y-4">
+                          {expiredAnnouncements.length > 0 ? (
+                            expiredAnnouncements.map((announcement) => (
+                              <div
+                                key={announcement.id}
+                                className="bg-red-500/5 border border-red-500/40 rounded-xl p-4 shadow-lg shadow-red-500/30"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <h3 className="font-montserrat font-medium text-lg text-white">
+                                    {announcement.title}
+                                  </h3>
+                                  <span className="text-xs px-2 py-1 rounded bg-red-700/80 text-white border border-red-500/60">
+                                    EXPIRED
+                                  </span>
+                                </div>
+                                <p className="font-montserrat text-gray-300 mb-3">
+                                  {announcement.content}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-4 text-xs text-gray-300">
+                                  <div className="flex items-center gap-2">
+                                    <Image src="/icons/calendar-icon.svg" alt="Date" width={12} height={12} />
+                                    <span>Posted: {formatDate(announcement.createdAt)}</span>
+                                  </div>
+                                  {announcement.expiresAt && (
+                                    <div className="flex items-center gap-2">
+                                      <span>📅 Expired: {formatDate(announcement.expiresAt)}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded-lg text-xs font-medium border bg-gray-700/80 text-white border-gray-600/60`}>
+                                      {announcement.category === 'important' ? 'Important' : 'General'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-gray-300 font-montserrat text-center py-8 bg-white/5 rounded-xl border border-[#9D9FA9]">
+                              No expired announcements.
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

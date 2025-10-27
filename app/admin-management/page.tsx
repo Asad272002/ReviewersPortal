@@ -236,7 +236,7 @@ export default function AdminManagement() {
     <div className="space-y-6">
       <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="font-montserrat font-semibold text-xl text-white">Google Sheets Data Overview</h3>
+          <h3 className="font-montserrat font-semibold text-xl text-white">Data Overview</h3>
           <button
             onClick={refreshAllData}
             className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded transition-colors"
@@ -268,6 +268,11 @@ export default function AdminManagement() {
             <h4 className="font-montserrat font-medium text-white mb-2">Support Tickets</h4>
             <p className="text-2xl font-bold text-[#9050E9]">{sheetData.supportTickets.length}</p>
             <p className="text-sm text-[#9D9FA9]">Total tickets</p>
+          </div>
+          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+            <h4 className="font-montserrat font-medium text-white mb-2">Users</h4>
+            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.length}</p>
+            <p className="text-sm text-[#9D9FA9]">Total users</p>
           </div>
         </div>
       </div>
@@ -505,6 +510,23 @@ export default function AdminManagement() {
                   ← Back to Overview
                 </button>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+                  <h4 className="font-montserrat font-medium text-white mb-2">Admins</h4>
+                  <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'admin').length}</p>
+                  <p className="text-sm text-[#9D9FA9]">Total admins</p>
+                </div>
+                <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+                  <h4 className="font-montserrat font-medium text-white mb-2">Reviewers</h4>
+                  <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'reviewer').length}</p>
+                  <p className="text-sm text-[#9D9FA9]">Total reviewers</p>
+                </div>
+                <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+                  <h4 className="font-montserrat font-medium text-white mb-2">Team Leaders</h4>
+                  <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'team_leader').length}</p>
+                  <p className="text-sm text-[#9D9FA9]">Total team leaders</p>
+                </div>
+              </div>
               <UserManager />
             </div>
           </div>
@@ -544,7 +566,7 @@ export default function AdminManagement() {
           className="fixed inset-0 w-full h-full pointer-events-none z-0"
           style={{ background: 'transparent' }}
         />
-        <Header title="Admin Management - Google Sheets Integration" />
+        <Header title="Admin Management" />
         
         <div className="flex flex-1 relative z-10">
           <Sidebar />

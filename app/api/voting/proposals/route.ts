@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVotingDurationDays, getVotingDurationDaysAt, hasVotingDurationHistory } from '@/lib/voting-settings';
-import { googleSheetsService } from '@/lib/google-sheets-service';
+import { supabaseService } from '@/lib/supabase/service';
 import { cache, CACHE_KEYS, CACHE_TTL } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         success: true, 
         proposals: cachedProposals,
         cached: true,
-        cacheStats: googleSheetsService.getCacheStats()
+        cacheStats: supabaseService.getCacheStats()
       });
     }
 
@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
 
     // Load data using the cached service
     const [proposalRows, votingResultRows, voteRows] = await Promise.all([
-      googleSheetsService.getProposals(),
-      googleSheetsService.getVotingResults(),
-      googleSheetsService.getVotes()
+      supabaseService.getProposals(),
+      supabaseService.getVotingResults(),
+      supabaseService.getVotes()
     ]);
 
     // Track proposals needing backfill of Voting Deadline in RD sheet
@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
     const proposals: any[] = [];
     for (let index = 0; index < proposalRows.length; index++) {
       const proposalRow: any = proposalRows[index];
-      // Generate proposal ID from row index + 1
-      const proposalId = `PROP-${String(index + 1).padStart(3, '0')}`;
+      // Normalize to PROP-### format. If RD id doesn't match, derive from index.
+      const idRaw = String(proposalRow.id || '').trim();
+      const idMatch = idRaw.match(/^PROP-(\d+)$/);
+      const proposalId = idMatch ? idRaw : `PROP-${String(index + 1).padStart(3, '0')}`;
       
       // Find voting results for this proposal
       const votingResult = votingResultRows.find((row: any) => 
@@ -156,13 +158,13 @@ export async function GET(request: NextRequest) {
 
     // Cache the processed proposals with votes for this user
     if (userId) {
-      cache.set(`${CACHE_KEYS.PROPOSALS_WITH_VOTES}_${userId}`, proposals, CACHE_TTL.PROPOSALS);
+      cache.set(CACHE_KEYS.PROPOSALS_WITH_VOTES(userId || undefined), proposals, CACHE_TTL.PROPOSALS_WITH_VOTES);
     }
 
     // Persist computed deadlines for proposals missing stored values
     if (canPersistBackfill && deadlineBackfills.length > 0) {
       try {
-        await googleSheetsService.backfillProposalVotingDeadlines(deadlineBackfills);
+        await supabaseService.backfillProposalVotingDeadlines(deadlineBackfills);
       } catch (deadlineError) {
         console.warn('Warning: Could not backfill Voting Deadline due to quota or sheet error:', deadlineError instanceof Error ? deadlineError.message : String(deadlineError));
       }
@@ -176,7 +178,7 @@ export async function GET(request: NextRequest) {
     // Batch create missing voting result entries to reduce API calls
     if (missingResults.length > 0) {
       try {
-        await googleSheetsService.updateVotingResults(missingResults);
+        await supabaseService.updateVotingResults(missingResults);
         // Invalidate cache after updating
         cache.delete(CACHE_KEYS.VOTING_RESULTS);
       } catch (writeError) {

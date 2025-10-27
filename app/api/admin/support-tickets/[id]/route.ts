@@ -1,36 +1,7 @@
 import { NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
-
-// Initialize Google Sheets authentication
-const initializeGoogleSheets = async () => {
-  const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-  const EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const KEY = process.env.GOOGLE_PRIVATE_KEY;
-
-  if (!SHEET_ID || !EMAIL || !KEY) {
-    throw new Error('Google Sheets environment variables not configured');
-  }
-
-  const serviceAccountAuth = new JWT({
-    email: EMAIL,
-    key: KEY.replace(/\\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
-  const doc = new GoogleSpreadsheet(SHEET_ID, serviceAccountAuth);
-  await doc.loadInfo();
-  return doc;
-};
-
-// Get Support Tickets sheet
-const getSupportTicketsSheet = async (doc: GoogleSpreadsheet) => {
-  const sheet = doc.sheetsByTitle['Support Tickets'];
-  if (!sheet) throw new Error('Support Tickets sheet not found');
-  return sheet;
-};
 
 // PUT - Update support ticket
 export async function PUT(req: Request, context: any) {
@@ -41,40 +12,46 @@ export async function PUT(req: Request, context: any) {
     const body = await req.json();
     const { status, priority, assignedTo, notes } = body ?? {};
 
-    const doc = await initializeGoogleSheets();
-    const sheet = await getSupportTicketsSheet(doc);
+    // Fetch existing ticket
+    const { data: rows, error: fetchError } = await supabaseAdmin
+      .from('support_tickets')
+      .select('*')
+      .eq('id', id)
+      .limit(1);
 
-    const rows = await sheet.getRows();
-    const rowIndex = rows.findIndex((row: any) => row.get('id') === id);
-    if (rowIndex === -1) {
+    if (fetchError) {
+      console.error('Supabase support_tickets fetch error:', fetchError);
+      return NextResponse.json({ error: 'Failed to fetch support ticket' }, { status: 500 });
+    }
+
+    const existing = rows && rows[0];
+    if (!existing) {
       return NextResponse.json({ error: 'Support ticket not found' }, { status: 404 });
     }
 
-    const row = rows[rowIndex];
     const now = new Date().toISOString();
 
-    if (status !== undefined) row.set('status', status);
-    if (priority !== undefined) row.set('priority', priority);
-    if (assignedTo !== undefined) row.set('assignedTo', assignedTo || '');
-    if (notes !== undefined) row.set('notes', notes || '');
-    row.set('updatedAt', now);
+    const payload: any = { updatedAt: now };
+    if (status !== undefined) payload.status = status;
+    if (priority !== undefined) payload.priority = priority;
+    if (assignedTo !== undefined) payload.assignedTo = assignedTo || '';
+    if (notes !== undefined) payload.notes = notes || '';
 
-    await row.save();
+    const { error: updateError } = await supabaseAdmin
+      .from('support_tickets')
+      .update(payload)
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Supabase support_tickets update error:', updateError);
+      return NextResponse.json({ error: 'Failed to update support ticket' }, { status: 500 });
+    }
 
     return NextResponse.json({
       message: 'Support ticket updated successfully',
       ticket: {
-        id: row.get('id'),
-        name: row.get('name'),
-        email: row.get('email'),
-        category: row.get('category'),
-        message: row.get('message'),
-        status: row.get('status'),
-        priority: row.get('priority'),
-        assignedTo: row.get('assignedTo') || undefined,
-        notes: row.get('notes') || undefined,
-        createdAt: row.get('createdAt'),
-        updatedAt: row.get('updatedAt'),
+        ...existing,
+        ...payload,
       },
     });
   } catch (error) {
@@ -89,16 +66,33 @@ export async function DELETE(_req: Request, context: any) {
     const { id } = (context?.params ?? {}) as { id?: string };
     if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
 
-    const doc = await initializeGoogleSheets();
-    const sheet = await getSupportTicketsSheet(doc);
+    // Fetch existing ticket
+    const { data: rows, error: fetchError } = await supabaseAdmin
+      .from('support_tickets')
+      .select('*')
+      .eq('id', id)
+      .limit(1);
 
-    const rows = await sheet.getRows();
-    const rowIndex = rows.findIndex((row: any) => row.get('id') === id);
-    if (rowIndex === -1) {
+    if (fetchError) {
+      console.error('Supabase support_tickets fetch error:', fetchError);
+      return NextResponse.json({ error: 'Failed to fetch support ticket' }, { status: 500 });
+    }
+
+    const existing = rows && rows[0];
+    if (!existing) {
       return NextResponse.json({ error: 'Support ticket not found' }, { status: 404 });
     }
 
-    await rows[rowIndex].delete();
+    const { error: deleteError } = await supabaseAdmin
+      .from('support_tickets')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Supabase support_tickets delete error:', deleteError);
+      return NextResponse.json({ error: 'Failed to delete support ticket' }, { status: 500 });
+    }
+
     return NextResponse.json({ message: 'Support ticket deleted successfully' });
   } catch (error) {
     console.error('Error deleting support ticket:', error);

@@ -1,177 +1,145 @@
 import { NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
-// Ensure Node.js runtime for google-spreadsheet
 export const runtime = 'nodejs';
 
-const BASE_HEADERS = ['ID', 'Username', 'Password', 'Name', 'Role', 'Email', 'Status', 'CreatedAt'];
-const REVIEWER_HEADERS = ['Expertise', 'CVLink', 'Organization', 'YearsExperience', 'LinkedInURL', 'GitHubIDs', 'OtherCircle', 'MattermostId'];
-
-const initializeGoogleSheets = async () => {
-  const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-  const EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const KEY = process.env.GOOGLE_PRIVATE_KEY;
-
-  if (!SHEET_ID || !EMAIL || !KEY) {
-    throw new Error('Google Sheets environment variables not configured');
+function getFirst(row: any, keys: string[]): any {
+  for (const k of keys) {
+    const v = row?.[k];
+    if (v !== undefined && v !== null && String(v).length > 0) return v;
   }
+  return undefined;
+}
 
-  const serviceAccountAuth = new JWT({
-    email: EMAIL,
-    key: KEY.replace(/\n/g, '\n'),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
+function normalizeRole(roleRaw: any): 'admin' | 'reviewer' | 'team_leader' {
+  const roleNorm = String(roleRaw || '')
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+  if (roleNorm === 'admin') return 'admin';
+  if (roleNorm === 'team_leader') return 'team_leader';
+  return 'reviewer';
+}
 
-  const doc = new GoogleSpreadsheet(SHEET_ID, serviceAccountAuth);
-  await doc.loadInfo();
-  return doc;
-};
+function toUser(row: any) {
+  const role = normalizeRole(getFirst(row, ['role', 'Role', 'user_role', 'userRole']));
+  const base: any = {
+    id: getFirst(row, ['id', 'ID', 'user_id', 'userId']) || '',
+    username: getFirst(row, ['username', 'user_name', 'Username', 'User Name']) || '',
+    name: getFirst(row, ['name', 'Name', 'full_name', 'Full Name', 'displayName']) || '',
+    role,
+    email: getFirst(row, ['email', 'Email']) || '',
+    status: getFirst(row, ['status', 'Status']) || 'active',
+    createdAt: getFirst(row, ['createdAt', 'CreatedAt', 'created_at']) || '',
+    updatedAt: getFirst(row, ['updatedAt', 'UpdatedAt', 'updated_at']) || ''
+  };
 
-const getUsersSheet = async (doc: GoogleSpreadsheet) => {
-  let sheet = doc.sheetsByTitle['Users'];
-  if (!sheet) {
-    sheet = await doc.addSheet({
-      title: 'Users',
-      headerValues: [...BASE_HEADERS, ...REVIEWER_HEADERS, 'UpdatedAt']
-    });
-  } else {
-    // Load header row before inspecting headerValues
-    await sheet.loadHeaderRow();
-    const existingHeaders = sheet.headerValues ?? [];
-    // Ensure all expected columns exist
-    const desiredHeaders = Array.from(new Set([
-      ...existingHeaders,
-      ...BASE_HEADERS,
-      ...REVIEWER_HEADERS,
-      'UpdatedAt'
-    ]));
-    const needsUpdate = desiredHeaders.length !== existingHeaders.length || desiredHeaders.some(h => !existingHeaders.includes(h));
-    if (needsUpdate) {
-      await sheet.setHeaderRow(desiredHeaders);
-      await sheet.loadHeaderRow();
-    }
+  if (role === 'reviewer') {
+    base.expertise = getFirst(row, ['expertise', 'Expertise']) || '';
+    base.cvLink = getFirst(row, ['cvLink', 'CVLink']) || '';
+    base.organization = getFirst(row, ['organization', 'Organization']) || '';
+    base.yearsExperience = getFirst(row, ['yearsExperience', 'YearsExperience']) || '';
+    base.linkedinUrl = getFirst(row, ['linkedinUrl', 'LinkedInURL']) || '';
+    base.githubIds = getFirst(row, ['githubIds', 'GitHubIDs']) || '';
+    base.mattermostId = getFirst(row, ['mattermostId', 'MattermostId']) || '';
+    base.otherCircle = String(getFirst(row, ['otherCircle', 'OtherCircle'] || ''))
+      .trim()
+      .toLowerCase() === 'yes';
   }
-  return sheet;
-};
+  return base;
+}
 
-// PUT /api/admin/users/:id
-export async function PUT(req: Request, context: any) {
+export async function GET(_req: Request, context: any) {
   try {
     const params = await context?.params;
-    const { id } = (params ?? {}) as { id: string };
-    if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
+    const { id } = (params ?? {}) as { id?: string };
+    if (!id) return NextResponse.json({ success: false, message: 'Missing id param' }, { status: 400 });
 
-    const body = await req.json();
-    const { username, password, name, role, email, status } = body ?? {};
+    const { data, error } = await supabaseAdmin
+      .from('user_app')
+      .select('*')
+      .eq('ID', id)
+      .limit(1);
 
-    const doc = await initializeGoogleSheets();
-    const sheet = await getUsersSheet(doc);
-
-    const rows = await sheet.getRows();
-    const row = rows.find((r: any) => r.get('ID') === id);
-    if (!row) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (error) {
+      console.error('Supabase user select error:', error);
+      return NextResponse.json({ success: false, message: 'Failed to fetch user' }, { status: 500 });
     }
 
-    const nowISO = new Date().toISOString();
+    const row = (data ?? [])[0];
+    if (!row) return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
 
-    // Base fields
-    if (username !== undefined) row.set('Username', username);
-    if (password !== undefined) row.set('Password', password);
-    if (name !== undefined) row.set('Name', name);
-    if (role !== undefined) row.set('Role', role);
-    if (email !== undefined) row.set('Email', email || '');
-    if (status !== undefined) row.set('Status', status || 'active');
-
-    // Reviewer-specific
-    const effectiveRole = role ?? (row.get('Role') || '');
-    if (effectiveRole === 'reviewer') {
-      const {
-        expertise = row.get('Expertise') || '',
-        cvLink = row.get('CVLink') || '',
-        organization = row.get('Organization') || '',
-        yearsExperience = row.get('YearsExperience') || '',
-        linkedinUrl = row.get('LinkedInURL') || '',
-        githubIds = row.get('GitHubIDs') || '',
-        mattermostId = row.get('MattermostId') || '',
-        otherCircle = (row.get('OtherCircle') || 'No')
-      } = body ?? {};
-
-      row.set('Expertise', expertise);
-      row.set('CVLink', cvLink);
-      row.set('Organization', organization);
-      row.set('YearsExperience', yearsExperience);
-      row.set('LinkedInURL', linkedinUrl);
-      row.set('GitHubIDs', githubIds);
-      row.set('MattermostId', mattermostId);
-      row.set('OtherCircle', typeof otherCircle === 'boolean' ? (otherCircle ? 'Yes' : 'No') : otherCircle);
-    } else {
-      // Clear reviewer-only fields if role changed away from reviewer
-      row.set('Expertise', '');
-      row.set('CVLink', '');
-      row.set('Organization', '');
-      row.set('YearsExperience', '');
-      row.set('LinkedInURL', '');
-      row.set('GitHubIDs', '');
-      row.set('MattermostId', '');
-      row.set('OtherCircle', 'No');
-    }
-
-    // Optionally track updates
-    row.set('UpdatedAt', nowISO);
-
-    await row.save();
-
-    const updatedRole = row.get('Role') || '';
-    const base: any = {
-      id: row.get('ID'),
-      username: row.get('Username'),
-      name: row.get('Name'),
-      role: updatedRole,
-      email: row.get('Email') || '',
-      status: row.get('Status') || 'active',
-      createdAt: row.get('CreatedAt') || '',
-      updatedAt: row.get('UpdatedAt') || ''
-    };
-
-    if (updatedRole === 'reviewer') {
-      base.expertise = row.get('Expertise') || '';
-      base.cvLink = row.get('CVLink') || '';
-      base.organization = row.get('Organization') || '';
-      base.yearsExperience = row.get('YearsExperience') || '';
-      base.linkedinUrl = row.get('LinkedInURL') || '';
-      base.githubIds = row.get('GitHubIDs') || '';
-      base.mattermostId = row.get('MattermostId') || '';
-      base.otherCircle = (row.get('OtherCircle') || 'No') === 'Yes';
-    }
-
-    return NextResponse.json({ message: 'User updated successfully', user: base });
-  } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    return NextResponse.json({ success: true, data: toUser(row) });
+  } catch (e) {
+    console.error('GET /admin/users/[id] error:', e);
+    return NextResponse.json({ success: false, message: 'Failed to fetch user' }, { status: 500 });
   }
 }
 
-// DELETE /api/admin/users/:id
-export async function DELETE(_req: Request, context: any) {
+export async function PUT(req: Request, context: any) {
   try {
-    const { id } = (context?.params ?? {}) as { id: string };
-    if (!id) return NextResponse.json({ error: 'Missing id param' }, { status: 400 });
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id?: string };
+    if (!id) return NextResponse.json({ success: false, message: 'Missing id param' }, { status: 400 });
 
-    const doc = await initializeGoogleSheets();
-    const sheet = await getUsersSheet(doc);
+    const body = await req.json();
+    const nowISO = new Date().toISOString();
 
-    const rows = await sheet.getRows();
-    const rowIndex = rows.findIndex((r: any) => r.get('ID') === id);
-    if (rowIndex === -1) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const updates: Record<string, any> = {};
+    if (body.username !== undefined) updates.Username = String(body.username);
+    if (body.password !== undefined) updates.Password = String(body.password);
+    if (body.name !== undefined) updates.Name = String(body.name);
+    if (body.role !== undefined) updates.Role = normalizeRole(body.role);
+    if (body.email !== undefined) updates.Email = String(body.email || '');
+    if (body.status !== undefined) updates.Status = String(body.status || 'active');
+
+    // Reviewer fields (map regardless of role presence to allow partial updates)
+    if (body.expertise !== undefined) updates.Expertise = String(body.expertise || '');
+    if (body.cvLink !== undefined) updates.CVLink = String(body.cvLink || '');
+    if (body.organization !== undefined) updates.Organization = String(body.organization || '');
+    if (body.yearsExperience !== undefined) updates.YearsExperience = String(body.yearsExperience || '');
+    if (body.linkedinUrl !== undefined) updates.LinkedInURL = String(body.linkedinUrl || '');
+    if (body.githubIds !== undefined) updates.GitHubIDs = String(body.githubIds || '');
+    if (body.mattermostId !== undefined) updates.MattermostId = String(body.mattermostId || '');
+    if (body.otherCircle !== undefined) updates.OtherCircle = body.otherCircle ? 'yes' : 'no';
+
+    updates.UpdatedAt = nowISO;
+
+    const { error } = await supabaseAdmin
+      .from('user_app')
+      .update(updates)
+      .eq('ID', id);
+
+    if (error) {
+      console.error('Supabase user update error:', error);
+      return NextResponse.json({ success: false, message: 'Failed to update user' }, { status: 500 });
     }
 
-    await rows[rowIndex].delete();
-    return NextResponse.json({ message: 'User deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    return NextResponse.json({ success: true, message: 'User updated successfully' });
+  } catch (e) {
+    console.error('PUT /admin/users/[id] error:', e);
+    return NextResponse.json({ success: false, message: 'Failed to update user' }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: Request, context: any) {
+  try {
+    const params = await context?.params;
+    const { id } = (params ?? {}) as { id?: string };
+    if (!id) return NextResponse.json({ success: false, message: 'Missing id param' }, { status: 400 });
+
+    const { error } = await supabaseAdmin
+      .from('user_app')
+      .delete()
+      .eq('ID', id);
+
+    if (error) {
+      console.error('Supabase user delete error:', error);
+      return NextResponse.json({ success: false, message: 'Failed to delete user' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'User deleted successfully' });
+  } catch (e) {
+    console.error('DELETE /admin/users/[id] error:', e);
+    return NextResponse.json({ success: false, message: 'Failed to delete user' }, { status: 500 });
   }
 }

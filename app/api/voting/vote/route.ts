@@ -110,8 +110,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has already voted on this proposal
+    // Duplicate vote check: compare by string userId OR username
+    const hasVoted = voteRows.some((v: any) => {
+      const vUid = String(v.userId || '').trim();
+      const vUname = String(v.username || '').trim().toLowerCase();
+      return (v.proposalId === proposalId) && (
+        vUid === String(userId).trim() || vUname === String(username).trim().toLowerCase()
+      );
+    });
+    if (hasVoted) {
+      return NextResponse.json({ success: false, message: 'You have already voted on this proposal. Vote changes are not allowed.' }, { status: 409 });
+    }
     const existingVote = voteRows.find((row: any) => 
-      row.proposalId === proposalId && row.userId === userId
+      row.proposalId === proposalId && row.userId === String(userId)
     );
 
     if (existingVote) {
@@ -122,10 +133,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Add new vote using the service
-    await googleSheetsService.addVote(proposalId, userId, username, voteType);
+    await googleSheetsService.addVote(proposalId, String(userId), username, voteType);
 
-    // Invalidate user-specific proposal cache
-    cache.delete(`${CACHE_KEYS.PROPOSALS_WITH_VOTES}_${userId}`);
+    // Recompute aggregated voting results for this proposal and persist
+    try {
+      const freshVotes = await googleSheetsService.getVotes();
+      const proposalVotes = freshVotes.filter((row: any) => row.proposalId === proposalId);
+      const totalUpvotes = proposalVotes.filter((row: any) => row.voteType === 'upvote').length;
+      const totalDownvotes = proposalVotes.filter((row: any) => row.voteType === 'downvote').length;
+      const voterCount = new Set(proposalVotes.map((row: any) => row.userId)).size;
+      const netScore = totalUpvotes - totalDownvotes;
+
+      await googleSheetsService.updateVotingResult(proposalId, {
+        'Total Upvotes': totalUpvotes,
+        'Total Downvotes': totalDownvotes,
+        'Net Score': netScore,
+        'Voter Count': voterCount
+      });
+    } catch (aggErr) {
+      console.warn('Warning: Could not update aggregated voting results:', aggErr instanceof Error ? aggErr.message : String(aggErr));
+    }
+
+    // Invalidate user-specific proposal cache with correct key
+    cache.delete(CACHE_KEYS.PROPOSALS_WITH_VOTES(String(userId)));
 
     // Return success response - the service handles all the vote counting and result updates
     return NextResponse.json({

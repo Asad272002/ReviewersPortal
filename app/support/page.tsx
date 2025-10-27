@@ -20,7 +20,26 @@ export default function Support() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    // Load existing support tickets
+    const loadTickets = async () => {
+      try {
+        const res = await fetch('/api/admin/support-tickets');
+        if (!res.ok) throw new Error('Failed to load tickets');
+        const json = await res.json();
+        setTickets(Array.isArray(json.tickets) ? json.tickets : []);
+      } catch (e) {
+        console.warn('Support tickets fetch error:', e);
+      } finally {
+        setIsLoadingTickets(false);
+      }
+    };
+    loadTickets();
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -351,20 +370,47 @@ export default function Support() {
             </div>
             
             <div className="mt-8 bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6">
+              <h2 className="font-montserrat font-semibold text-2xl text-white mb-4">Recent Support Tickets</h2>
+              {isLoadingTickets ? (
+                <p className="font-montserrat text-gray-300">Loading tickets...</p>
+              ) : tickets.length === 0 ? (
+                <p className="font-montserrat text-gray-300">No support tickets yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {tickets.slice(0, 10).map((t) => (
+                    <div key={t.id} className="border border-[#9D9FA9]/50 rounded-lg p-4 bg-[#0C021E]/40">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-montserrat text-white font-medium">{t.name} <span className="text-gray-400">({t.email})</span></p>
+                          <p className="font-montserrat text-[#9050E9]">{t.category}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="px-2 py-1 rounded bg-[#9050E9]/20 text-[#A96AFF] font-montserrat text-sm">{t.status || 'open'}</span>
+                          <span className="px-2 py-1 rounded bg-[#9050E9]/10 text-gray-300 font-montserrat text-sm">{new Date(t.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <p className="mt-3 font-montserrat text-gray-200">{String(t.message || '').slice(0, 180)}{String(t.message || '').length > 180 ? '…' : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-8 bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6">
               <h2 className="font-montserrat font-semibold text-2xl text-white mb-4">Frequently Asked Questions</h2>
               <div className="space-y-4">
                 <div className="border-b border-[#9D9FA9] pb-4">
-                  <h3 className="font-montserrat font-medium text-lg text-gray-200 mb-2">How do I reset my password?</h3>
+                  <h3 className="font-montserrat font-medium text-lg text-gray-200">How do I reset my password?</h3>
                   <p className="font-montserrat text-gray-300">You can reset your password by clicking the "Forgot Password" link on the login page and following the instructions sent to your email.</p>
                 </div>
                 
                 <div className="border-b border-[#9D9FA9] pb-4">
-                  <h3 className="font-montserrat font-medium text-lg text-gray-200 mb-2">How do I submit a proposal for review?</h3>
+                  <h3 className="font-montserrat font-medium text-lg text-gray-200">How do I submit a proposal for review?</h3>
                   <p className="font-montserrat text-gray-300">Navigate to the "Requirement Documents" section and click on "Submit Your Proposal" to access the submission form.</p>
                 </div>
                 
                 <div>
-                  <h3 className="font-montserrat font-medium text-lg text-gray-200 mb-2">What file formats are supported for document uploads?</h3>
+                  <h3 className="font-montserrat font-medium text-lg text-gray-200">What file formats are supported for document uploads?</h3>
                   <p className="font-montserrat text-gray-300">We support PDF, DOC, DOCX, and TXT file formats for document uploads. Maximum file size is 10MB per file.</p>
                 </div>
               </div>
