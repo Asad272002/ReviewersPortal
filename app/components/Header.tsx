@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '../context/AuthContext';
 
@@ -70,7 +71,21 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
                 <p className="font-montserrat text-white font-medium text-sm sm:text-base truncate">{user?.name}</p>
                 <p className="font-montserrat text-gray-400 text-xs sm:text-sm capitalize">{user?.role}</p>
               </div>
-              <div className="p-1.5 sm:p-2">
+              <div className="p-1.5 sm:p-2 space-y-1.5">
+                <Link
+                  href="/profile"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                  className="w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 text-left font-montserrat text-gray-300 hover:text-white hover:bg-[#2A1A4A] rounded transition-colors duration-200 text-sm sm:text-base"
+                >
+                  <Image 
+                    src="/icons/profile-icon.svg" 
+                    alt="Profile" 
+                    width={14} 
+                    height={14} 
+                    className="sm:w-4 sm:h-4 opacity-70"
+                  />
+                  Profile
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 text-left font-montserrat text-gray-300 hover:text-white hover:bg-[#2A1A4A] rounded transition-colors duration-200 text-sm sm:text-base"

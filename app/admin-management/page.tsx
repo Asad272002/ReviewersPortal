@@ -173,30 +173,60 @@ export default function AdminManagement() {
   const fetchSheetData = async () => {
     setIsLoading(true);
     try {
-      // Fetch data from all sheets
-      const [announcementsRes, resourcesRes, processesRes, usersRes, supportTicketsRes] = await Promise.all([
-        fetch('/api/admin/announcements'),
-        fetch('/api/admin/resources'),
-        fetch('/api/admin/processes'),
-        fetch('/api/admin/users'),
-        fetch('/api/admin/support-tickets')
-      ]);
+      const endpoints: Record<string, string> = {
+        announcements: '/api/admin/announcements',
+        resources: '/api/admin/resources',
+        processes: '/api/admin/processes',
+        users: '/api/admin/users',
+        supportTickets: '/api/admin/support-tickets'
+      };
 
-      const announcements = announcementsRes.ok ? await announcementsRes.json() : {};
-      const resources = resourcesRes.ok ? await resourcesRes.json() : {};
-      const processes = processesRes.ok ? await processesRes.json() : {};
-      const users = usersRes.ok ? await usersRes.json() : {};
-      const supportTickets = supportTicketsRes.ok ? await supportTicketsRes.json() : {};
+      const results = await Promise.allSettled(
+        Object.entries(endpoints).map(([key, url]) =>
+          fetch(url)
+            .then(async (res) => {
+              if (!res.ok) {
+                throw new Error(`HTTP ${res.status} ${res.statusText}`);
+              }
+              const json = await res.json();
+              return { key, data: json };
+            })
+            .catch((err) => {
+              console.error(`Fetch failed for ${key} (${url}):`, err?.message || err);
+              return { key, error: err };
+            })
+        )
+      );
 
-      setSheetData({
-        announcements: announcements.announcements || [],
-        resources: resources.resources || [],
-        processes: processes.processes || [],
-        users: users.data?.users || [],
-        supportTickets: supportTickets.tickets || []
-      });
+      const nextData = {
+        announcements: [] as any[],
+        resources: [] as any[],
+        processes: [] as any[],
+        users: [] as any[],
+        supportTickets: [] as any[]
+      };
+
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          const payload = r.value as { key: string; data?: any; error?: any };
+          if (payload.error) {
+            console.error(`Skipping ${payload.key} due to fetch error.`);
+            continue;
+          }
+          const { key, data } = payload;
+          if (key === 'announcements') nextData.announcements = data?.announcements || data?.data?.announcements || [];
+          if (key === 'resources') nextData.resources = data?.resources || data?.data?.resources || [];
+          if (key === 'processes') nextData.processes = data?.processes || data?.data?.processes || [];
+          if (key === 'users') nextData.users = data?.users || data?.data?.users || [];
+          if (key === 'supportTickets') nextData.supportTickets = data?.tickets || data?.data?.tickets || [];
+        } else {
+          console.error('Unexpected promise rejection while fetching admin data:', (r as any).reason);
+        }
+      }
+
+      setSheetData(nextData);
     } catch (error) {
-      console.error('Error fetching sheet data:', error);
+      console.error('Failed to fetch admin data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -395,9 +425,9 @@ export default function AdminManagement() {
       </div>
       
       <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6">
-        <h4 className="font-montserrat font-semibold text-lg text-white mb-4">Google Sheets Integration</h4>
+        <h4 className="font-montserrat font-semibold text-lg text-white mb-4">Admin Data Sources</h4>
         <p className="font-montserrat text-gray-300 mb-4">
-          This data is directly synced with your Google Sheets. Any changes made in the sheets will be reflected here after refreshing.
+          This data is fetched from the backend API (Supabase). Refresh to see the latest updates.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <a
@@ -406,7 +436,7 @@ export default function AdminManagement() {
             rel="noopener noreferrer"
             className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 inline-flex items-center gap-2 w-full sm:w-auto"
           >
-            📊 Open Google Sheets
+            📊 Open Data Source
           </a>
           <button
             onClick={refreshAllData}
@@ -423,7 +453,7 @@ export default function AdminManagement() {
     if (isLoading) {
       return (
         <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-8 text-center">
-          <p className="font-montserrat text-gray-300">Loading data from Google Sheets...</p>
+          <p className="font-montserrat text-gray-300">Loading admin data...</p>
         </div>
       );
     }

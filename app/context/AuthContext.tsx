@@ -6,6 +6,7 @@ import { User, AuthState } from '../types/auth';
 interface AuthContextType extends AuthState {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -43,6 +44,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Auth check failed:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const refresh = async (): Promise<void> => {
+    try {
+      const response = await fetch('/api/auth/verify', {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          setAuthState({
+            user: data.user,
+            isAuthenticated: true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Auth refresh failed:', error);
     }
   };
 
@@ -92,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ ...authState, login, logout, refresh, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
