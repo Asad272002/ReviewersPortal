@@ -202,15 +202,15 @@ export default function SupportTicketManager() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-montserrat font-semibold text-xl text-white">Support Tickets</h3>
-          <div className="flex items-center gap-4">
-            <div className="text-sm font-montserrat text-[#9D9FA9]">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+          <h3 className="font-montserrat font-semibold text-xl text-white w-full sm:w-auto">Support Tickets</h3>
+          <div className="flex items-center gap-4 w-full sm:w-auto flex-wrap">
+            <div className="text-sm font-montserrat text-[#9D9FA9] w-full sm:w-auto">
               Total: {tickets.length} | Open: {tickets.filter(t => t.status === 'open').length}
             </div>
             <button
               onClick={fetchTickets}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <span>🔄</span>
               Refresh
@@ -219,13 +219,13 @@ export default function SupportTicketManager() {
         </div>
         
         {/* Filters */}
-        <div className="flex gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="w-full sm:w-auto">
             <label className="block font-montserrat text-[#9D9FA9] mb-1 text-sm">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="p-2 bg-[#0C021E] border border-[#9D9FA9] rounded text-white text-sm focus:outline-none focus:border-[#A96AFF]"
+              className="p-2 bg-[#0C021E] border border-[#9D9FA9] rounded text-white text-sm focus:outline-none focus:border-[#A96AFF] w-full sm:w-auto"
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
@@ -235,12 +235,12 @@ export default function SupportTicketManager() {
             </select>
           </div>
           
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block font-montserrat text-[#9D9FA9] mb-1 text-sm">Priority</label>
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
-              className="p-2 bg-[#0C021E] border border-[#9D9FA9] rounded text-white text-sm focus:outline-none focus:border-[#A96AFF]"
+              className="p-2 bg-[#0C021E] border border-[#9D9FA9] rounded text-white text-sm focus:outline-none focus:border-[#A96AFF] w-full sm:w-auto"
             >
               <option value="all">All Priority</option>
               <option value="urgent">Urgent</option>

@@ -206,16 +206,16 @@ export default function ProcessManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="w-full sm:w-auto">
           <h3 className="font-montserrat font-semibold text-xl text-white mb-2">Process Documentation</h3>
           <p className="font-montserrat text-gray-300">Manage workflow processes, guidelines, and procedures</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 w-full sm:w-auto flex-wrap">
           <button
             onClick={syncToGoogleSheets}
             disabled={syncingToSheets}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-colors"
+            className="bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-colors w-full sm:w-auto"
           >
             {syncingToSheets ? 'Syncing...' : '📊 Sync to Sheets'}
           </button>
@@ -224,7 +224,7 @@ export default function ProcessManager() {
               resetForm();
               setShowForm(true);
             }}
-            className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-colors"
+            className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-colors w-full sm:w-auto"
           >
             + Add Process Document
           </button>
@@ -232,7 +232,7 @@ export default function ProcessManager() {
       </div>
 
       {/* Status Filter Buttons */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setStatusFilter('all')}
           className={`px-4 py-2 rounded-lg font-montserrat font-medium transition-colors ${
@@ -515,7 +515,7 @@ export default function ProcessManager() {
         ) : (
           filteredProcesses.map((process) => (
             <div key={process.id} className="bg-[#1A0B2E] rounded-lg border border-[#9D9FA9] p-6">
-              <div className="flex justify-between items-start mb-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between items-start mb-4 gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{getCategoryIcon(process.category)}</span>
@@ -528,23 +528,23 @@ export default function ProcessManager() {
                       {process.status.charAt(0).toUpperCase() + process.status.slice(1)}
                     </span>
                   </div>
-                  <p className="font-montserrat text-gray-300 mb-2">{process.description}</p>
+                  <p className="font-montserrat text-gray-300 mb-2 break-words">{process.description}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-400">
                     <span>Category: {process.category}</span>
                     <span>Order: {process.order}</span>
                     <span>Updated: {new Date(process.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 ml-0 sm:ml-4 w-full sm:w-auto mt-2 sm:mt-0">
                   <button
                     onClick={() => handleEdit(process)}
-                    className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-1 px-3 rounded transition-colors text-sm"
+                    className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-3 rounded transition-colors text-sm w-full sm:w-auto"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(process.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white font-montserrat font-medium py-1 px-3 rounded transition-colors text-sm"
+                    className="bg-red-600 hover:bg-red-700 text-white font-montserrat font-medium py-2 px-3 rounded transition-colors text-sm w-full sm:w-auto"
                   >
                     Delete
                   </button>

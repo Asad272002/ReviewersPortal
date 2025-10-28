@@ -33,7 +33,7 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
   };
   
   return (
-    <header className="flex justify-between items-center py-3 px-4 sm:py-4 sm:px-6 w-full bg-card-bg border-b border-border-color shadow-sm transition-all">
+    <header className="flex justify-between items-center py-3 pl-14 pr-4 sm:py-4 sm:pl-20 sm:pr-6 lg:px-6 w-full bg-card-bg border-b border-border-color shadow-sm transition-all">
       <div className="flex items-center gap-2 sm:gap-4">
         <h1 className="font-montserrat font-medium text-xl sm:text-2xl lg:text-3xl text-primary-light truncate">{title}</h1>
       </div>

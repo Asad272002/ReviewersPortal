@@ -535,40 +535,40 @@ export default function VoteProposalsPage() {
         {/* Content */}
         <div className="relative z-10">
           <Header />
-          <div className="flex">
+          <div className="flex flex-col lg:flex-row">
             <Sidebar />
-            <main className="flex-1 p-8">
+            <main className="flex-1 p-4 sm:p-8">
               <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="mb-8 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-6">
-                  <h1 className="text-3xl font-bold font-montserrat mb-2 text-white">🗳️ Vote for Proposals</h1>
+                <div className="mb-8 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-4 sm:p-6">
+                  <h1 className="text-2xl sm:text-3xl font-bold font-montserrat mb-2 text-white">🗳️ Vote for Proposals</h1>
                   <p className="text-gray-300 font-montserrat">
                     Review and vote on submitted proposals. Each user can cast one vote per proposal.
                   </p>
                 </div>
 
                 {/* Filters and Sorting */}
-                <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-6 mb-6">
-                <div className="flex flex-wrap gap-4 items-center justify-between">
-                  <div className="flex gap-4">
-                    <div>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-4 sm:p-6 mb-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="w-full sm:w-auto">
                       <label className="block text-sm font-montserrat text-gray-300 mb-2">Filter by Status</label>
                       <select 
                         value={filter} 
                         onChange={(e) => setFilter(e.target.value as any)}
-                        className="bg-white/10 border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-white/40 focus:bg-white/15"
+                        className="bg-white/10 border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-white/40 focus:bg-white/15 w-full sm:w-auto"
                       >
                         <option value="all" className="bg-gray-800 text-white">All Proposals</option>
                         <option value="active" className="bg-gray-800 text-white">Active Voting</option>
                         <option value="expired" className="bg-gray-800 text-white">Voting Ended</option>
                       </select>
                     </div>
-                    <div>
+                    <div className="w-full sm:w-auto">
                       <label className="block text-sm font-montserrat text-gray-300 mb-2">Sort by</label>
                       <select 
                         value={sortBy} 
                         onChange={(e) => setSortBy(e.target.value as any)}
-                        className="bg-white/10 border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-white/40 focus:bg-white/15"
+                        className="bg-white/10 border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-white/40 focus:bg-white/15 w-full sm:w-auto"
                       >
                         <option value="newest" className="bg-gray-800 text-white">Newest First</option>
                         <option value="popular" className="bg-gray-800 text-white">Most Popular</option>
@@ -579,7 +579,7 @@ export default function VoteProposalsPage() {
                   <button
                     onClick={fetchProposals}
                     disabled={loading}
-                    className="bg-white/10 hover:bg-white/20 border border-[#9D9FA9] hover:border-white/40 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-white/10 hover:bg-white/20 border border-[#9D9FA9] hover:border-white/40 text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 w-full sm:w-auto justify-center"
                   >
                     {loading ? (
                       <>
@@ -598,14 +598,14 @@ export default function VoteProposalsPage() {
               {/* Proposals List */}
               {loading ? (
                 <div className="text-center py-12">
-                  <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-8 max-w-md mx-auto">
+                  <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6 sm:p-8 max-w-md mx-auto">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/50 mx-auto mb-4"></div>
                     <p className="text-gray-300 font-montserrat">Loading proposals...</p>
                   </div>
                 </div>
               ) : sortedProposals.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-8 max-w-md mx-auto">
+                  <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6 sm:p-8 max-w-md mx-auto">
                     <div className="text-6xl mb-4">📝</div>
                     <h3 className="text-xl font-montserrat mb-2 text-white">No Proposals Found</h3>
                     <p className="text-gray-300 font-montserrat text-lg">No proposals found for the selected filter.</p>
@@ -614,15 +614,15 @@ export default function VoteProposalsPage() {
               ) : (
                 <div className="space-y-6">
                   {sortedProposals.map((proposal) => (
-                    <div key={proposal.proposalId} className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-6">{/* Removed hover animation */}
+                    <div key={proposal.proposalId} className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-4 sm:p-6">{/* Removed hover animation */}
                       
                       {/* Proposal Header */}
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
                         <div className="flex-1">
-                          <h3 className="text-xl font-bold font-montserrat text-white mb-2">
+                          <h3 className="text-lg sm:text-xl font-bold font-montserrat text-white mb-2">
                             {proposal.proposalTitle}
                           </h3>
-                          <div className="flex flex-wrap gap-4 text-sm text-gray-300 font-montserrat">
+                          <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-gray-300 font-montserrat">
                             <span>👤 {proposal.reviewerName}</span>
                             <span>📂 {proposal.projectCategory}</span>
                             <span>👥 {proposal.teamSize} members</span>
@@ -630,7 +630,7 @@ export default function VoteProposalsPage() {
                             <span>⏱️ {proposal.timelineWeeks} weeks</span>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="sm:text-right">
                           <div className={`px-3 py-1 rounded-lg text-sm font-montserrat backdrop-blur-sm border ${
                             proposal.status === 'active' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
                             proposal.status === 'expired' ? 'bg-red-500/20 text-red-300 border-red-500/30' : 'bg-gray-500/20 text-gray-300 border-gray-500/30'
@@ -672,14 +672,14 @@ export default function VoteProposalsPage() {
                       </div>
 
                       {/* Voting Section */}
-                      <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                        <div className="flex items-center gap-6">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-white/20">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
                           {/* Vote Buttons */}
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleVote(proposal.proposalId, 'upvote')}
                               disabled={proposal.status !== 'active' || votingLoading === proposal.proposalId || proposal.userVote !== null}
-                              className={`flex items-center gap-1 px-3 py-2 rounded-lg font-montserrat transition-all duration-300 border ${
+                              className={`flex items-center gap-1 px-4 py-3 sm:px-3 sm:py-2 rounded-lg font-montserrat transition-all duration-300 border w-full sm:w-auto justify-center ${
                                 proposal.userVote === 'upvote' 
                                   ? 'bg-green-500/30 text-green-200 border-green-500/50' 
                                   : proposal.userVote !== null
@@ -693,7 +693,7 @@ export default function VoteProposalsPage() {
                             <button
                               onClick={() => handleVote(proposal.proposalId, 'downvote')}
                               disabled={proposal.status !== 'active' || votingLoading === proposal.proposalId || proposal.userVote !== null}
-                              className={`flex items-center gap-1 px-3 py-2 rounded-lg font-montserrat transition-all duration-300 border ${
+                              className={`flex items-center gap-1 px-4 py-3 sm:px-3 sm:py-2 rounded-lg font-montserrat transition-all duration-300 border w-full sm:w-auto justify-center ${
                                 proposal.userVote === 'downvote' 
                                   ? 'bg-red-500/30 text-red-200 border-red-500/50' 
                                   : proposal.userVote !== null
@@ -707,7 +707,7 @@ export default function VoteProposalsPage() {
                           </div>
 
                           {/* Vote Stats */}
-                          <div className="flex items-center gap-4 text-sm font-montserrat">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm font-montserrat">
                             <div className="bg-white/5 rounded-lg px-3 py-2 border border-[#9D9FA9]">
                               <span className={`font-semibold ${
                                 proposal.netScore > 0 ? 'text-green-400' :

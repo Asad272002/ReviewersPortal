@@ -219,7 +219,7 @@ export default function AdminManagement() {
           <Header title="Access Denied" />
           <div className="flex flex-1 relative z-10">
             <Sidebar />
-            <main className="flex-1 p-8">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
               <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-8 text-center">
                 <h2 className="font-montserrat font-semibold text-xl text-white mb-4">Access Denied</h2>
                 <p className="font-montserrat text-gray-300">You need admin privileges to access this page.</p>
@@ -235,11 +235,11 @@ export default function AdminManagement() {
   const renderOverview = () => (
     <div className="space-y-6">
       <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
           <h3 className="font-montserrat font-semibold text-xl text-white">Data Overview</h3>
           <button
             onClick={refreshAllData}
-            className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded transition-colors"
+            className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded transition-colors w-full sm:w-auto"
           >
             🔄 Refresh All Data
           </button>
@@ -344,18 +344,18 @@ export default function AdminManagement() {
   const renderDataSection = (sectionName: string, data: any[]) => (
     <div className="space-y-6">
       <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
           <h3 className="font-montserrat font-semibold text-xl text-white capitalize">{sectionName} Data</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => setActiveSection('overview')}
-              className="bg-[#0C021E] hover:bg-white/10 border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300"
+              className="bg-[#0C021E] hover:bg-white/10 border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 w-full sm:w-auto"
             >
               ← Back to Overview
             </button>
             <button
               onClick={refreshAllData}
-              className="bg-[#0C021E] hover:bg-white/10 border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300"
+              className="bg-[#0C021E] hover:bg-white/10 border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 w-full sm:w-auto"
             >
               🔄 Refresh
             </button>
@@ -399,18 +399,18 @@ export default function AdminManagement() {
         <p className="font-montserrat text-gray-300 mb-4">
           This data is directly synced with your Google Sheets. Any changes made in the sheets will be reflected here after refreshing.
         </p>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <a
             href={`https://docs.google.com/spreadsheets/d/${process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID || 'your-sheet-id'}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 inline-flex items-center gap-2"
+            className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 inline-flex items-center gap-2 w-full sm:w-auto"
           >
             📊 Open Google Sheets
           </a>
           <button
             onClick={refreshAllData}
-            className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
+            className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
           >
             🔄 Sync Data
           </button>
@@ -428,129 +428,129 @@ export default function AdminManagement() {
       );
     }
 
-    switch (activeSection) {
-      case 'announcements':
-        return (
-          <div className="space-y-6">
-            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">Announcement Management</h3>
-                <button
-                  onClick={() => setActiveSection('overview')}
-                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
-                >
-                  ← Back to Overview
-                </button>
-              </div>
-              <AnnouncementManager />
-            </div>
-          </div>
-        );
-      case 'resources':
-        return (
-          <div className="space-y-6">
-            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">Resource Management</h3>
-                <button
-                  onClick={() => setActiveSection('overview')}
-                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
-                >
-                  ← Back to Overview
-                </button>
-              </div>
-              <ResourceManager />
-            </div>
-          </div>
-        );
-      case 'processes':
-        return (
-          <div className="space-y-6">
-            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">Process Documentation Management</h3>
-                <button
-                  onClick={() => setActiveSection('overview')}
-                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
-                >
-                  ← Back to Overview
-                </button>
-              </div>
-              <ProcessManager />
-            </div>
-          </div>
-        );
-      case 'awarded-teams':
-        return (
-          <div className="space-y-6">
-            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">Awarded Teams Connect Management</h3>
-                <button
-                  onClick={() => setActiveSection('overview')}
-                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
-                >
-                  ← Back to Overview
-                </button>
-              </div>
-              <AwardedTeamsManager onBack={() => setActiveSection('overview')} users={sheetData.users} />
-            </div>
-          </div>
-        );
-      case 'users':
-        return (
-          <div className="space-y-6">
-            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">User Management</h3>
-                <button
-                  onClick={() => setActiveSection('overview')}
-                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
-                >
-                  ← Back to Overview
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-                  <h4 className="font-montserrat font-medium text-white mb-2">Admins</h4>
-                  <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'admin').length}</p>
-                  <p className="text-sm text-[#9D9FA9]">Total admins</p>
+      switch (activeSection) {
+        case 'announcements':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Announcement Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
                 </div>
-                <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-                  <h4 className="font-montserrat font-medium text-white mb-2">Reviewers</h4>
-                  <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'reviewer').length}</p>
-                  <p className="text-sm text-[#9D9FA9]">Total reviewers</p>
-                </div>
-                <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-                  <h4 className="font-montserrat font-medium text-white mb-2">Team Leaders</h4>
-                  <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'team_leader').length}</p>
-                  <p className="text-sm text-[#9D9FA9]">Total team leaders</p>
-                </div>
+                <AnnouncementManager />
               </div>
-              <UserManager />
             </div>
-          </div>
-        );
-      case 'support-tickets':
-        return <SupportTicketManager />;
+          );
+        case 'resources':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Resource Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <ResourceManager />
+              </div>
+            </div>
+          );
+        case 'processes':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Process Documentation Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <ProcessManager />
+              </div>
+            </div>
+          );
+        case 'awarded-teams':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Awarded Teams Connect Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <AwardedTeamsManager onBack={() => setActiveSection('overview')} users={sheetData.users} />
+              </div>
+            </div>
+          );
+        case 'users':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">User Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+                    <h4 className="font-montserrat font-medium text-white mb-2">Admins</h4>
+                    <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'admin').length}</p>
+                    <p className="text-sm text-[#9D9FA9]">Total admins</p>
+                  </div>
+                  <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+                    <h4 className="font-montserrat font-medium text-white mb-2">Reviewers</h4>
+                    <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'reviewer').length}</p>
+                    <p className="text-sm text-[#9D9FA9]">Total reviewers</p>
+                  </div>
+                  <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
+                    <h4 className="font-montserrat font-medium text-white mb-2">Team Leaders</h4>
+                    <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'team_leader').length}</p>
+                    <p className="text-sm text-[#9D9FA9]">Total team leaders</p>
+                  </div>
+                </div>
+                <UserManager />
+              </div>
+            </div>
+          );
+        case 'support-tickets':
+          return <SupportTicketManager />;
 
-      case 'voting-settings':
-        return (
-          <div className="space-y-6">
-            <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-montserrat font-semibold text-xl text-white">Voting Settings Management</h3>
-                <button
-                  onClick={() => setActiveSection('overview')}
-                  className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105"
-                >
-                  ← Back to Overview
-                </button>
+        case 'voting-settings':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Voting Settings Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <VotingSettingsManager />
               </div>
-              <VotingSettingsManager />
             </div>
-          </div>
-        );
+          );
 
       default:
         return renderOverview();
@@ -571,7 +571,7 @@ export default function AdminManagement() {
         <div className="flex flex-1 relative z-10">
           <Sidebar />
           
-          <main className="flex-1 p-8 relative">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative">
             {/* Background overlay */}
             <div className="absolute inset-0 bg-[rgba(12,2,30,0.3)] rounded-3xl border border-[#9D9FA9] pointer-events-none" />
             <div className="relative z-10">

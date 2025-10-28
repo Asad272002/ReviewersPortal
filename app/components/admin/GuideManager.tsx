@@ -201,9 +201,9 @@ export default function GuideManager() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-montserrat font-semibold text-xl text-white">Process Guides</h3>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+          <h3 className="font-montserrat font-semibold text-xl text-white w-full sm:w-auto">Process Guides</h3>
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             <button
               onClick={() => {
                 setShowForm(!showForm);
@@ -211,14 +211,14 @@ export default function GuideManager() {
                   resetForm();
                 }
               }}
-              className="bg-green-600 hover:bg-green-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto"
             >
               <span>➕</span>
               {showForm ? 'Cancel' : 'Create'}
             </button>
             <button
               onClick={fetchGuides}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto"
             >
               <span>🔄</span>
               Refresh

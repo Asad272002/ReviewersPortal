@@ -174,9 +174,9 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-montserrat font-semibold text-xl text-white">Announcements</h3>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+          <h3 className="font-montserrat font-semibold text-xl text-white w-full sm:w-auto">Announcements</h3>
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             <button
               onClick={() => {
                 setShowForm(!showForm);
@@ -184,14 +184,14 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
                   resetForm();
                 }
               }}
-              className="bg-green-600 hover:bg-green-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto"
             >
               <span>➕</span>
               {showForm ? 'Cancel' : 'Create'}
             </button>
             <button
               onClick={fetchAnnouncements}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto"
             >
               <span>🔄</span>
               Refresh
@@ -302,8 +302,53 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+          <>
+            {/* Mobile card list */}
+            <div className="sm:hidden space-y-3">
+              {announcements.map((announcement) => (
+                <div key={announcement.id} className="bg-[#0C021E] border border-[#9D9FA9]/40 rounded-lg p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <h5 className="font-montserrat font-semibold text-white">{announcement.title}</h5>
+                    <span className={`px-2 py-1 rounded text-xs font-montserrat ${
+                      announcement.category === 'important'
+                        ? 'bg-yellow-500 text-black'
+                        : 'bg-blue-500 text-white'
+                    }`}>
+                      {announcement.category}
+                    </span>
+                  </div>
+                  <p className="font-montserrat text-[#9D9FA9] mt-2">
+                    {announcement.content.length > 100
+                      ? `${announcement.content.substring(0, 100)}...`
+                      : announcement.content}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-montserrat">
+                    <span className={`px-2 py-1 rounded ${
+                      announcement.status === 'live'
+                        ? 'bg-green-500 text-white'
+                        : announcement.status === 'upcoming'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-red-500 text-white'
+                    }`}>
+                      {announcement.status || 'live'}
+                    </span>
+                    <span className="text-[#9D9FA9]">Expires: {announcement.expiresAt ? formatDateShort(announcement.expiresAt) : 'Never'}</span>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={() => handleEdit(announcement)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded transition-colors">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(announcement.id)} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded transition-colors">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-[#9D9FA9]">
                   <th className="text-left p-3 font-montserrat font-medium text-white">Title</th>
@@ -375,6 +420,7 @@ export default function AnnouncementManager({ onAnnouncementUpdate }: Announceme
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

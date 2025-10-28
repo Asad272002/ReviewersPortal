@@ -337,18 +337,18 @@ export default function UserManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-montserrat font-semibold text-xl text-white">User Management</h3>
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+        <h3 className="font-montserrat font-semibold text-xl text-white w-full sm:w-auto">User Management</h3>
+        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300"
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 w-full sm:w-auto"
           >
             + Add User
           </button>
           <button
             onClick={fetchUsers}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300"
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 w-full sm:w-auto"
           >
             🔄 Refresh
           </button>
@@ -582,8 +582,76 @@ export default function UserManager() {
         {filteredUsers.length === 0 ? (
           <p className="font-montserrat text-gray-300">No users match your filters.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
+          <>
+          {/* Mobile card list */}
+          <div className="sm:hidden space-y-3">
+            {visibleUsers.map((u) => {
+              const roleBadge =
+                u.role === 'admin' ? 'bg-indigo-600' :
+                u.role === 'reviewer' ? 'bg-emerald-600' :
+                u.role === 'team_leader' ? 'bg-amber-600' : 'bg-slate-600';
+              const statusBadge = (u.status || 'active') === 'active' ? 'bg-emerald-700' : 'bg-slate-700';
+              return (
+                <div key={u.id} className="bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <div>
+                      <div className="text-white font-montserrat font-medium">{u.name}</div>
+                      <div className="text-[#9D9FA9] font-montserrat text-sm">{u.username}</div>
+                    </div>
+                    <span className={`inline-block text-white font-montserrat text-xs px-2 py-1 rounded ${roleBadge}`}>{u.role}</span>
+                  </div>
+                  <div className="mt-2 text-[#D1D2D7] font-montserrat text-sm break-all">{u.email || '-'}</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`inline-block text-white font-montserrat text-xs px-2 py-1 rounded ${statusBadge}`}>{u.status || 'active'}</span>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => toggleExpand(u.id)}
+                      className="flex-1 bg-[#2A1A4A] hover:bg-[#3B2567] border border-[#9D9FA9] text-white font-montserrat text-sm py-2 px-3 rounded"
+                    >
+                      {expandedRows[u.id] ? 'Hide' : 'View'}
+                    </button>
+                    <button
+                      onClick={() => startEdit(u)}
+                      className="flex-1 bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat text-sm py-2 px-3 rounded"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteUser(u.id)}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-montserrat text-sm py-2 px-3 rounded"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  {expandedRows[u.id] && (
+                    <div className="mt-3 bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-4 text-sm font-montserrat text-[#D1D2D7] space-y-2">
+                      {u.expertise && <div><span className="text-white">Expertise:</span> {u.expertise}</div>}
+                      {u.organization && <div><span className="text-white">Organization:</span> {u.organization}</div>}
+                      {u.yearsExperience && <div><span className="text-white">Experience:</span> {u.yearsExperience} years</div>}
+                      {u.githubIds && <div><span className="text-white">GitHub IDs:</span> {u.githubIds}</div>}
+                      {u.mattermostId && <div><span className="text-white">Mattermost ID:</span> {u.mattermostId}</div>}
+                      <div><span className="text-white">Other circle:</span> {u.otherCircle ? 'Yes' : 'No'}</div>
+                      {u.cvLink && (
+                        <div>
+                          <span className="text-white">CV:</span> <a className="text-blue-300 underline break-all" target="_blank" rel="noopener noreferrer" href={u.cvLink}>{u.cvLink}</a>
+                        </div>
+                      )}
+                      {u.linkedinUrl && (
+                        <div>
+                          <span className="text-white">LinkedIn:</span> <a className="text-blue-300 underline break-all" target="_blank" rel="noopener noreferrer" href={u.linkedinUrl}>{u.linkedinUrl}</a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full table-auto">
               <thead>
                 <tr className="text-left bg-[#2A1A4A]">
                   <th className="px-4 py-3 text-white font-montserrat">Name</th>
@@ -669,6 +737,7 @@ export default function UserManager() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* Pagination */}

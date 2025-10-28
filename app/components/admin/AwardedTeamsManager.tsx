@@ -521,11 +521,11 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
             {/* Reviewers Tab */}
             {activeTab === 'reviewers' && (
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-white font-montserrat">Reviewers</h2>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h2 className="text-xl font-semibold text-white font-montserrat w-full sm:w-auto">Reviewers</h2>
                   <button
                     onClick={() => setShowAddReviewerForm(!showAddReviewerForm)}
-                    className="px-4 py-2 bg-[#9050E9] text-white rounded-lg hover:bg-[#7040C9] transition-colors font-montserrat"
+                    className="px-4 py-2 bg-[#9050E9] text-white rounded-lg hover:bg-[#7040C9] transition-colors font-montserrat w-full sm:w-auto"
                   >
                     + Add Reviewer
                   </button>
@@ -691,11 +691,11 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
             {/* Assignments Tab */}
             {activeTab === 'assignments' && (
               <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-white font-montserrat">Team-Reviewer Assignments</h2>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+                  <h2 className="text-xl font-semibold text-white font-montserrat w-full sm:w-auto">Team-Reviewer Assignments</h2>
                   <button
                     onClick={() => setShowAssignmentForm(true)}
-                    className="px-4 py-2 bg-[#9050E9] text-white rounded-lg hover:bg-[#7040C9] transition-colors font-montserrat"
+                    className="px-4 py-2 bg-[#9050E9] text-white rounded-lg hover:bg-[#7040C9] transition-colors font-montserrat w-full sm:w-auto"
                   >
                     + Create Assignment
                   </button>

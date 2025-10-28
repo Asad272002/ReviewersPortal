@@ -190,9 +190,9 @@ export default function ResourceManager() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-montserrat font-semibold text-xl text-white">Resources</h3>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+          <h3 className="font-montserrat font-semibold text-xl text-white w-full sm:w-auto">Resources</h3>
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             <button
               onClick={() => {
                 setShowForm(!showForm);
@@ -200,14 +200,14 @@ export default function ResourceManager() {
                   resetForm();
                 }
               }}
-              className="bg-green-600 hover:bg-green-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto"
             >
               <span>➕</span>
               {showForm ? 'Cancel' : 'Create'}
             </button>
             <button
               onClick={fetchResources}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-montserrat font-medium py-2 px-4 rounded transition-colors flex items-center gap-2 w-full sm:w-auto"
             >
               <span>🔄</span>
               Refresh
@@ -330,8 +330,51 @@ export default function ResourceManager() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <>
+            {/* Mobile card list */}
+            <div className="sm:hidden space-y-3">
+              {resources.map((resource) => (
+                <div key={resource.id} className="bg-[#0C021E] border border-[#9D9FA9]/40 rounded-lg p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <h5 className="font-montserrat font-semibold text-white">{resource.title}</h5>
+                    <span className="px-2 py-1 rounded text-xs font-montserrat bg-blue-500 text-white">
+                      {getCategoryLabel(resource.category)}
+                    </span>
+                  </div>
+                  <p className="font-montserrat text-[#9D9FA9] mt-2">
+                    {resource.description && resource.description.length > 120
+                      ? `${resource.description.substring(0, 120)}...`
+                      : resource.description}
+                  </p>
+                  {(resource.url || resource.fileUrl) && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {resource.url && (
+                        <a href={resource.url} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded transition-colors">
+                          Open Link
+                        </a>
+                      )}
+                      {resource.fileUrl && (
+                        <a href={resource.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-center bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 rounded transition-colors">
+                          {resource.fileName ? `Download ${resource.fileName}` : 'Download File'}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={() => handleEdit(resource)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded transition-colors">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(resource.id)} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded transition-colors">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full">
               <thead>
                 <tr className="border-b border-[#9D9FA9]">
                   <th className="text-left font-montserrat text-[#9D9FA9] py-3 px-2">Title</th>
@@ -408,6 +451,7 @@ export default function ResourceManager() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>
