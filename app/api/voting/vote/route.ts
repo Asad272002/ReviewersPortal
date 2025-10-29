@@ -29,24 +29,22 @@ export async function POST(request: NextRequest) {
     const voteRows = await googleSheetsService.getVotes();
     const proposalRows = await googleSheetsService.getProposals();
 
-    // Extract proposal index from proposalId (e.g., PROP-001 -> index 0)
-    const proposalMatch = proposalId.match(/PROP-(\d+)/);
-    if (!proposalMatch) {
-      return NextResponse.json({
-        success: false,
-        message: 'Invalid proposal ID format'
-      }, { status: 400 });
-    }
-    
-    const proposalIndex = parseInt(proposalMatch[1]) - 1;
-    const proposal = proposalRows[proposalIndex];
+    // Find proposal by normalized ID to avoid index/order mismatches
+    const normalizedProposals = proposalRows.map((row: any, idx: number) => {
+      const idRaw = String(row.id || row.ID || row.proposalId || '').trim();
+      const idMatch = idRaw.match(/^PROP-(\d+)$/);
+      const normalizedId = idMatch ? idRaw : `PROP-${String(idx + 1).padStart(3, '0')}`;
+      return { row, normalizedId };
+    });
 
-    if (!proposal) {
+    const found = normalizedProposals.find(p => p.normalizedId === proposalId);
+    if (!found) {
       return NextResponse.json({
         success: false,
         message: 'Proposal not found'
       }, { status: 404 });
     }
+    const proposal = found.row;
 
     // Check if voting period is still active using stored deadline
     const submissionDateStr = proposal.submissionDate;
