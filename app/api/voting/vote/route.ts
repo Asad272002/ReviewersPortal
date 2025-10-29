@@ -139,7 +139,14 @@ export async function POST(request: NextRequest) {
       const proposalVotes = freshVotes.filter((row: any) => row.proposalId === proposalId);
       const totalUpvotes = proposalVotes.filter((row: any) => row.voteType === 'upvote').length;
       const totalDownvotes = proposalVotes.filter((row: any) => row.voteType === 'downvote').length;
-      const voterCount = new Set(proposalVotes.map((row: any) => row.userId)).size;
+    const voterKeys = new Set(
+      proposalVotes.map((row: any) => {
+        const uid = String(row.userId || '').trim();
+        const uname = String(row.username || '').trim().toLowerCase();
+        return uid || uname; // prefer userId; fallback to username
+      })
+    );
+    const voterCount = voterKeys.has('') ? voterKeys.size - 1 : voterKeys.size;
       const netScore = totalUpvotes - totalDownvotes;
 
       await googleSheetsService.updateVotingResult(proposalId, {

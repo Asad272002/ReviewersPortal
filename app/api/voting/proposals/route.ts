@@ -113,25 +113,29 @@ export async function GET(request: NextRequest) {
       const now = new Date();
       const isExpired = now > votingDeadline;
 
-      // Get voting stats - calculate from votes if no voting result exists yet
-      let totalUpvotes, totalDownvotes, voterCount;
+      // Get voting stats
+      // Always compute voterCount from raw votes with a resilient key:
+      // use userId when present, otherwise fall back to normalized username.
+      const proposalVotes = voteRows.filter((row: any) => row.proposalId === proposalId);
+      let totalUpvotes, totalDownvotes;
       
       if (votingResult) {
         totalUpvotes = parseInt(votingResult.totalUpvotes || '0');
         totalDownvotes = parseInt(votingResult.totalDownvotes || '0');
-        voterCount = parseInt(votingResult.voterCount || '0');
       } else {
-        // Calculate directly from votes sheet for real-time display
-        const proposalVotes = voteRows.filter((row: any) => 
-          row.proposalId === proposalId
-        );
         totalUpvotes = proposalVotes.filter((row: any) => row.voteType === 'upvote').length;
         totalDownvotes = proposalVotes.filter((row: any) => row.voteType === 'downvote').length;
-        
-        // Count unique voters
-        const uniqueVoters = new Set(proposalVotes.map((row: any) => row.userId));
-        voterCount = uniqueVoters.size;
       }
+
+      const uniqueVoterKeys = new Set(
+        proposalVotes.map((row: any) => {
+          const uid = String(row.userId || '').trim();
+          const uname = String(row.username || '').trim().toLowerCase();
+          return uid || uname; // prefer userId; fallback to username
+        })
+      );
+      // Exclude empty key if present
+      const voterCount = uniqueVoterKeys.has('') ? uniqueVoterKeys.size - 1 : uniqueVoterKeys.size;
       
       const netScore = totalUpvotes - totalDownvotes;
 
