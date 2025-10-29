@@ -12,6 +12,7 @@ const protectedRoutes = [
   '/resources',
   '/support',
   '/vote-proposals',
+  '/reviewer-tests',
   '/chat'
 ]
 
@@ -25,8 +26,8 @@ const publicRoutes = [
 // Define role-based route access
 const roleBasedRoutes = {
   admin: ['/admin-management'],
-  reviewer: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/chat'],
-  team_leader: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/chat']
+  reviewer: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/reviewer-tests', '/chat'],
+  team_leader: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/reviewer-tests', '/chat']
 }
 
 export async function middleware(request: NextRequest) {

@@ -19,6 +19,7 @@ export default function Home() {
   const animationIdRef = useRef<number | null>(null);
   const [isAwardedTeamMember, setIsAwardedTeamMember] = useState(false);
   const [isCheckingTeamStatus, setIsCheckingTeamStatus] = useState(true);
+  const [motionEnabled, setMotionEnabled] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'team_leader') {
@@ -47,8 +48,41 @@ export default function Home() {
     }
   };
 
+  // Initialize motion preference: honor saved setting and prefers-reduced-motion
   useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('dashboardMotion') : null;
+      if (saved) {
+        setMotionEnabled(saved === 'on');
+      } else {
+        const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        setMotionEnabled(!reduce);
+      }
+    } catch {
+      setMotionEnabled(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    // If motion is disabled, ensure canvas is hidden and any previous animation cleaned up
+    if (!motionEnabled) {
+      if (canvasRef.current) {
+        canvasRef.current.classList.add('hidden');
+      }
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
+      }
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        rendererRef.current = null;
+      }
+      sceneRef.current = null;
+      return;
+    }
+
     if (!canvasRef.current) return;
+    canvasRef.current.classList.remove('hidden');
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -61,88 +95,92 @@ export default function Home() {
 
     sceneRef.current = scene;
     rendererRef.current = renderer;
-
-    // Create floating particles
-    const particleGeometry = new THREE.BufferGeometry();
+    // Restore original particle + geometric shapes background
+    // Particles (purple/blue theme to match site)
     const particleCount = 150;
+    const particlesGeometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
-    const sizes = new Float32Array(particleCount);
 
     for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 20;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
-      
-      // Blue to purple gradient colors
-      colors[i * 3] = Math.random() * 0.5 + 0.3; // R
-      colors[i * 3 + 1] = Math.random() * 0.3 + 0.4; // G
-      colors[i * 3 + 2] = Math.random() * 0.3 + 0.7; // B
-      
-      sizes[i] = Math.random() * 3 + 1;
+      const ix = i * 3;
+      positions[ix] = (Math.random() - 0.5) * 30;
+      positions[ix + 1] = (Math.random() - 0.5) * 30;
+      positions[ix + 2] = (Math.random() - 0.5) * 20;
+
+      // purple/blue gradient
+      const t = Math.random();
+      const r = 0.35 + t * 0.35;
+      const g = 0.30 + t * 0.25;
+      const b = 0.75 + t * 0.20;
+      colors[ix] = r;
+      colors[ix + 1] = g;
+      colors[ix + 2] = b;
     }
 
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    const particleMaterial = new THREE.PointsMaterial({
+    const particlesMaterial = new THREE.PointsMaterial({
       size: 2,
       vertexColors: true,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.75,
       blending: THREE.AdditiveBlending
     });
 
-    const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
+    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particlesMesh);
 
-    // Create geometric shapes
+    // Floating geometric wireframe shapes
     const geometries = [
-      new THREE.TetrahedronGeometry(0.5),
-      new THREE.OctahedronGeometry(0.4),
-      new THREE.IcosahedronGeometry(0.3)
+      new THREE.TetrahedronGeometry(0.8),
+      new THREE.OctahedronGeometry(0.7),
+      new THREE.IcosahedronGeometry(0.6),
     ];
 
     const shapes: THREE.Mesh[] = [];
     for (let i = 0; i < 8; i++) {
       const geometry = geometries[Math.floor(Math.random() * geometries.length)];
       const material = new THREE.MeshBasicMaterial({
-        color: new THREE.Color().setHSL(Math.random() * 0.3 + 0.6, 0.7, 0.5),
+        color: new THREE.Color().setHSL(0.72 + Math.random() * 0.08, 0.8, 0.6),
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.25,
         wireframe: true
       });
-      
-      const shape = new THREE.Mesh(geometry, material);
-      shape.position.set(
-        (Math.random() - 0.5) * 15,
-        (Math.random() - 0.5) * 15,
-        (Math.random() - 0.5) * 10
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(
+        (Math.random() - 0.5) * 25,
+        (Math.random() - 0.5) * 25,
+        (Math.random() - 0.5) * 15
       );
-      
-      shapes.push(shape);
-      scene.add(shape);
+
+      mesh.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+
+      shapes.push(mesh);
+      scene.add(mesh);
     }
 
     // Animation loop
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
-      
-      // Rotate particles
-      particles.rotation.x += 0.001;
-      particles.rotation.y += 0.002;
-      
-      // Animate shapes
-      shapes.forEach((shape, index) => {
-        shape.rotation.x += 0.01 + index * 0.001;
-        shape.rotation.y += 0.01 + index * 0.001;
-        shape.position.y += Math.sin(Date.now() * 0.001 + index) * 0.01;
-      });
-      
+
+      particlesMesh.rotation.y += 0.0015;
+      particlesMesh.rotation.x += 0.0008;
+
+      for (const s of shapes) {
+        s.rotation.x += 0.0015;
+        s.rotation.y += 0.0020;
+      }
+
       renderer.render(scene, camera);
     };
-    
+
     animate();
 
     // Handle resize
@@ -163,7 +201,7 @@ export default function Home() {
         rendererRef.current.dispose();
       }
     };
-  }, []);
+  }, [motionEnabled]);
 
   // Show loading while checking team status for team leaders
   if (user?.role === 'team_leader' && isCheckingTeamStatus) {
@@ -183,7 +221,7 @@ export default function Home() {
         {/* Three.js Canvas Background */}
         <canvas 
           ref={canvasRef}
-          className="fixed inset-0 w-full h-full pointer-events-none z-0"
+          className={`fixed inset-0 w-full h-full pointer-events-none z-0 ${!motionEnabled ? 'hidden' : ''}`}
           style={{ background: 'transparent' }}
         />
         <Header />
@@ -192,6 +230,23 @@ export default function Home() {
           {!(user?.role === 'team_leader' && isAwardedTeamMember) && <Sidebar />}
           
           <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team_leader' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team_leader' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
+            {/* Motion toggle accessible control */}
+            <div className="absolute right-2 sm:right-4 top-2 sm:top-4 z-20">
+              <button
+                onClick={() => {
+                  setMotionEnabled(prev => {
+                    const next = !prev;
+                    try { localStorage.setItem('dashboardMotion', next ? 'on' : 'off'); } catch {}
+                    return next;
+                  });
+                }}
+                aria-pressed={motionEnabled}
+                className="px-3 py-1.5 rounded-full border border-[#9D9FA9] bg-[#2A1A4A] text-gray-200 hover:text-white hover:bg-[#3A225A] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#B26BED]"
+                title={motionEnabled ? 'Disable animated background' : 'Enable animated background'}
+              >
+                {motionEnabled ? 'Disable Motion' : 'Enable Motion'}
+              </button>
+            </div>
             {user?.role === 'reviewer' ? (
               // Default Dashboard for Reviewers with Sidebar
               <>
@@ -243,6 +298,18 @@ export default function Home() {
                     ]}
                     linkText="Vote now"
                     linkHref="/vote-proposals"
+                  />
+
+                  <InfoCard 
+                    title="Reviewer Tests" 
+                    icon="documents-icon.svg"
+                    content={[
+                      "Assessments",
+                      "Timed quizzes",
+                      "Skills check"
+                    ]}
+                    linkText="Open Tests"
+                    linkHref="/reviewer-tests"
                   />
                   
                   <InfoCard 

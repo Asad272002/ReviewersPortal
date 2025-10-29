@@ -137,6 +137,16 @@ const Sidebar = () => {
           multiline={true} 
           onClick={closeMobileMenu}
         />
+        {user?.role === 'reviewer' && (
+          <NavItem 
+            icon="vote-icon.svg" 
+            label="Reviewer Test" 
+            href="/reviewer-tests"
+            active={pathname?.startsWith('/reviewer-tests') || false} 
+            multiline={true} 
+            onClick={closeMobileMenu}
+          />
+        )}
         <NavItem 
           icon="document-icon.svg" 
           label="Process Documentation" 

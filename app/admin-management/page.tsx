@@ -15,6 +15,7 @@ import AwardedTeamsManager from '../components/admin/AwardedTeamsManager';
 import SupportTicketManager from '../components/admin/SupportTicketManager';
 import UserManager from '../components/admin/UserManager';
 import VotingSettingsManager from '../components/admin/VotingSettingsManager';
+import ReviewerTestsManager from '../components/admin/ReviewerTestsManager';
 
 
 interface SheetData {
@@ -366,6 +367,14 @@ export default function AdminManagement() {
             <p className="text-sm text-[#9D9FA9]">Configure voting duration, vote changes, and minimum votes</p>
           </button>
 
+          <button
+            onClick={() => setActiveSection('reviewer-tests')}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">🧪 Reviewer Tests</h4>
+            <p className="text-sm text-[#9D9FA9]">Create, edit, and manage reviewer test quizzes</p>
+          </button>
+
         </div>
       </div>
     </div>
@@ -578,6 +587,23 @@ export default function AdminManagement() {
                   </button>
                 </div>
                 <VotingSettingsManager />
+              </div>
+            </div>
+          );
+        case 'reviewer-tests':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Reviewer Tests Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <ReviewerTestsManager />
               </div>
             </div>
           );
