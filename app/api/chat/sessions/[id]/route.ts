@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-
-const jwt = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: SCOPES,
-});
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, jwt);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 // GET - Fetch specific chat session details
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -27,19 +16,21 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       );
     }
 
-    await doc.loadInfo();
-    
-    let sessionsSheet = doc.sheetsByTitle['Chat Sessions'];
-    if (!sessionsSheet) {
+    const { data: rows, error } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('session_id', id)
+      .limit(1);
+
+    if (error) {
+      console.error('Supabase error fetching session:', error);
       return NextResponse.json(
-        { success: false, message: 'Chat sessions sheet not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to fetch chat session' },
+        { status: 500 }
       );
     }
 
-    const rows = await sessionsSheet.getRows();
-    const session = rows.find(row => row.get('Session ID') === id);
-    
+    const session = rows && rows[0];
     if (!session) {
       return NextResponse.json(
         { success: false, message: 'Chat session not found' },
@@ -48,17 +39,21 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     }
 
     // Verify user access
-    const teamId = session.get('Team ID');
-    const reviewerId = session.get('Reviewer ID');
-    
-    if (userRole === 'user' && teamId !== userId) {
+    if ((userRole === 'user' || userRole === 'team') && session.team_id !== userId) {
       return NextResponse.json(
         { success: false, message: 'Access denied' },
         { status: 403 }
       );
     }
-    
-    if (userRole === 'reviewer' && reviewerId !== userId) {
+    const idsMatchFlex = (a: any, b: any) => {
+      const sa = String(a ?? '');
+      const sb = String(b ?? '');
+      if (sa === sb) return true;
+      const da = sa.replace(/\D/g, '');
+      const db = sb.replace(/\D/g, '');
+      return da && db && da === db;
+    };
+    if (userRole === 'reviewer' && !idsMatchFlex(session.reviewer_id, userId)) {
       return NextResponse.json(
         { success: false, message: 'Access denied' },
         { status: 403 }
@@ -66,23 +61,19 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     }
 
     const sessionData = {
-      id: session.get('Session ID'),
-      teamId: session.get('Team ID'),
-      reviewerId: session.get('Reviewer ID'),
-      assignmentId: session.get('Assignment ID'),
-      status: session.get('Status'),
-      createdAt: session.get('Created At'),
-      lastActivity: session.get('Last Activity'),
-      createdBy: session.get('Created By'),
-      endedAt: session.get('Ended At'),
-      endedBy: session.get('Ended By')
+      id: session.session_id,
+      teamId: session.team_id,
+      reviewerId: session.reviewer_id,
+      assignmentId: session.assignment_id,
+      status: session.status,
+      createdAt: session.created_at,
+      lastActivity: session.last_activity,
+      createdBy: session.created_by,
+      endedAt: session.ended_at,
+      endedBy: session.ended_by,
     };
 
-    return NextResponse.json({
-      success: true,
-      data: sessionData
-    });
-
+    return NextResponse.json({ success: true, data: sessionData });
   } catch (error) {
     console.error('Error fetching chat session:', error);
     return NextResponse.json(
@@ -106,38 +97,44 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       );
     }
 
-    await doc.loadInfo();
-    
-    let sessionsSheet = doc.sheetsByTitle['Chat Sessions'];
-    if (!sessionsSheet) {
+    const { data: rows, error } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('session_id', id)
+      .limit(1);
+
+    if (error) {
+      console.error('Supabase error fetching session:', error);
       return NextResponse.json(
-        { success: false, message: 'Chat sessions sheet not found' },
-        { status: 404 }
+        { success: false, message: 'Chat sessions not available' },
+        { status: 500 }
       );
     }
 
-    const rows = await sessionsSheet.getRows();
-    const sessionRow = rows.find(row => row.get('Session ID') === id);
-    
-    if (!sessionRow) {
+    const session = rows && rows[0];
+    if (!session) {
       return NextResponse.json(
         { success: false, message: 'Chat session not found' },
         { status: 404 }
       );
     }
 
-    // Verify user access for session modification
-    const teamId = sessionRow.get('Team ID');
-    const reviewerId = sessionRow.get('Reviewer ID');
-    
-    if (userRole === 'user' && teamId !== userId) {
+    // Verify user access
+    if ((userRole === 'user' || userRole === 'team') && session.team_id !== userId) {
       return NextResponse.json(
         { success: false, message: 'Access denied' },
         { status: 403 }
       );
     }
-    
-    if (userRole === 'reviewer' && reviewerId !== userId) {
+    const idsMatchFlex = (a: any, b: any) => {
+      const sa = String(a ?? '');
+      const sb = String(b ?? '');
+      if (sa === sb) return true;
+      const da = sa.replace(/\D/g, '');
+      const db = sb.replace(/\D/g, '');
+      return da && db && da === db;
+    };
+    if (userRole === 'reviewer' && !idsMatchFlex(session.reviewer_id, userId)) {
       return NextResponse.json(
         { success: false, message: 'Access denied' },
         { status: 403 }
@@ -145,35 +142,27 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     }
 
     const currentTime = new Date().toISOString();
+    let update: any = { last_activity: currentTime };
 
     switch (action) {
       case 'end':
-        sessionRow.set('Status', 'ended');
-        sessionRow.set('Ended At', currentTime);
-        sessionRow.set('Ended By', userId);
-        sessionRow.set('Last Activity', currentTime);
+        update = { ...update, status: 'ended', ended_at: currentTime, ended_by: userId };
         break;
-
       case 'pause':
-        sessionRow.set('Status', 'paused');
-        sessionRow.set('Last Activity', currentTime);
+        update = { ...update, status: 'paused' };
         break;
-
       case 'resume':
-        if (sessionRow.get('Status') !== 'paused') {
+        if (session.status !== 'paused') {
           return NextResponse.json(
             { success: false, message: 'Session is not paused' },
             { status: 400 }
           );
         }
-        sessionRow.set('Status', 'active');
-        sessionRow.set('Last Activity', currentTime);
+        update = { ...update, status: 'active' };
         break;
-
       case 'update_activity':
-        sessionRow.set('Last Activity', currentTime);
+        // only update last_activity
         break;
-
       default:
         return NextResponse.json(
           { success: false, message: 'Invalid action' },
@@ -181,20 +170,30 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
         );
     }
 
-    await sessionRow.save();
+    const { error: updError } = await supabaseAdmin
+      .from('chat_sessions')
+      .update(update)
+      .eq('session_id', id);
+
+    if (updError) {
+      console.error('Supabase error updating session:', updError);
+      return NextResponse.json(
+        { success: false, message: 'Failed to update chat session' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       message: `Session ${action}ed successfully`,
       data: {
-        id: sessionRow.get('Session ID'),
-        status: sessionRow.get('Status'),
-        lastActivity: sessionRow.get('Last Activity'),
-        endedAt: sessionRow.get('Ended At'),
-        endedBy: sessionRow.get('Ended By')
+        id: id,
+        status: update.status ?? session.status,
+        lastActivity: currentTime,
+        endedAt: update.ended_at ?? session.ended_at,
+        endedBy: update.ended_by ?? session.ended_by,
       }
     });
-
   } catch (error) {
     console.error('Error updating chat session:', error);
     return NextResponse.json(
@@ -218,44 +217,31 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       );
     }
 
-    await doc.loadInfo();
-    
-    let sessionsSheet = doc.sheetsByTitle['Chat Sessions'];
-    if (!sessionsSheet) {
+    const { error: delMsgsError } = await supabaseAdmin
+      .from('chat_messages')
+      .delete()
+      .eq('session_id', id);
+    if (delMsgsError) {
+      console.error('Supabase error deleting messages:', delMsgsError);
       return NextResponse.json(
-        { success: false, message: 'Chat sessions sheet not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to delete session messages' },
+        { status: 500 }
       );
     }
 
-    const rows = await sessionsSheet.getRows();
-    const sessionRow = rows.find(row => row.get('Session ID') === id);
-    
-    if (!sessionRow) {
+    const { error: delSessionError } = await supabaseAdmin
+      .from('chat_sessions')
+      .delete()
+      .eq('session_id', id);
+    if (delSessionError) {
+      console.error('Supabase error deleting session:', delSessionError);
       return NextResponse.json(
-        { success: false, message: 'Chat session not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to delete chat session' },
+        { status: 500 }
       );
     }
 
-    // Also delete associated messages
-    let messagesSheet = doc.sheetsByTitle['Chat Messages'];
-    if (messagesSheet) {
-      const messageRows = await messagesSheet.getRows();
-      const sessionMessages = messageRows.filter(row => row.get('Session ID') === id);
-      
-      for (const messageRow of sessionMessages) {
-        await messageRow.delete();
-      }
-    }
-
-    await sessionRow.delete();
-
-    return NextResponse.json({
-      success: true,
-      message: 'Chat session and associated messages deleted successfully'
-    });
-
+    return NextResponse.json({ success: true, message: 'Chat session and associated messages deleted successfully' });
   } catch (error) {
     console.error('Error deleting chat session:', error);
     return NextResponse.json(

@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-
-const jwt = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: SCOPES,
-});
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, jwt);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 // POST - Generate a shareable chat link
 export async function POST(request: NextRequest) {
@@ -18,82 +7,125 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { assignmentId, adminId } = body;
 
-    if (!assignmentId || !adminId) {
+    // Only assignmentId is required; adminId is optional for created_by attribution
+    if (!assignmentId) {
       return NextResponse.json(
         { success: false, message: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    await doc.loadInfo();
-    
-    // Verify assignment exists and is approved
-    let assignmentsSheet = doc.sheetsByTitle['TeamReviewerAssignments'];
-    if (!assignmentsSheet) {
-      return NextResponse.json(
-        { success: false, message: 'Assignments sheet not found' },
-        { status: 404 }
-      );
+    // Verify assignment exists and is approved/active in Supabase
+    let assignmentNormalized: { teamId: string; reviewerId: string; status: string } | null = null;
+
+    // Try legacy table with spaced, quoted columns
+    {
+      const { data: assignmentRows, error: assignErr } = await supabaseAdmin
+        .from('team_reviewer_assignment')
+        .select('"ID", "Status", "Team ID", "Reviewer ID"')
+        .eq('ID', assignmentId)
+        .limit(1);
+      if (!assignErr && assignmentRows && assignmentRows[0]) {
+        const a = assignmentRows[0];
+        assignmentNormalized = {
+          teamId: a['Team ID'],
+          reviewerId: a['Reviewer ID'],
+          status: String(a['Status'] || '').toLowerCase(),
+        };
+      }
     }
 
-    const assignmentRows = await assignmentsSheet.getRows();
-    const assignment = assignmentRows.find(row => row.get('ID') === assignmentId);
-    
-    if (!assignment) {
+    // Fallback to newer snake_case table
+    if (!assignmentNormalized) {
+      const { data: assignmentRows2, error: assignErr2 } = await supabaseAdmin
+        .from('team_reviewer_assignments')
+        .select('id, status, teamId, reviewerId')
+        .eq('id', assignmentId)
+        .limit(1);
+      if (!assignErr2 && assignmentRows2 && assignmentRows2[0]) {
+        const a2 = assignmentRows2[0];
+        assignmentNormalized = {
+          teamId: a2.teamId,
+          reviewerId: a2.reviewerId,
+          status: String(a2.status || '').toLowerCase(),
+        };
+      }
+    }
+
+    if (!assignmentNormalized) {
       return NextResponse.json(
         { success: false, message: 'Assignment not found' },
         { status: 404 }
       );
     }
-
-    if (assignment.get('Status') !== 'approved' && assignment.get('Status') !== 'active') {
+    if (!['approved', 'active'].includes(assignmentNormalized.status)) {
       return NextResponse.json(
         { success: false, message: 'Assignment must be approved to generate chat link' },
         { status: 400 }
       );
     }
 
-    // Check if chat session already exists
-    let sessionsSheet = doc.sheetsByTitle['ChatSessions'];
-    if (!sessionsSheet) {
-      sessionsSheet = await doc.addSheet({
-        title: 'ChatSessions',
-        headerValues: [
-          'SessionID', 'AssignmentID', 'TeamID', 'ReviewerID', 'ShareToken', 
-          'Status', 'CreatedAt', 'LastActivity', 'ExpiresAt'
-        ]
-      });
+    // Check for existing active chat session for the assignment
+    const { data: existingSessions, error: sessErr } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('assignment_id', assignmentId)
+      .eq('status', 'active')
+      .limit(1);
+    if (sessErr) {
+      console.error('Supabase error fetching existing session:', sessErr);
+      return NextResponse.json(
+        { success: false, message: 'Failed to check existing chat sessions' },
+        { status: 500 }
+      );
     }
 
-    const sessionRows = await sessionsSheet.getRows();
-    let existingSession = sessionRows.find(row => row.get('AssignmentID') === assignmentId);
-    
-    let shareToken;
-    let sessionId;
-    
-    if (existingSession && existingSession.get('Status') === 'active') {
-      // Use existing session
-      shareToken = existingSession.get('ShareToken');
-      sessionId = existingSession.get('SessionID');
+    let shareToken: string;
+    let sessionId: string;
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    if (existingSessions && existingSessions[0]) {
+      const sess = existingSessions[0];
+      sessionId = sess.session_id;
+      shareToken = sess.share_token || `share_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+      if (!sess.share_token || !sess.share_expires_at) {
+        const { error: updErr } = await supabaseAdmin
+          .from('chat_sessions')
+          .update({ share_token: shareToken, share_expires_at: expiresAt })
+          .eq('session_id', sessionId);
+        if (updErr) {
+          console.warn('Supabase warning updating share token for existing session:', updErr);
+        }
+      }
     } else {
       // Create new session
       sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       shareToken = `share_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
-      
-      const currentTime = new Date().toISOString();
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
-      
-      await sessionsSheet.addRow({
-        'SessionID': sessionId,
-        'AssignmentID': assignmentId,
-        'TeamID': assignment.get('TeamID'),
-        'ReviewerID': assignment.get('ReviewerID'),
-        'ShareToken': shareToken,
-        'Status': 'active',
-        'CreatedAt': currentTime,
-        'LastActivity': currentTime,
-        'ExpiresAt': expiresAt
-      });
+
+      const { error: insertErr } = await supabaseAdmin
+        .from('chat_sessions')
+        .insert([
+          {
+            session_id: sessionId,
+            assignment_id: assignmentId,
+            team_id: assignmentNormalized.teamId,
+            reviewer_id: assignmentNormalized.reviewerId,
+            status: 'active',
+            created_at: now,
+            last_activity: now,
+            created_by: adminId || 'system',
+            share_token: shareToken,
+            share_expires_at: expiresAt,
+          },
+        ]);
+      if (insertErr) {
+        console.error('Supabase error creating chat session:', insertErr);
+        return NextResponse.json(
+          { success: false, message: 'Failed to create chat session' },
+          { status: 500 }
+        );
+      }
     }
 
     const shareUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/chat/shared/${shareToken}`;
@@ -106,9 +138,9 @@ export async function POST(request: NextRequest) {
         shareToken,
         shareUrl,
         assignmentId,
-        teamId: assignment.get('TeamID'),
-        reviewerId: assignment.get('ReviewerID')
-      }
+        teamId: assignmentNormalized.teamId,
+        reviewerId: assignmentNormalized.reviewerId,
+      },
     });
 
   } catch (error) {
@@ -133,19 +165,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await doc.loadInfo();
-    
-    let sessionsSheet = doc.sheetsByTitle['ChatSessions'];
-    if (!sessionsSheet) {
+    // Find chat session by share token
+    const { data: rows, error } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('share_token', shareToken)
+      .limit(1);
+    if (error) {
+      console.error('Supabase error fetching session by token:', error);
       return NextResponse.json(
-        { success: false, message: 'Chat sessions not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to validate share token' },
+        { status: 500 }
       );
     }
-
-    const sessionRows = await sessionsSheet.getRows();
-    const session = sessionRows.find(row => row.get('ShareToken') === shareToken);
-    
+    const session = rows && rows[0];
     if (!session) {
       return NextResponse.json(
         { success: false, message: 'Invalid share token' },
@@ -153,66 +186,59 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if session is expired
-    const expiresAt = new Date(session.get('ExpiresAt'));
-    if (expiresAt < new Date()) {
+    // Check expiry and active status
+    const exp = session.share_expires_at ? new Date(session.share_expires_at) : null;
+    if (exp && exp.getTime() < Date.now()) {
       return NextResponse.json(
         { success: false, message: 'Share link has expired' },
         { status: 410 }
       );
     }
-
-    if (session.get('Status') !== 'active') {
+    if (session.status !== 'active') {
       return NextResponse.json(
         { success: false, message: 'Chat session is not active' },
         { status: 403 }
       );
     }
 
-    // Get team and reviewer info
-    let teamsSheet = doc.sheetsByTitle['AwardedTeams'];
-    let reviewersSheet = doc.sheetsByTitle['Reviewers'];
-    
-    let teamInfo = null;
-    let reviewerInfo = null;
-    
-    if (teamsSheet) {
-      const teamRows = await teamsSheet.getRows();
-      const team = teamRows.find(row => row.get('ID') === session.get('TeamID'));
-      if (team) {
+    // Team info from Supabase (awarded_team)
+    let teamInfo: any = null;
+    const { data: teamRows, error: teamErr } = await supabaseAdmin
+      .from('awarded_team')
+      .select('"ID", "Team Name", "Proposal Title"')
+      .eq('ID', session.team_id)
+      .limit(1);
+    if (!teamErr) {
+      const t = teamRows && teamRows[0];
+      if (t) {
         teamInfo = {
-          id: team.get('ID'),
-          name: team.get('Name'),
-          description: team.get('Description')
-        };
-      }
-    }
-    
-    if (reviewersSheet) {
-      const reviewerRows = await reviewersSheet.getRows();
-      const reviewer = reviewerRows.find(row => row.get('ID') === session.get('ReviewerID'));
-      if (reviewer) {
-        reviewerInfo = {
-          id: reviewer.get('ID'),
-          name: 'Review Circle Reviewer', // Always anonymized
-          email: reviewer.get('Email')
+          id: t['ID'],
+          name: t['Team Name'],
+          description: t['Proposal Title'] || '',
         };
       }
     }
 
+    // Reviewer info (anonymized)
+    const reviewerInfo = {
+      id: session.reviewer_id,
+      name: 'Review Circle Reviewer',
+      email: '',
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        sessionId: session.get('SessionID'),
-        assignmentId: session.get('AssignmentID'),
-        teamId: session.get('TeamID'),
-        reviewerId: session.get('ReviewerID'),
-        status: session.get('Status'),
-        createdAt: session.get('CreatedAt'),
-        expiresAt: session.get('ExpiresAt'),
+        sessionId: session.session_id,
+        assignmentId: session.assignment_id,
+        teamId: session.team_id,
+        reviewerId: session.reviewer_id,
+        status: session.status,
+        createdAt: session.created_at,
+        expiresAt: session.share_expires_at,
         teamInfo,
-        reviewerInfo
-      }
+        reviewerInfo,
+      },
     });
 
   } catch (error) {

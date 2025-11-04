@@ -1,37 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SignJWT } from 'jose'
-import { User } from '@/app/types/auth'
+import { User } from '@/types/auth'
 import { supabaseService } from '@/lib/supabase/service'
 
 export async function POST(request: NextRequest) {
   try {
-    // Robust parsing to avoid JSON.parse errors on empty/invalid body
-    const raw = await request.text()
-    let data: any = {}
-    if (raw) {
+    const contentType = request.headers.get('content-type') || ''
+
+    let username = ''
+    let password = ''
+
+    if (contentType.includes('application/json')) {
+      const data = await request.json()
+      username = String(data?.username || '').trim()
+      password = String(data?.password || '')
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const raw = await request.text()
+      const params = new URLSearchParams(raw)
+      username = String(params.get('username') || '').trim()
+      password = String(params.get('password') || '')
+    } else if (contentType.includes('multipart/form-data')) {
+      const form = await request.formData()
+      username = String(form.get('username') || '').trim()
+      password = String(form.get('password') || '')
+    } else {
+      const raw = await request.text()
       try {
-        data = JSON.parse(raw)
+        const data = raw ? JSON.parse(raw) : {}
+        username = String(data?.username || '').trim()
+        password = String(data?.password || '')
       } catch (e) {
         return NextResponse.json(
-          { success: false, message: 'Invalid JSON body' },
+          { success: false, message: 'Invalid request body' },
           { status: 400 }
         )
       }
     }
 
-    const rawUsername = data?.username
-    const rawPassword = data?.password
-
-    const trimmedUsername = String(rawUsername || '').trim()
-    if (!trimmedUsername || !rawPassword) {
+    if (!username || !password) {
       return NextResponse.json(
         { success: false, message: 'Username and password are required' },
         { status: 400 }
       )
     }
 
-    // Validate against Supabase user_app
-    const dbUser = await supabaseService.validateUserCredentials(trimmedUsername, String(rawPassword))
+    const dbUser = await supabaseService.validateUserCredentials(username, String(password))
     if (!dbUser) {
       return NextResponse.json(
         { success: false, message: 'Invalid username or password' },
@@ -39,7 +52,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const normalizedRole = dbUser.role?.toLowerCase() === 'reviewer' ? 'reviewer' : dbUser.role
+    const roleLower = String(dbUser.role || '').toLowerCase().replace(/\s+/g, '_')
+    const normalizedRole = roleLower === 'admin' ? 'admin' : roleLower === 'team_leader' ? 'team' : roleLower === 'team' ? 'team' : 'reviewer'
 
     const secretKey = process.env.JWT_SECRET || 'your-secret-key'
     const secret = new TextEncoder().encode(secretKey)
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
       path: '/',
       sameSite: 'lax',
     })

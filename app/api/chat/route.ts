@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-
-const jwt = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  scopes: SCOPES,
-});
-
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID!, jwt);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 // GET - Fetch chat messages for a session
 export async function GET(request: NextRequest) {
@@ -27,20 +16,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await doc.loadInfo();
-    
-    // Check if user has access to this chat session
-    let sessionsSheet = doc.sheetsByTitle['Chat Sessions'];
-    if (!sessionsSheet) {
+    // Fetch chat session
+    const { data: sessionRows, error: sessionErr } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .limit(1);
+    if (sessionErr) {
+      console.error('Supabase error fetching chat session:', sessionErr);
       return NextResponse.json(
-        { success: false, message: 'Chat sessions sheet not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to fetch chat session' },
+        { status: 500 }
       );
     }
-
-    const sessionRows = await sessionsSheet.getRows();
-    const session = sessionRows.find(row => row.get('Session ID') === sessionId);
-    
+    const session = sessionRows && sessionRows[0];
     if (!session) {
       return NextResponse.json(
         { success: false, message: 'Chat session not found' },
@@ -49,62 +38,67 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user access
-    const teamId = session.get('Team ID');
-    const reviewerId = session.get('Reviewer ID');
-    
-    if (userRole === 'user' && teamId !== userId) {
+    if ((userRole === 'user' || userRole === 'team') && session.team_id !== userId) {
       return NextResponse.json(
         { success: false, message: 'Access denied' },
         { status: 403 }
       );
     }
-    
-    if (userRole === 'reviewer' && reviewerId !== userId) {
+    const idsMatchFlex = (a: any, b: any) => {
+      const sa = String(a ?? '');
+      const sb = String(b ?? '');
+      if (sa === sb) return true;
+      const da = sa.replace(/\D/g, '');
+      const db = sb.replace(/\D/g, '');
+      return da && db && da === db;
+    };
+    if (userRole === 'reviewer' && !idsMatchFlex(session.reviewer_id, userId)) {
       return NextResponse.json(
         { success: false, message: 'Access denied' },
         { status: 403 }
       );
     }
 
-    // Fetch chat messages
-    let messagesSheet = doc.sheetsByTitle['Chat Messages'];
-    if (!messagesSheet) {
+    // Fetch chat messages from Supabase
+    const { data: messageRows, error: msgErr } = await supabaseAdmin
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('timestamp', { ascending: true });
+    if (msgErr) {
+      console.error('Supabase error fetching chat messages:', msgErr);
       return NextResponse.json(
-        { success: false, message: 'Chat messages sheet not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to fetch chat messages' },
+        { status: 500 }
       );
     }
 
-    const messageRows = await messagesSheet.getRows();
-    const messages = messageRows
-      .filter(row => row.get('Session ID') === sessionId)
-      .map(row => ({
-        id: row.get('Message ID'),
-        sessionId: row.get('Session ID'),
-        senderId: row.get('Sender ID'),
-        senderType: row.get('Sender Type'),
-        senderName: row.get('Sender Name'),
-        message: row.get('Message'),
-        messageType: row.get('Message Type'),
-        fileUrl: row.get('File URL'),
-        fileName: row.get('File Name'),
-        timestamp: row.get('Timestamp'),
-        isRead: row.get('Is Read') === 'TRUE'
-      }))
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const messages = (messageRows || []).map((row: any) => ({
+      id: row.id,
+      sessionId: row.session_id,
+      senderId: row.sender_id,
+      senderType: row.sender_type,
+      senderName: row.sender_name,
+      message: row.message,
+      messageType: row.message_type,
+      fileUrl: row.file_url,
+      fileName: row.file_name,
+      timestamp: row.timestamp,
+      isRead: !!row.is_read,
+    }));
 
     return NextResponse.json({
       success: true,
       data: {
         session: {
-          id: session.get('Session ID'),
-          teamId: session.get('Team ID'),
-          reviewerId: session.get('Reviewer ID'),
-          status: session.get('Status'),
-          createdAt: session.get('Created At')
+          id: session.session_id,
+          teamId: session.team_id,
+          reviewerId: session.reviewer_id,
+          status: session.status,
+          createdAt: session.created_at,
         },
-        messages
-      }
+        messages,
+      },
     });
 
   } catch (error) {
@@ -129,43 +123,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await doc.loadInfo();
-    
     // Verify session exists and is active
-    let sessionsSheet = doc.sheetsByTitle['Chat Sessions'];
-    if (!sessionsSheet) {
+    const { data: sessionRows, error: sessionErr } = await supabaseAdmin
+      .from('chat_sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .limit(1);
+    if (sessionErr) {
+      console.error('Supabase error fetching chat session:', sessionErr);
       return NextResponse.json(
-        { success: false, message: 'Chat sessions sheet not found' },
-        { status: 404 }
+        { success: false, message: 'Failed to verify chat session' },
+        { status: 500 }
       );
     }
-
-    const sessionRows = await sessionsSheet.getRows();
-    const session = sessionRows.find(row => row.get('Session ID') === sessionId);
-    
-    if (!session || session.get('Status') !== 'active') {
+    const session = sessionRows && sessionRows[0];
+    if (!session || session.status !== 'active') {
       return NextResponse.json(
         { success: false, message: 'Chat session not found or inactive' },
         { status: 404 }
       );
     }
 
-    // Add message to sheet
-    let messagesSheet = doc.sheetsByTitle['Chat Messages'];
-    if (!messagesSheet) {
-      // Create messages sheet if it doesn't exist
-      messagesSheet = await doc.addSheet({
-        title: 'Chat Messages',
-        headerValues: [
-          'Message ID', 'Session ID', 'Sender ID', 'Sender Type', 'Sender Name',
-          'Message', 'Message Type', 'File URL', 'File Name', 'Timestamp', 'Is Read'
-        ]
-      });
-    }
-
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const timestamp = new Date().toISOString();
-    
+
     // Determine sender name based on type
     let senderName = 'Unknown';
     if (senderType === 'team') {
@@ -176,23 +156,46 @@ export async function POST(request: NextRequest) {
       senderName = 'Administrator';
     }
 
-    await messagesSheet.addRow({
-      'Message ID': messageId,
-      'Session ID': sessionId,
-      'Sender ID': senderId,
-      'Sender Type': senderType,
-      'Sender Name': senderName,
-      'Message': message,
-      'Message Type': messageType,
-      'File URL': fileUrl || '',
-      'File Name': fileName || '',
-      'Timestamp': timestamp,
-      'Is Read': 'FALSE'
-    });
+    // Insert message into Supabase
+    const { data: insertedRows, error: insertErr } = await supabaseAdmin
+      .from('chat_messages')
+      .insert([
+        {
+          session_id: sessionId,
+          assignment_id: session.assignment_id ?? null,
+          sender_id: senderId,
+          sender_type: senderType,
+          sender_name: senderName,
+          message,
+          message_type: messageType,
+          file_url: fileUrl || null,
+          file_name: fileName || null,
+          timestamp,
+          is_read: false,
+          created_at: timestamp,
+        },
+      ])
+      .select('*');
+
+    if (insertErr) {
+      console.error('Supabase error inserting chat message:', insertErr);
+      return NextResponse.json(
+        { success: false, message: 'Failed to send message' },
+        { status: 500 }
+      );
+    }
+
+    const inserted = insertedRows && insertedRows[0];
+    const messageId = inserted?.id ?? '';
 
     // Update session last activity
-    session.set('Last Activity', timestamp);
-    await session.save();
+    const { error: updateErr } = await supabaseAdmin
+      .from('chat_sessions')
+      .update({ last_activity: timestamp })
+      .eq('session_id', sessionId);
+    if (updateErr) {
+      console.warn('Supabase warning updating last_activity:', updateErr);
+    }
 
     return NextResponse.json({
       success: true,
@@ -200,8 +203,8 @@ export async function POST(request: NextRequest) {
       data: {
         messageId,
         timestamp,
-        senderName
-      }
+        senderName,
+      },
     });
 
   } catch (error) {

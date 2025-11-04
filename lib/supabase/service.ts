@@ -484,19 +484,6 @@ export const supabaseService = {
     const trimmed = String(username).trim();
     if (!trimmed || !password) return null;
 
-    // Fetch rows and filter client-side to support mixed casing/spaces in column names
-    const { data, error } = await supabaseAdmin
-      .from('user_app')
-      .select('*')
-      .limit(2000);
-
-    if (error) {
-      console.error('Supabase validateUserCredentials select error:', error);
-      return null;
-    }
-
-    const rows = data || [];
-
     const getFirst = (row: any, keys: string[]): any => {
       for (const k of keys) {
         const v = row?.[k];
@@ -505,35 +492,127 @@ export const supabaseService = {
       return undefined;
     };
 
-    const candidate = rows.find((row: any) => {
-      const uname = getFirst(row, ['username', 'user_name', 'Username', 'USER_NAME', 'USER', 'user', 'User Name']);
-      return String(uname || '').trim() === trimmed;
-    });
+    // 1) PRIORITIZE team authentication via awarded_team
+    {
+      const { data, error } = await supabaseAdmin
+        .from('awarded_team')
+        .select('*')
+        .limit(2000);
 
-    if (!candidate) return null;
+      if (!error) {
+        const rows = data || [];
+        const candidate = rows.find((row: any) => {
+          const uname = getFirst(row, ['Team Username', 'Team Leader Username']);
+          return String(uname || '').trim() === trimmed;
+        });
 
-    const dbPassword = getFirst(candidate, ['password', 'Password', 'password_hash', 'passwordHash', 'PASSWORD', 'PASSWORD_HASH']);
-    if (!dbPassword) {
-      console.warn('User row missing password field in user_app');
-      return null;
+        if (candidate) {
+          let dbPassword = getFirst(candidate, ['Team Password', 'Team Password Hash']);
+          if (!dbPassword) {
+            // Fallback: if team password is missing in awarded_team, try matching against user_app
+            console.warn('Team row missing password field in awarded_team; attempting user_app fallback');
+            try {
+              const { data: userData, error: userErr } = await supabaseAdmin
+                .from('user_app')
+                .select('*')
+                .limit(2000);
+              if (!userErr) {
+                const userRows = userData || [];
+                const userCandidate = userRows.find((row: any) => {
+                  const u = getFirst(row, ['username', 'user_name', 'Username', 'USER_NAME', 'USER', 'user', 'User Name']);
+                  return String(u || '').trim() === trimmed;
+                });
+                const fallbackPw = userCandidate ? getFirst(userCandidate, ['password', 'Password', 'password_hash', 'passwordHash', 'PASSWORD', 'PASSWORD_HASH']) : undefined;
+                dbPassword = fallbackPw;
+              } else {
+                console.error('Supabase fallback select error (user_app for team password):', userErr);
+              }
+            } catch (e) {
+              console.error('Error during user_app fallback for team password:', e);
+            }
+          }
+
+          if (!dbPassword) return null;
+
+          const isMatch = String(dbPassword) === String(password);
+          if (!isMatch) return null;
+
+          const uid = getFirst(candidate, ['ID', 'id']) ?? '';
+          const uname = getFirst(candidate, ['Team Username', 'Team Leader Username']) ?? trimmed;
+          const name = getFirst(candidate, ['Team Name', 'Name']) ?? uname;
+
+          return {
+            id: String(uid),
+            username: String(uname),
+            name: String(name),
+            role: 'team',
+          };
+        }
+      } else {
+        console.error('Supabase validateUserCredentials select error (awarded_team):', error);
+      }
     }
 
-    // Plaintext comparison; replace with hash verification if your DB stores hashes
-    const isMatch = String(dbPassword) === String(password);
-    if (!isMatch) return null;
+    // 2) Otherwise authenticate via user_app (admins/reviewers/teams)
+    {
+      const { data, error } = await supabaseAdmin
+        .from('user_app')
+        .select('*')
+        .limit(2000);
 
-    const uid = getFirst(candidate, ['id', 'ID', 'user_id', 'userId']) ?? '';
-    const uname = getFirst(candidate, ['username', 'user_name', 'Username', 'User Name']) ?? trimmed;
-    const name = getFirst(candidate, ['name', 'Name', 'full_name', 'Full Name', 'displayName']) ?? uname;
-    const roleRaw = getFirst(candidate, ['role', 'Role', 'user_role', 'userRole']) ?? 'reviewer';
-    const roleNorm = String(roleRaw).toLowerCase().replace(/\s+/g, '_');
-    const normalizedRole = roleNorm === 'team_leader' ? 'team_leader' : roleNorm === 'admin' ? 'admin' : 'reviewer';
+      if (!error) {
+        const rows = data || [];
+        const candidate = rows.find((row: any) => {
+          const uname = getFirst(row, ['username', 'user_name', 'Username', 'USER_NAME', 'USER', 'user', 'User Name']);
+          return String(uname || '').trim() === trimmed;
+        });
 
-    return {
-      id: String(uid),
-      username: String(uname),
-      name: String(name),
-      role: String(normalizedRole),
-    };
+        if (candidate) {
+          const dbPassword = getFirst(candidate, ['password', 'Password', 'password_hash', 'passwordHash', 'PASSWORD', 'PASSWORD_HASH']);
+          if (!dbPassword) {
+            console.warn('User row missing password field in user_app');
+            return null;
+          }
+
+          const isMatch = String(dbPassword) === String(password);
+          if (!isMatch) return null;
+
+          const uid = getFirst(candidate, ['id', 'ID', 'user_id', 'userId']) ?? '';
+          const uname = getFirst(candidate, ['username', 'user_name', 'Username', 'User Name']) ?? trimmed;
+          const name = getFirst(candidate, ['name', 'Name', 'full_name', 'Full Name', 'displayName']) ?? uname;
+          const roleRaw = getFirst(candidate, ['role', 'Role', 'user_role', 'userRole']);
+          if (!roleRaw) {
+            // If role is missing in user_app, prefer safety: do not grant reviewer/admin.
+            return null;
+          }
+          const roleNorm = String(roleRaw).toLowerCase().replace(/\s+/g, '_');
+          // Normalize team leaders to team; allow admin/reviewer as-is
+          if (roleNorm === 'admin' || roleNorm === 'reviewer') {
+            // Edge-case: if a reviewer also exists as an awarded team with same username, prefer team role when logging with team password
+            // We already attempted awarded_team first; reaching here means no awarded_team match or password mismatch.
+            return {
+              id: String(uid),
+              username: String(uname),
+              name: String(name),
+              role: roleNorm,
+            };
+          }
+          if (roleNorm === 'team' || roleNorm === 'team_leader') {
+            return {
+              id: String(uid),
+              username: String(uname),
+              name: String(name),
+              role: 'team',
+            };
+          }
+          // Unknown role
+          return null;
+        }
+      } else {
+        console.error('Supabase validateUserCredentials select error (user_app):', error);
+      }
+    }
+
+    return null;
   },
 };

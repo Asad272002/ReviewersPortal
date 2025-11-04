@@ -13,14 +13,14 @@ function getFirst(row: any, keys: string[]): any {
   return undefined;
 }
 
-function normalizeRole(roleRaw: any): 'admin' | 'reviewer' | 'team_leader' {
+function normalizeRole(roleRaw: any): 'admin' | 'reviewer' | 'team' {
   const roleNorm = String(roleRaw || '').toLowerCase().replace(/\s+/g, '_');
   if (roleNorm === 'admin') return 'admin';
-  if (roleNorm === 'team_leader') return 'team_leader';
+  if (roleNorm === 'team' || roleNorm === 'team_leader') return 'team';
   return 'reviewer';
 }
 
-async function verifyJwtAndGetUser(req: NextRequest): Promise<{ userId: string; username: string; role: 'admin' | 'reviewer' | 'team_leader' } | null> {
+async function verifyJwtAndGetUser(req: NextRequest): Promise<{ userId: string; username: string; role: 'admin' | 'reviewer' | 'team' } | null> {
   const token = req.cookies.get('token')?.value;
   if (!token) return null;
   try {

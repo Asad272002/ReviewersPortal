@@ -59,19 +59,51 @@ export default function ChatComponent({
   const loadChatData = async () => {
     try {
       setIsLoading(true);
+      const roleParam = userRole === 'team' ? 'user' : userRole;
       
       // Load session details
-      const sessionResponse = await fetch(`/api/chat/sessions/${sessionId}`);
+      const sessionResponse = await fetch(`/api/chat/sessions/${sessionId}?userId=${encodeURIComponent(userId)}&userRole=${encodeURIComponent(roleParam)}`);
       if (sessionResponse.ok) {
         const sessionData = await sessionResponse.json();
-        setSession(sessionData);
+        const s = sessionData?.data;
+        if (s) {
+          setSession({
+            id: s.id,
+            assignmentId: s.assignmentId,
+            teamId: s.teamId,
+            reviewerId: s.reviewerId,
+            status: s.status,
+            startedAt: s.createdAt,
+            endedAt: s.endedAt,
+            lastMessageAt: s.lastActivity,
+            messageCount: 0,
+            createdAt: s.createdAt,
+            updatedAt: s.lastActivity,
+          });
+        }
       }
       
       // Load messages
-      const messagesResponse = await fetch(`/api/chat?sessionId=${sessionId}`);
+      const messagesResponse = await fetch(`/api/chat?sessionId=${encodeURIComponent(sessionId)}&userId=${encodeURIComponent(userId)}&userRole=${encodeURIComponent(roleParam)}`);
       if (messagesResponse.ok) {
         const messagesData = await messagesResponse.json();
-        setMessages(messagesData.messages || []);
+        const m = messagesData?.data?.messages || [];
+        const normalized = m.map((row: any) => ({
+          id: row.id,
+          assignmentId: sessionId, // not provided per-message; tie to session
+          senderId: row.senderId,
+          senderType: row.senderType,
+          senderName: row.senderName,
+          senderRole: row.senderType,
+          messageType: row.messageType === 'file' ? 'file' : 'text',
+          content: row.message,
+          fileName: row.fileName || undefined,
+          fileUrl: row.fileUrl || undefined,
+          timestamp: row.timestamp,
+          isRead: !!row.isRead,
+          createdAt: row.timestamp,
+        }));
+        setMessages(normalized);
       }
     } catch (error) {
       console.error('Error loading chat data:', error);
@@ -84,10 +116,27 @@ export default function ChatComponent({
     // Poll for new messages every 3 seconds
     pollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`/api/chat?sessionId=${sessionId}`);
+        const roleParam = userRole === 'team' ? 'user' : userRole;
+        const response = await fetch(`/api/chat?sessionId=${encodeURIComponent(sessionId)}&userId=${encodeURIComponent(userId)}&userRole=${encodeURIComponent(roleParam)}`);
         if (response.ok) {
           const data = await response.json();
-          setMessages(data.messages || []);
+          const m = data?.data?.messages || [];
+          const normalized = m.map((row: any) => ({
+            id: row.id,
+            assignmentId: sessionId,
+            senderId: row.senderId,
+            senderType: row.senderType,
+            senderName: row.senderName,
+            senderRole: row.senderType,
+            messageType: row.messageType === 'file' ? 'file' : 'text',
+            content: row.message,
+            fileName: row.fileName || undefined,
+            fileUrl: row.fileUrl || undefined,
+            timestamp: row.timestamp,
+            isRead: !!row.isRead,
+            createdAt: row.timestamp,
+          }));
+          setMessages(normalized);
         }
       } catch (error) {
         console.error('Error polling messages:', error);
@@ -108,8 +157,8 @@ export default function ChatComponent({
         body: JSON.stringify({
           sessionId,
           senderId: userId,
-          senderRole: userRole,
-          content: newMessage.trim(),
+          senderType: userRole,
+          message: newMessage.trim(),
           messageType: 'text'
         }),
       });
@@ -180,14 +229,10 @@ export default function ChatComponent({
         body: JSON.stringify({
           sessionId,
           senderId: userId,
-          senderRole: userRole,
-          content: `Shared file: ${upload.file.name}`,
+          senderType: userRole,
+          message: `Shared file: ${upload.file.name}`,
           messageType: 'file',
-          fileData: {
-            name: upload.file.name,
-            size: upload.file.size,
-            type: upload.file.type
-          }
+          fileName: upload.file.name
         }),
       });
       
@@ -349,6 +394,11 @@ export default function ChatComponent({
 
       {/* Input Area */}
       <div className="p-4 border-t border-[#9D9FA9] bg-[#1A0B2E]">
+        {session?.status !== 'active' && (
+          <div className="mb-2 text-center text-[#9D9FA9] text-sm font-montserrat">
+            This session is not active. Chat is read-only.
+          </div>
+        )}
         <div className="flex space-x-2">
           <input
             type="file"
@@ -360,9 +410,10 @@ export default function ChatComponent({
           />
           
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-2 bg-[#0C021E] hover:bg-[#9050E9] border border-[#9D9FA9] text-white rounded transition-colors"
+            onClick={() => { if (session?.status === 'active') fileInputRef.current?.click(); }}
+            className={`px-3 py-2 border border-[#9D9FA9] text-white rounded transition-colors ${session?.status === 'active' ? 'bg-[#0C021E] hover:bg-[#9050E9]' : 'bg-[#0C021E] opacity-50 cursor-not-allowed'}`}
             title="Attach file"
+            disabled={session?.status !== 'active'}
           >
             📎
           </button>
@@ -374,12 +425,12 @@ export default function ChatComponent({
             placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
             className="flex-1 px-3 py-2 bg-[#0C021E] border border-[#9D9FA9] text-white rounded resize-none focus:outline-none focus:border-[#9050E9] font-montserrat"
             rows={2}
-            disabled={isSending}
+            disabled={isSending || session?.status !== 'active'}
           />
           
           <button
             onClick={sendMessage}
-            disabled={!newMessage.trim() || isSending}
+            disabled={!newMessage.trim() || isSending || session?.status !== 'active'}
             className="px-4 py-2 bg-[#9050E9] hover:bg-[#A96AFF] disabled:bg-[#9D9FA9] disabled:cursor-not-allowed text-white rounded transition-colors font-montserrat font-medium"
           >
             {isSending ? '...' : 'Send'}

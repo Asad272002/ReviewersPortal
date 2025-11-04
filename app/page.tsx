@@ -10,6 +10,7 @@ import InfoCard from "./components/InfoCard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from './context/AuthContext';
 import Image from "next/image";
+import AwardedTeamsConnect from "./components/AwardedTeamsConnect";
 
 export default function Home() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export default function Home() {
   const [motionEnabled, setMotionEnabled] = useState(false);
 
   useEffect(() => {
-    if (user?.role === 'team_leader') {
+    if (user?.role === 'team') {
       checkIfAwardedTeamMember();
     } else {
       setIsCheckingTeamStatus(false);
@@ -34,11 +35,14 @@ export default function Home() {
       const response = await fetch('/api/admin/awarded-teams');
       if (response.ok) {
         const data = await response.json();
-        // Check if this user is a team leader of any awarded team
+        // Match by username or fallback to id in case of normalization differences
         const isTeamLeader = data.data.awardedTeams?.some(
-          (team: any) => team.teamLeaderUsername === user?.username
+          (team: any) => {
+            const teamUser = team.teamUsername ?? team.teamLeaderUsername;
+            return teamUser === user?.username || team.id === user?.id;
+          }
         );
-        setIsAwardedTeamMember(isTeamLeader);
+        setIsAwardedTeamMember(Boolean(isTeamLeader));
       }
     } catch (error) {
       console.error('Error checking team status:', error);
@@ -203,8 +207,8 @@ export default function Home() {
     };
   }, [motionEnabled]);
 
-  // Show loading while checking team status for team leaders
-  if (user?.role === 'team_leader' && isCheckingTeamStatus) {
+  // Show loading while checking team status for team members
+  if (user?.role === 'team' && isCheckingTeamStatus) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -227,9 +231,9 @@ export default function Home() {
         <Header />
         
         <div className="flex flex-1 relative z-10">
-          {!(user?.role === 'team_leader' && isAwardedTeamMember) && <Sidebar />}
-          
-          <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team_leader' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team_leader' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
+          {!(user?.role === 'team' && isAwardedTeamMember) && <Sidebar />}
+
+          <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
             {/* Motion toggle accessible control */}
             <div className="absolute right-2 sm:right-4 top-2 sm:top-4 z-20">
               <button
@@ -337,7 +341,7 @@ export default function Home() {
                   />
                 </div>
               </>
-            ) : user?.role === 'team_leader' && isAwardedTeamMember ? (
+            ) : user?.role === 'team' && isAwardedTeamMember ? (
               // Simplified Team Dashboard
               <div className="min-h-screen flex items-center justify-center">
                 <div className="w-full">

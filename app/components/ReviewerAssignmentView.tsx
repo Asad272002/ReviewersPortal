@@ -3,12 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { TeamReviewerAssignment } from '../types/awarded-teams';
+import ChatComponent from './chat/ChatComponent';
 
 export default function ReviewerAssignmentView() {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<TeamReviewerAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const [reviewerIdForChat, setReviewerIdForChat] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -85,6 +89,30 @@ export default function ReviewerAssignmentView() {
         return '❌';
       default:
         return '❓';
+    }
+  };
+
+  const openChatForAssignment = async (assignment: TeamReviewerAssignment) => {
+    try {
+      setError(null);
+      const sessionsResponse = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(assignment.reviewerId)}&userRole=reviewer`);
+      if (sessionsResponse.ok) {
+        const sessionsData = await sessionsResponse.json();
+        const sessions = sessionsData?.data || [];
+        const existingSession = sessions.find((s: any) => s.assignmentId === assignment.id && s.status === 'active');
+        if (existingSession) {
+          setChatSessionId(existingSession.id);
+          setReviewerIdForChat(assignment.reviewerId);
+          setShowChat(true);
+          return;
+        }
+        setError('Chat has not been started by admin yet.');
+      } else {
+        setError('Unable to check chat session.');
+      }
+    } catch (err) {
+      console.error('Error opening chat:', err);
+      setError('Failed to open chat.');
     }
   };
 
@@ -198,6 +226,18 @@ export default function ReviewerAssignmentView() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      {showChat && chatSessionId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl h-[600px] bg-[#0C021E] rounded-lg border border-[#9D9FA9] overflow-hidden">
+            <ChatComponent
+              sessionId={chatSessionId}
+              userId={reviewerIdForChat || ''}
+              userRole="reviewer"
+              onClose={() => setShowChat(false)}
+            />
+          </div>
+        </div>
+      )}
       <div className="mb-8">
         <h1 className="font-montserrat font-bold text-3xl text-white text-center mb-2">
           Reviewer Dashboard
@@ -330,6 +370,14 @@ export default function ReviewerAssignmentView() {
                       You can now communicate with the team through the chat system when they initiate contact.
                     </p>
                   </div>
+                  {assignment.status === 'active' && (
+                    <button
+                      onClick={() => openChatForAssignment(assignment)}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      Open Chat
+                    </button>
+                  )}
                 </div>
               ) : assignment.status === 'pending' ? (
                 <div className="mt-6 text-center">

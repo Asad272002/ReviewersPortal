@@ -30,9 +30,12 @@ export default function AwardedTeamsConnect() {
       if (response.ok) {
         const data = await response.json();
         
-        // Find the team where this user is the team leader (by username)
+        // Find the team where this user is the team member (by team username; fallback to leader)
         const userTeam = data.data.awardedTeams?.find(
-          (team: any) => team.teamLeaderUsername === user?.username
+          (team: any) => {
+            const teamUser = team.teamUsername ?? team.teamLeaderUsername;
+            return teamUser === user?.username || team.id === user?.id;
+          }
         );
         
         if (userTeam) {
@@ -58,52 +61,28 @@ export default function AwardedTeamsConnect() {
     }
   };
 
-  const startChatSession = async () => {
-    if (!assignment) return;
-    
+  const openChatIfAvailable = async () => {
+    if (!assignment || !user?.id) return;
     try {
       setError(null);
-      
-      // Check if there's already an active session
-      const sessionsResponse = await fetch('/api/chat/sessions');
+      const roleParam = 'user'; // team members use 'user' for API access
+      const sessionsResponse = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(user.id)}&userRole=${encodeURIComponent(roleParam)}`);
       if (sessionsResponse.ok) {
         const sessionsData = await sessionsResponse.json();
-        const existingSession = sessionsData.sessions?.find(
-          (session: any) => 
-            session.assignmentId === assignment.id && 
-            session.status === 'active'
-        );
-        
+        const sessions = sessionsData?.data || [];
+        const existingSession = sessions.find((s: any) => s.assignmentId === assignment.id && s.status === 'active');
         if (existingSession) {
           setChatSessionId(existingSession.id);
           setShowChat(true);
           return;
         }
-      }
-      
-      // Create new chat session
-      const response = await fetch('/api/chat/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          assignmentId: assignment.id,
-          teamId: assignment.teamId,
-          reviewerId: assignment.reviewerId
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setChatSessionId(data.sessionId);
-        setShowChat(true);
+        setError('Chat has not been started by admin yet.');
       } else {
-        throw new Error('Failed to start chat session');
+        setError('Unable to check chat session.');
       }
-    } catch (error) {
-      console.error('Error starting chat session:', error);
-      setError('Failed to start chat session. Please try again.');
+    } catch (err) {
+      console.error('Error opening chat:', err);
+      setError('Failed to open chat. Please try again.');
     }
   };
 
@@ -346,8 +325,8 @@ export default function AwardedTeamsConnect() {
               )}
               
               <button
-                onClick={startChatSession}
-                disabled={assignment.status !== 'approved' && assignment.status !== 'active'}
+                onClick={openChatIfAvailable}
+                disabled={assignment.status === 'pending' || assignment.status === 'revoked'}
                 className="w-full bg-gradient-to-r from-[#9050E9] to-[#A96AFF] hover:from-[#A96AFF] hover:to-[#B47AFF] disabled:from-[#9D9FA9] disabled:to-[#9D9FA9] disabled:cursor-not-allowed text-white font-montserrat font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg"
               >
                 {assignment.status === 'pending' ? (
@@ -360,10 +339,15 @@ export default function AwardedTeamsConnect() {
                     <span className="mr-2">🚫</span>
                     Chat Unavailable
                   </>
+                ) : assignment.status === 'approved' ? (
+                  <>
+                    <span className="mr-2">🛠️</span>
+                    Waiting for Admin to Start Chat
+                  </>
                 ) : (
                   <>
                     <span className="mr-2">🚀</span>
-                    Go to Chat
+                    Open Chat
                   </>
                 )}
               </button>

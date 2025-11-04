@@ -86,7 +86,9 @@ const Sidebar = () => {
       `}>
         <div className="mb-4 sm:mb-6 px-2 sm:px-4">
           <h2 className="font-montserrat font-bold text-xl sm:text-2xl text-primary-light mb-1">Review Circle</h2>
-          <p className="font-montserrat text-xs sm:text-sm text-text-secondary">Reviewer Portal</p>
+          <p className="font-montserrat text-xs sm:text-sm text-text-secondary">
+            {user?.role === 'admin' ? 'Admin Portal' : user?.role === 'reviewer' ? 'Reviewer Portal' : user?.role === 'team' ? 'Team Portal' : 'Portal'}
+          </p>
         </div>
         
         <NavItem 

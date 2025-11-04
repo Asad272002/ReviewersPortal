@@ -2,17 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { TeamReviewerAssignment } from '../types/awarded-teams';
+import { TeamReviewerAssignment, AwardedTeam } from '../types/awarded-teams';
 import ChatComponent from './chat/ChatComponent';
 
 export default function UnifiedReviewerDashboard() {
   const { user } = useAuth();
-  const [assignments, setAssignments] = useState<TeamReviewerAssignment[]>([]);
+  type ReviewerAssignmentWithTeam = TeamReviewerAssignment & { teamInfo?: AwardedTeam };
+  const [assignments, setAssignments] = useState<ReviewerAssignmentWithTeam[]>([]);
   const [teamAssignment, setTeamAssignment] = useState<TeamReviewerAssignment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const [reviewerIdForChat, setReviewerIdForChat] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'assignments' | 'team-connection'>('assignments');
 
   useEffect(() => {
@@ -87,52 +89,52 @@ export default function UnifiedReviewerDashboard() {
     }
   };
 
-  const startChatSession = async () => {
+  const openChatIfAvailable = async () => {
     if (!teamAssignment) return;
-    
     try {
       setError(null);
-      
-      // Check if there's already an active session
-      const sessionsResponse = await fetch('/api/chat/sessions');
+      const sessionsResponse = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(teamAssignment.reviewerId)}&userRole=reviewer`);
       if (sessionsResponse.ok) {
         const sessionsData = await sessionsResponse.json();
-        const existingSession = sessionsData.sessions?.find(
-          (session: any) => 
-            session.assignmentId === teamAssignment.id && 
-            session.status === 'active'
-        );
-        
+        const sessions = sessionsData?.data || [];
+        const existingSession = sessions.find((s: any) => s.assignmentId === teamAssignment.id && s.status === 'active');
         if (existingSession) {
           setChatSessionId(existingSession.id);
+          setReviewerIdForChat(teamAssignment.reviewerId);
           setShowChat(true);
           return;
         }
-      }
-      
-      // Create new chat session
-      const response = await fetch('/api/chat/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          assignmentId: teamAssignment.id,
-          teamId: teamAssignment.teamId,
-          reviewerId: teamAssignment.reviewerId
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setChatSessionId(data.sessionId);
-        setShowChat(true);
+        setError('Chat has not been started by admin yet.');
       } else {
-        throw new Error('Failed to start chat session');
+        setError('Unable to check chat session.');
       }
-    } catch (error) {
-      console.error('Error starting chat:', error);
-      setError('Failed to start chat session');
+    } catch (err) {
+      console.error('Error opening chat:', err);
+      setError('Failed to open chat.');
+    }
+  };
+
+  const openChatForAssignment = async (assignment: TeamReviewerAssignment) => {
+    try {
+      setError(null);
+      const sessionsResponse = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(assignment.reviewerId)}&userRole=reviewer`);
+      if (sessionsResponse.ok) {
+        const sessionsData = await sessionsResponse.json();
+        const sessions = sessionsData?.data || [];
+        const existingSession = sessions.find((s: any) => s.assignmentId === assignment.id && s.status === 'active');
+        if (existingSession) {
+          setChatSessionId(existingSession.id);
+          setReviewerIdForChat(assignment.reviewerId);
+          setShowChat(true);
+          return;
+        }
+        setError('Chat has not been started by admin yet.');
+      } else {
+        setError('Unable to check chat session.');
+      }
+    } catch (err) {
+      console.error('Error opening chat:', err);
+      setError('Failed to open chat.');
     }
   };
 
@@ -227,6 +229,18 @@ export default function UnifiedReviewerDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto">
+      {showChat && chatSessionId && activeTab === 'assignments' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl h-[600px] bg-[#0C021E] rounded-lg border border-[#9D9FA9] overflow-hidden">
+            <ChatComponent
+              sessionId={chatSessionId}
+              userId={reviewerIdForChat || ''}
+              userRole="reviewer"
+              onClose={() => setShowChat(false)}
+            />
+          </div>
+        </div>
+      )}
       {/* Tab Navigation */}
       {hasAssignments && hasTeamConnection && (
         <div className="mb-6">
@@ -286,11 +300,12 @@ export default function UnifiedReviewerDashboard() {
                     </div>
                   </div>
                   
-                  {assignment.teamInfo?.projectDescription && (
+                  {/* Optional details: If available, show more team info */}
+                  {assignment.teamInfo?.proposalTitle && (
                     <div className="mb-4">
-                      <h4 className="font-semibold text-white mb-2">Project Description:</h4>
+                      <h4 className="font-semibold text-white mb-2">Proposal Title:</h4>
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        {assignment.teamInfo.projectDescription}
+                        {assignment.teamInfo.proposalTitle}
                       </p>
                     </div>
                   )}
@@ -299,16 +314,26 @@ export default function UnifiedReviewerDashboard() {
                     <div>
                       <span className="text-gray-400">Assignment Date:</span>
                       <span className="text-white ml-2">
-                        {assignment.assignedDate ? new Date(assignment.assignedDate).toLocaleDateString() : 'N/A'}
+                        {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
                       </span>
                     </div>
                     <div>
                       <span className="text-gray-400">Last Updated:</span>
                       <span className="text-white ml-2">
-                        {assignment.lastUpdated ? new Date(assignment.lastUpdated).toLocaleDateString() : 'N/A'}
+                        {assignment.updatedAt ? new Date(assignment.updatedAt).toLocaleDateString() : 'N/A'}
                       </span>
                     </div>
                   </div>
+                  {assignment.status === 'active' && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => openChatForAssignment(assignment)}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                      >
+                        Open Chat
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -340,18 +365,18 @@ export default function UnifiedReviewerDashboard() {
                     <p><strong>Assignment ID:</strong> {teamAssignment.id}</p>
                     <p><strong>Team ID:</strong> {teamAssignment.teamId}</p>
                     <p><strong>Reviewer ID:</strong> {teamAssignment.reviewerId}</p>
-                    {teamAssignment.assignedDate && (
-                      <p><strong>Assigned Date:</strong> {new Date(teamAssignment.assignedDate).toLocaleDateString()}</p>
+                    {teamAssignment.assignedAt && (
+                      <p><strong>Assigned Date:</strong> {new Date(teamAssignment.assignedAt).toLocaleDateString()}</p>
                     )}
                   </div>
                   
-                  {teamAssignment.status === 'approved' && (
+                  {(teamAssignment.status === 'approved' || teamAssignment.status === 'active') && (
                     <div className="mt-6">
                       <button
-                        onClick={startChatSession}
+                        onClick={openChatIfAvailable}
                         className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
                       >
-                        Start Chat with Reviewer
+                        {teamAssignment.status === 'approved' ? 'Waiting for Admin to Start Chat' : 'Open Chat with Reviewer'}
                       </button>
                     </div>
                   )}
@@ -370,7 +395,7 @@ export default function UnifiedReviewerDashboard() {
                         ✕
                       </button>
                     </div>
-                    <ChatComponent sessionId={chatSessionId} />
+                    <ChatComponent sessionId={chatSessionId} userId={reviewerIdForChat || teamAssignment?.reviewerId || ''} userRole="reviewer" onClose={() => setShowChat(false)} />
                   </div>
                 )}
               </div>

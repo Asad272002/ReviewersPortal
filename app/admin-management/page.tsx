@@ -561,9 +561,9 @@ export default function AdminManagement() {
                     <p className="text-sm text-[#9D9FA9]">Total reviewers</p>
                   </div>
                   <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-                    <h4 className="font-montserrat font-medium text-white mb-2">Team Leaders</h4>
-                    <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'team_leader').length}</p>
-                    <p className="text-sm text-[#9D9FA9]">Total team leaders</p>
+                    <h4 className="font-montserrat font-medium text-white mb-2">Team Accounts</h4>
+                    <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.filter((u: any) => u.role === 'team' || u.role === 'team_leader').length}</p>
+                    <p className="text-sm text-[#9D9FA9]">Total team accounts</p>
                   </div>
                 </div>
                 <UserManager />

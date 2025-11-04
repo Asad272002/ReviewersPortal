@@ -4,12 +4,12 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
-type Role = 'admin' | 'reviewer' | 'team_leader';
+type Role = 'admin' | 'reviewer' | 'team';
 
 function normalizeRole(roleRaw: any): Role {
   const roleNorm = String(roleRaw || '').toLowerCase().replace(/\s+/g, '_');
   if (roleNorm === 'admin') return 'admin';
-  if (roleNorm === 'team_leader') return 'team_leader';
+  if (roleNorm === 'team' || roleNorm === 'team_leader') return 'team';
   return 'reviewer';
 }
 

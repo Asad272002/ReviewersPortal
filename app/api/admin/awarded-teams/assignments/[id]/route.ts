@@ -16,53 +16,86 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ success: false, message: 'Missing action in body' }, { status: 400 });
     }
 
-    const { data: existing, error: fetchErr } = await supabaseAdmin
-      .from('team_reviewer_assignments')
-      .select('*')
-      .eq('id', id)
-      .limit(1);
+    // Fetch assignment from modern table; gracefully fall back to legacy table shape
+    let tableType: 'modern' | 'legacy' = 'modern';
+    let row: any = null;
 
-    if (fetchErr) {
-      console.error('Supabase select assignment error:', fetchErr);
-      return NextResponse.json({ success: false, message: 'Failed to fetch assignment' }, { status: 500 });
+    {
+      const { data: existingModern, error: fetchErrModern } = await supabaseAdmin
+        .from('team_reviewer_assignments')
+        .select('*')
+        .eq('id', id)
+        .limit(1);
+      if (!fetchErrModern && existingModern && existingModern[0]) {
+        row = existingModern[0];
+        tableType = 'modern';
+      } else {
+        // Try legacy table with spaced, quoted columns
+        const { data: existingLegacy, error: fetchErrLegacy } = await supabaseAdmin
+          .from('team_reviewer_assignment')
+          .select('"ID", "Team ID", "Reviewer ID", "Assigned By", "Assigned At", "Status", "Approved By", "Approved At", "Revoked By", "Revoked At", "Notes", "Created At", "Updated At"')
+          .eq('ID', id)
+          .limit(1);
+        if (fetchErrLegacy) {
+          console.error('Supabase select assignment error:', fetchErrLegacy);
+          return NextResponse.json({ success: false, message: 'Failed to fetch assignment' }, { status: 500 });
+        }
+        if (existingLegacy && existingLegacy[0]) {
+          row = existingLegacy[0];
+          tableType = 'legacy';
+        }
+      }
     }
 
-    const row = (existing ?? [])[0];
     if (!row) {
       return NextResponse.json({ success: false, message: 'Assignment not found' }, { status: 404 });
     }
 
     const now = new Date().toISOString();
-    const updates: Record<string, any> = { updatedAt: now };
+    const updatesModern: Record<string, any> = { updatedAt: now };
+    const updatesLegacy: Record<string, any> = { 'Updated At': now };
+
+    const currentStatus = tableType === 'modern'
+      ? String(row.status || '').toLowerCase()
+      : String(row['Status'] || '').toLowerCase();
 
     switch (action) {
       case 'approve':
-        updates.status = 'approved';
-        updates.approvedAt = now;
-        if (adminId) updates.approvedBy = adminId;
+        updatesModern.status = 'approved';
+        updatesModern.approvedAt = now;
+        if (adminId) updatesModern.approvedBy = adminId;
+        updatesLegacy['Status'] = 'approved';
+        updatesLegacy['Approved At'] = now;
+        if (adminId) updatesLegacy['Approved By'] = adminId;
         break;
       case 'activate':
-        if (row.status !== 'approved') {
+        if (currentStatus !== 'approved') {
           return NextResponse.json(
             { success: false, message: 'Assignment must be approved before activation' },
             { status: 400 }
           );
         }
-        updates.status = 'active';
+        updatesModern.status = 'active';
+        updatesLegacy['Status'] = 'active';
         break;
       case 'revoke':
-        updates.status = 'revoked';
-        updates.revokedAt = now;
-        if (adminId) updates.revokedBy = adminId;
+        updatesModern.status = 'revoked';
+        updatesModern.revokedAt = now;
+        if (adminId) updatesModern.revokedBy = adminId;
+        updatesLegacy['Status'] = 'revoked';
+        updatesLegacy['Revoked At'] = now;
+        if (adminId) updatesLegacy['Revoked By'] = adminId;
         break;
       case 'complete':
-        updates.status = 'completed';
-        updates.completedAt = now;
+        updatesModern.status = 'completed';
+        updatesModern.completedAt = now;
+        updatesLegacy['Status'] = 'completed';
         break;
       case 'update_notes':
       case 'notes':
         if (typeof notes === 'string') {
-          updates.notes = notes;
+          updatesModern.notes = notes;
+          updatesLegacy['Notes'] = notes;
         } else {
           return NextResponse.json({ success: false, message: 'Notes must be a string' }, { status: 400 });
         }
@@ -71,19 +104,38 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
         return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
     }
 
-    const { data: updatedRows, error: updateErr } = await supabaseAdmin
-      .from('team_reviewer_assignments')
-      .update(updates)
-      .eq('id', id)
-      .select('*')
-      .limit(1);
+    let updatedRows: any[] | null = null;
+    let updateErr: any = null;
+
+    if (tableType === 'modern') {
+      const resp = await supabaseAdmin
+        .from('team_reviewer_assignments')
+        .update(updatesModern)
+        .eq('id', id)
+        .select('*')
+        .limit(1);
+      updatedRows = resp.data;
+      updateErr = resp.error;
+    } else {
+      const resp = await supabaseAdmin
+        .from('team_reviewer_assignment')
+        .update(updatesLegacy)
+        .eq('ID', id)
+        .select('"ID", "Status", "Updated At"')
+        .limit(1);
+      updatedRows = resp.data;
+      updateErr = resp.error;
+    }
 
     if (updateErr) {
       console.error('Supabase update assignment error:', updateErr);
       return NextResponse.json({ success: false, message: 'Failed to update assignment' }, { status: 500 });
     }
 
-    const updated = (updatedRows ?? [])[0] ?? { id, status: updates.status, updatedAt: now };
+    const updatedRaw = (updatedRows ?? [])[0];
+    const updated = tableType === 'modern'
+      ? (updatedRaw ?? { id, status: updatesModern.status, updatedAt: now })
+      : ({ id: updatedRaw?.['ID'] ?? id, status: updatedRaw?.['Status'] ?? updatesLegacy['Status'], updatedAt: updatedRaw?.['Updated At'] ?? now });
 
     return NextResponse.json({
       success: true,

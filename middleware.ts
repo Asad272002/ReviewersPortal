@@ -27,7 +27,7 @@ const publicRoutes = [
 const roleBasedRoutes = {
   admin: ['/admin-management'],
   reviewer: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/reviewer-tests', '/chat'],
-  team_leader: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/reviewer-tests', '/chat']
+  team: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/reviewer-tests', '/chat']
 }
 
 export async function middleware(request: NextRequest) {
@@ -41,12 +41,13 @@ export async function middleware(request: NextRequest) {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key')
         const { payload } = await jwtVerify(token, secret)
         const userRole = (payload.role as string) || ''
-        const normalizedRole = userRole.toLowerCase() === 'reviewer' ? 'reviewer' : userRole
+        const roleLower = userRole.toLowerCase().replace(/\s+/g, '_')
+        const normalizedRole = roleLower === 'admin' ? 'admin' : roleLower === 'team_leader' ? 'team' : roleLower === 'team' ? 'team' : 'reviewer'
         // Choose a sensible dashboard per role
         let redirectPath = '/'
         if (normalizedRole === 'admin') {
           redirectPath = '/admin-management'
-        } else if (normalizedRole === 'reviewer' || normalizedRole === 'team_leader') {
+        } else if (normalizedRole === 'reviewer' || normalizedRole === 'team') {
           redirectPath = '/'
         }
         return NextResponse.redirect(new URL(redirectPath, request.url))
@@ -93,7 +94,8 @@ export async function middleware(request: NextRequest) {
     const userId = payload.userId as string
 
     // Normalize reviewer roles (merge "Reviewer" and "reviewer" into "reviewer")
-    const normalizedRole = userRole.toLowerCase() === 'reviewer' ? 'reviewer' : userRole
+    const roleLower = userRole.toLowerCase().replace(/\s+/g, '_')
+    const normalizedRole = roleLower === 'admin' ? 'admin' : roleLower === 'team_leader' ? 'team' : roleLower === 'team' ? 'team' : 'reviewer'
 
     // Check role-based access
     if (normalizedRole === 'admin') {
@@ -110,7 +112,7 @@ export async function middleware(request: NextRequest) {
       let redirectPath = '/'
       if (normalizedRole === 'reviewer') {
         redirectPath = '/announcements'
-      } else if (normalizedRole === 'team_leader') {
+      } else if (normalizedRole === 'team') {
         redirectPath = '/announcements'
       }
       

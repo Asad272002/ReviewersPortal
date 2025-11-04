@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { AwardedTeam, Reviewer, TeamReviewerAssignment } from '../../types/awarded-teams';
+import ChatComponent from '../chat/ChatComponent';
 
 interface User {
   id: string;
@@ -19,6 +21,7 @@ interface AwardedTeamsManagerProps {
 }
 
 const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users = [] }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'teams' | 'reviewers' | 'assignments'>('teams');
   const [teams, setTeams] = useState<AwardedTeam[]>([]);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
@@ -26,6 +29,9 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const [showRevokedDropdown, setShowRevokedDropdown] = useState(false);
 
   // Form states
   const [showAddTeamForm, setShowAddTeamForm] = useState(false);
@@ -41,8 +47,12 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
     name: '',
     email: '',
     projectTitle: '',
+    proposalId: '',
+    teamLeaderName: '',
     category: '',
-    awardType: ''
+    awardType: '',
+    teamUsername: '',
+    teamPassword: ''
   });
 
   // New reviewer form
@@ -160,7 +170,7 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
       
       if (data.success) {
         setSuccess('Team added successfully!');
-        setNewTeam({ name: '', email: '', projectTitle: '', category: '', awardType: '' });
+        setNewTeam({ name: '', email: '', projectTitle: '', proposalId: '', teamLeaderName: '', category: '', awardType: '', teamUsername: '', teamPassword: '' });
         setShowAddTeamForm(false);
         fetchData();
       } else {
@@ -324,8 +334,25 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
     setSuccess(null);
   };
 
+  const closeChat = () => {
+    setShowChat(false);
+    setChatSessionId(null);
+  };
+
   return (
     <div className="w-full">
+      {showChat && chatSessionId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl h-[600px] bg-[#0C021E] rounded-lg border border-[#9D9FA9] overflow-hidden">
+            <ChatComponent
+              sessionId={chatSessionId}
+              userId={user?.id || ''}
+              userRole="admin"
+              onClose={closeChat}
+            />
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6 mb-6">
@@ -415,11 +442,41 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
                         />
                         <input
                           type="text"
+                          placeholder="Team Username"
+                          value={newTeam.teamUsername}
+                          onChange={(e) => setNewTeam({ ...newTeam, teamUsername: e.target.value })}
+                          className="px-3 py-2 bg-[#0C021E] border border-[#9D9FA9] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9050E9] font-montserrat placeholder-[#9D9FA9]"
+                          required
+                        />
+                        <input
+                          type="password"
+                          placeholder="Team Password"
+                          value={newTeam.teamPassword}
+                          onChange={(e) => setNewTeam({ ...newTeam, teamPassword: e.target.value })}
+                          className="px-3 py-2 bg-[#0C021E] border border-[#9D9FA9] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9050E9] font-montserrat placeholder-[#9D9FA9]"
+                          required
+                        />
+                        <input
+                          type="text"
                           placeholder="Project Title"
                           value={newTeam.projectTitle}
                           onChange={(e) => setNewTeam({ ...newTeam, projectTitle: e.target.value })}
                           className="px-3 py-2 bg-[#0C021E] border border-[#9D9FA9] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9050E9] font-montserrat placeholder-[#9D9FA9]"
                           required
+                        />
+                        <input
+                          type="text"
+                          placeholder="Proposal ID"
+                          value={newTeam.proposalId}
+                          onChange={(e) => setNewTeam({ ...newTeam, proposalId: e.target.value })}
+                          className="px-3 py-2 bg-[#0C021E] border border-[#9D9FA9] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9050E9] font-montserrat placeholder-[#9D9FA9]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Team Leader Name"
+                          value={newTeam.teamLeaderName}
+                          onChange={(e) => setNewTeam({ ...newTeam, teamLeaderName: e.target.value })}
+                          className="px-3 py-2 bg-[#0C021E] border border-[#9D9FA9] text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9050E9] font-montserrat placeholder-[#9D9FA9]"
                         />
                         <input
                           type="text"
@@ -472,6 +529,11 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
                             <p className="text-sm text-[#9D9FA9] font-montserrat">
                               <strong>Team Leader:</strong> {team.teamLeaderName} ({team.teamLeaderUsername})
                             </p>
+                            {team.teamUsername && (
+                              <p className="text-sm text-[#9D9FA9] font-montserrat">
+                                <strong>Team Username:</strong> {team.teamUsername}
+                              </p>
+                            )}
                             <p className="text-sm text-[#9D9FA9] font-montserrat">
                               <strong>Proposal ID:</strong> {team.proposalId}
                             </p>
@@ -714,7 +776,8 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
                         <option value="">Select Team</option>
                         {teams.filter(team => team.status === 'active').map((team) => (
                           <option key={team.id} value={team.id}>
-                            {team.name} - {team.projectTitle}
+                            {(team.teamName || team.name || '-')}
+                            {` - ${(team.proposalTitle || team.projectTitle || '-')}`}
                           </option>
                         ))}
                       </select>
@@ -755,10 +818,83 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
                   </div>
                 )}
 
+                {/* Current Assignments (non-revoked) */}
                 <div className="grid gap-4">
-                  {assignments.map((assignment) => {
+                  {assignments.filter(a => a.status !== 'revoked').map((assignment) => {
                     const team = teams.find(t => t.id === assignment.teamId);
                     const reviewer = reviewers.find(r => r.id === assignment.reviewerId);
+                    
+                    const startChatForAssignment = async () => {
+                      try {
+                        setError(null);
+                        setSuccess(null);
+                        if (!user?.id) {
+                          setError('Missing admin user ID');
+                          return;
+                        }
+                        const response = await fetch('/api/chat/sessions', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            teamId: assignment.teamId,
+                            assignmentId: assignment.id,
+                            createdBy: user.id
+                          })
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.success) {
+                          const status = data.data?.status || data.status;
+                          if (status === 'existing') {
+                            setSuccess('Chat session already active for this assignment.');
+                          } else {
+                            setSuccess('Chat session started successfully.');
+                          }
+                        } else {
+                          setError(data.message || 'Failed to start chat session');
+                        }
+                      } catch (err) {
+                        console.error('Error starting chat session:', err);
+                        setError('Failed to start chat session');
+                      }
+                    };
+
+                    const endChatForAssignment = async () => {
+                      try {
+                        setError(null);
+                        setSuccess(null);
+                        if (!user?.id) {
+                          setError('Missing admin user ID');
+                          return;
+                        }
+                        // Find active session for this assignment
+                        const sessionsResp = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(user.id)}&userRole=admin`);
+                        if (!sessionsResp.ok) {
+                          setError('Unable to fetch chat sessions');
+                          return;
+                        }
+                        const sessionsJson = await sessionsResp.json();
+                        const sessions = sessionsJson?.data || [];
+                        const existingSession = sessions.find((s: any) => s.assignmentId === assignment.id && s.status === 'active');
+                        if (!existingSession) {
+                          setError('No active chat session found for this assignment');
+                          return;
+                        }
+                        const putResp = await fetch(`/api/chat/sessions/${existingSession.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'end', userId: user.id, userRole: 'admin' })
+                        });
+                        const putJson = await putResp.json();
+                        if (putResp.ok && putJson.success) {
+                          setSuccess('Chat session ended successfully.');
+                        } else {
+                          setError(putJson.message || 'Failed to end chat session');
+                        }
+                      } catch (err) {
+                        console.error('Error ending chat session:', err);
+                        setError('Failed to end chat session');
+                      }
+                    };
                     
                     return (
                       <div key={assignment.id} className="bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-4">
@@ -879,12 +1015,193 @@ const AwardedTeamsManager: React.FC<AwardedTeamsManagerProps> = ({ onBack, users
                                   )}
                                 </div>
                               )}
+
+                              {assignment.status === 'active' && (
+                                <div className="flex space-x-1">
+                                  <button
+                                    onClick={startChatForAssignment}
+                                    className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-montserrat"
+                                  >
+                                    Start Chat
+                                  </button>
+                                  <button
+                                    onClick={endChatForAssignment}
+                                    className="px-2 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors font-montserrat"
+                                  >
+                                    End Chat
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        setError(null);
+                                        setSuccess(null);
+                                        if (!user?.id) {
+                                          setError('Missing admin user ID');
+                                          return;
+                                        }
+                                        const sessionsResp = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(user.id)}&userRole=admin`);
+                                        if (!sessionsResp.ok) {
+                                          setError('Unable to fetch chat sessions');
+                                          return;
+                                        }
+                                        const sessionsJson = await sessionsResp.json();
+                                        const sessions = sessionsJson?.data || [];
+                                        const existingSession = sessions.find((s: any) => s.assignmentId === assignment.id && s.status === 'active');
+                                        if (!existingSession) {
+                                          setError('No active chat session found for this assignment');
+                                          return;
+                                        }
+                                        setChatSessionId(existingSession.id);
+                                        setShowChat(true);
+                                      } catch (err) {
+                                        console.error('Error opening chat view:', err);
+                                        setError('Failed to open chat view');
+                                      }
+                                    }}
+                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-montserrat"
+                                  >
+                                    View Chat
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Revoked Assignments Dropdown */}
+                <div className="mt-6">
+                  <button
+                    onClick={() => setShowRevokedDropdown(prev => !prev)}
+                    className="w-full flex items-center justify-between px-4 py-2 bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg text-white hover:bg-[#3A2A5A] transition-colors font-montserrat"
+                  >
+                    <span>Revoked Assignments</span>
+                    <span className="text-sm text-[#9D9FA9]">{assignments.filter(a => a.status === 'revoked').length}</span>
+                  </button>
+
+                  {showRevokedDropdown && (
+                    <div className="mt-3 grid gap-4">
+                      {assignments.filter(a => a.status === 'revoked').length === 0 ? (
+                        <div className="text-[#9D9FA9] text-sm font-montserrat px-2">No revoked assignments</div>
+                      ) : (
+                        assignments
+                          .filter(a => a.status === 'revoked')
+                          .map((assignment) => {
+                            const team = teams.find(t => t.id === assignment.teamId);
+                            const reviewer = reviewers.find(r => r.id === assignment.reviewerId);
+
+                            const openChatHistoryForAssignment = async () => {
+                              try {
+                                setError(null);
+                                setSuccess(null);
+                                if (!user?.id) {
+                                  setError('Missing admin user ID');
+                                  return;
+                                }
+                                // List all sessions and find latest for this assignment (ended or active)
+                                const sessionsResp = await fetch(`/api/chat/sessions?userId=${encodeURIComponent(user.id)}&userRole=admin`);
+                                if (!sessionsResp.ok) {
+                                  setError('Unable to fetch chat sessions');
+                                  return;
+                                }
+                                const sessionsJson = await sessionsResp.json();
+                                const sessions = sessionsJson?.data || [];
+                                const assignmentSessions = sessions.filter((s: any) => s.assignmentId === assignment.id);
+                                if (assignmentSessions.length === 0) {
+                                  setError('No chat sessions found for this revoked assignment');
+                                  return;
+                                }
+                                // Prefer the most recently active entry by lastActivity or createdAt
+                                assignmentSessions.sort((a: any, b: any) => {
+                                  const ta = new Date(a.lastActivity || a.createdAt).getTime();
+                                  const tb = new Date(b.lastActivity || b.createdAt).getTime();
+                                  return tb - ta;
+                                });
+                                const target = assignmentSessions[0];
+                                setChatSessionId(target.id);
+                                setShowChat(true);
+                              } catch (err) {
+                                console.error('Error opening chat history:', err);
+                                setError('Failed to open chat history');
+                              }
+                            };
+
+                            return (
+                              <div key={assignment.id} className="bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="grid grid-cols-2 gap-4 mb-3">
+                                      <div>
+                                        <h4 className="font-medium text-white font-montserrat mb-1">Team Details</h4>
+                                        <p className="text-sm text-white font-montserrat">{team?.teamName || team?.name || 'Unknown Team'}</p>
+                                        <p className="text-xs text-[#9D9FA9] font-montserrat">{team?.proposalTitle || team?.projectTitle}</p>
+                                        {team?.teamLeaderName && (
+                                          <p className="text-xs text-[#9D9FA9] font-montserrat">Leader: {team.teamLeaderName}</p>
+                                        )}
+                                        {team?.teamLeaderEmail && (
+                                          <p className="text-xs text-[#9D9FA9] font-montserrat">{team.teamLeaderEmail}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium text-white font-montserrat mb-1">Reviewer Details</h4>
+                                        <p className="text-sm text-white font-montserrat">{reviewer?.name || 'Unknown Reviewer'}</p>
+                                        {reviewer?.anonymousName && (
+                                          <p className="text-xs text-purple-300 font-montserrat">Anonymous: {reviewer.anonymousName}</p>
+                                        )}
+                                        <p className="text-xs text-[#9D9FA9] font-montserrat">{reviewer?.email}</p>
+                                        {reviewer?.expertise && (
+                                          <p className="text-xs text-[#9D9FA9] font-montserrat">Expertise: {reviewer.expertise}</p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="border-t border-[#9D9FA9]/20 pt-2">
+                                      <div className="grid grid-cols-2 gap-4 text-xs text-[#9D9FA9] font-montserrat">
+                                        <div>
+                                          <p><strong>Assignment ID:</strong> {assignment.id}</p>
+                                          <p><strong>Assigned:</strong> {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleString() : 'N/A'}</p>
+                                          {assignment.assignedBy && (
+                                            <p><strong>Assigned By:</strong> {assignment.assignedBy}</p>
+                                          )}
+                                        </div>
+                                        <div>
+                                          {assignment.approvedAt && (
+                                            <p><strong>Approved:</strong> {new Date(assignment.approvedAt).toLocaleString()}</p>
+                                          )}
+                                          {assignment.approvedBy && (
+                                            <p><strong>Approved By:</strong> {assignment.approvedBy}</p>
+                                          )}
+                                          {assignment.revokedAt && (
+                                            <p><strong>Revoked:</strong> {new Date(assignment.revokedAt).toLocaleString()}</p>
+                                          )}
+                                          {assignment.notes && (
+                                            <p><strong>Notes:</strong> {assignment.notes}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-2">
+                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">revoked</span>
+                                    <div className="flex space-x-1">
+                                      <button
+                                        onClick={openChatHistoryForAssignment}
+                                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-montserrat"
+                                      >
+                                        View Chat History
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

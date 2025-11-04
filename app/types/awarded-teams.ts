@@ -5,6 +5,7 @@ export interface AwardedTeam {
   proposalId: string;
   proposalTitle: string;
   projectTitle?: string; // Alias for proposalTitle for backward compatibility
+  teamUsername?: string; // Normalized team login username (preferred)
   teamLeaderUsername: string; // Links to Users sheet
   teamLeaderEmail: string;
   email?: string; // Alias for teamLeaderEmail for backward compatibility

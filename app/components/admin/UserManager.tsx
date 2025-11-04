@@ -13,7 +13,7 @@ interface AdminUserBase {
   id: string;
   username: string;
   name: string;
-  role: 'admin' | 'reviewer' | 'team_leader' | string;
+  role: 'admin' | 'reviewer' | 'team' | string;
   email?: string;
   status?: string;
   createdAt?: string;
@@ -31,7 +31,16 @@ interface ReviewerExtras {
   otherCircle?: boolean;
 }
 
-type AdminUser = AdminUserBase & ReviewerExtras;
+interface TeamExtras {
+  teamName?: string;
+  proposalId?: string;
+  proposalTitle?: string;
+  teamLeaderName?: string;
+  awardDate?: string;
+  teamUsername?: string;
+}
+
+type AdminUser = AdminUserBase & ReviewerExtras & TeamExtras;
 
 export default function UserManager() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -40,7 +49,7 @@ export default function UserManager() {
   const [success, setSuccess] = useState<string | null>(null);
   // List controls
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'reviewer' | 'team_leader'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'reviewer' | 'team'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -63,6 +72,12 @@ export default function UserManager() {
     githubIds: '',
     mattermostId: '',
     otherCircle: false,
+    teamName: '',
+    proposalId: '',
+    proposalTitle: '',
+    teamLeaderName: '',
+    awardDate: '',
+    teamUsername: '',
   });
 
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -107,6 +122,12 @@ export default function UserManager() {
       githubIds: '',
       mattermostId: '',
       otherCircle: false,
+      teamName: '',
+      proposalId: '',
+      proposalTitle: '',
+      teamLeaderName: '',
+      awardDate: '',
+      teamUsername: '',
     });
     setShowAddForm(false);
   };
@@ -143,6 +164,12 @@ export default function UserManager() {
         if (!yrsReq.isValid) return yrsReq.error || 'Invalid years of experience';
       }
     }
+    if (newUser.role === 'team') {
+      const tReq = validateRequiredText(newUser.teamName || '', 'Team Name', 1, 200);
+      if (!tReq.isValid) return tReq.error || 'Invalid team name';
+      const tlReq = validateRequiredText(newUser.teamLeaderName || newUser.name || '', 'Team Leader Name', 1, 200);
+      if (!tlReq.isValid) return tlReq.error || 'Invalid team leader name';
+    }
 
     return null;
   };
@@ -177,6 +204,14 @@ export default function UserManager() {
         body.githubIds = sanitizeInput(newUser.githubIds || '');
         body.mattermostId = sanitizeInput(newUser.mattermostId || '');
         body.otherCircle = !!newUser.otherCircle;
+      }
+      if (newUser.role === 'team') {
+        body.teamName = sanitizeInput(newUser.teamName || '');
+        body.proposalId = sanitizeInput(newUser.proposalId || '');
+        body.proposalTitle = sanitizeInput(newUser.proposalTitle || '');
+        body.teamLeaderName = sanitizeInput(newUser.teamLeaderName || newUser.name || '');
+        body.awardDate = sanitizeInput(newUser.awardDate || '');
+        body.teamUsername = sanitizeInput(newUser.teamUsername || newUser.username || '');
       }
 
       const res = await fetch('/api/admin/users', {
@@ -270,6 +305,14 @@ export default function UserManager() {
         body.githubIds = sanitizeInput(editForm.githubIds || '');
         body.mattermostId = sanitizeInput(editForm.mattermostId || '');
         body.otherCircle = !!editForm.otherCircle;
+      }
+      if (editForm.role === 'team' || editForm.role === 'team_leader') {
+        body.teamName = sanitizeInput(editForm.teamName || '');
+        body.proposalId = sanitizeInput(editForm.proposalId || '');
+        body.proposalTitle = sanitizeInput(editForm.proposalTitle || '');
+        body.teamLeaderName = sanitizeInput(editForm.teamLeaderName || editForm.name || '');
+        body.awardDate = sanitizeInput(editForm.awardDate || '');
+        body.teamUsername = sanitizeInput((editForm as any).teamUsername || editForm.username || '');
       }
 
       const res = await fetch(`/api/admin/users/${editingUser?.id}`, {
@@ -404,7 +447,7 @@ export default function UserManager() {
               >
                 <option value="admin">Admin</option>
                 <option value="reviewer">Reviewer</option>
-                <option value="team_leader">Team Leader</option>
+                <option value="team">Team</option>
               </select>
             </div>
             <div>
@@ -505,6 +548,62 @@ export default function UserManager() {
               </div>
             )}
 
+            {newUser.role === 'team' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[#9D9FA9] pt-4">
+                <div>
+                  <label className="block text-white font-montserrat mb-1">Team Name</label>
+                  <input
+                    type="text"
+                    value={newUser.teamName || ''}
+                    onChange={(e) => setNewUser({ ...newUser, teamName: e.target.value })}
+                    className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    placeholder="Enter team name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-white font-montserrat mb-1">Proposal ID</label>
+                  <input
+                    type="text"
+                    value={newUser.proposalId || ''}
+                    onChange={(e) => setNewUser({ ...newUser, proposalId: e.target.value })}
+                    className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    placeholder="e.g. PROP-001"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white font-montserrat mb-1">Proposal Title</label>
+                  <input
+                    type="text"
+                    value={newUser.proposalTitle || ''}
+                    onChange={(e) => setNewUser({ ...newUser, proposalTitle: e.target.value })}
+                    className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    placeholder="Enter proposal title"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white font-montserrat mb-1">Team Leader Name</label>
+                  <input
+                    type="text"
+                    value={newUser.teamLeaderName || newUser.name || ''}
+                    onChange={(e) => setNewUser({ ...newUser, teamLeaderName: e.target.value })}
+                    className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    placeholder="Enter team leader name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-white font-montserrat mb-1">Award Date</label>
+                  <input
+                    type="text"
+                    value={newUser.awardDate || ''}
+                    onChange={(e) => setNewUser({ ...newUser, awardDate: e.target.value })}
+                    className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    placeholder="YYYY-MM-DD"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-2">
               <button
                 type="submit"
@@ -549,7 +648,7 @@ export default function UserManager() {
                 <option value="all">All</option>
                 <option value="admin">Admin</option>
                 <option value="reviewer">Reviewer</option>
-                <option value="team_leader">Team Leader</option>
+                <option value="team">Team</option>
               </select>
             </div>
             <div>
@@ -589,7 +688,7 @@ export default function UserManager() {
               const roleBadge =
                 u.role === 'admin' ? 'bg-indigo-600' :
                 u.role === 'reviewer' ? 'bg-emerald-600' :
-                u.role === 'team_leader' ? 'bg-amber-600' : 'bg-slate-600';
+                u.role === 'team' ? 'bg-amber-600' : 'bg-slate-600';
               const statusBadge = (u.status || 'active') === 'active' ? 'bg-emerald-700' : 'bg-slate-700';
               return (
                 <div key={u.id} className="bg-[#2A1A4A] border border-[#9D9FA9] rounded-lg p-4">
@@ -666,7 +765,7 @@ export default function UserManager() {
                   const roleBadge =
                     u.role === 'admin' ? 'bg-indigo-600' :
                     u.role === 'reviewer' ? 'bg-emerald-600' :
-                    u.role === 'team_leader' ? 'bg-amber-600' : 'bg-slate-600';
+                    u.role === 'team' ? 'bg-amber-600' : 'bg-slate-600';
                   const statusBadge = (u.status || 'active') === 'active' ? 'bg-emerald-700' : 'bg-slate-700';
                   return (
                     <Fragment key={u.id}>
@@ -888,6 +987,55 @@ export default function UserManager() {
                       className="h-4 w-4"
                     />
                     <label className="text-white font-montserrat">Part of another circle</label>
+                  </div>
+                </>
+              )}
+              {(editForm.role === 'team' || editForm.role === 'team_leader') && (
+                <>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Team Name</label>
+                    <input
+                      type="text"
+                      value={editForm.teamName || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), teamName: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Proposal ID</label>
+                    <input
+                      type="text"
+                      value={editForm.proposalId || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), proposalId: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Proposal Title</label>
+                    <input
+                      type="text"
+                      value={editForm.proposalTitle || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), proposalTitle: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Team Leader Name</label>
+                    <input
+                      type="text"
+                      value={editForm.teamLeaderName || editForm.name || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), teamLeaderName: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white font-montserrat mb-1">Award Date</label>
+                    <input
+                      type="text"
+                      value={editForm.awardDate || ''}
+                      onChange={(e) => setEditForm({ ...(editForm as any), awardDate: e.target.value })}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    />
                   </div>
                 </>
               )}
