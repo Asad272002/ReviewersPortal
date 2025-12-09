@@ -24,14 +24,53 @@ function getClientCreds(clientJson: any): { client_id: string; client_secret: st
 }
 
 async function getOAuthAccessToken(): Promise<string> {
-  const clientPath = process.env.GDRIVE_OAUTH_PATH || 'supabase/gdrive-oauth-client.json';
-  const tokenPath = process.env.GDRIVE_CREDENTIALS_PATH || 'supabase/gdrive-oauth-token.json';
-  const clientRaw = fs.readFileSync(clientPath, 'utf-8');
-  const tokenRaw = fs.readFileSync(tokenPath, 'utf-8');
-  const clientJson = JSON.parse(clientRaw);
-  const tokenJson = JSON.parse(tokenRaw);
-  const { client_id, client_secret } = getClientCreds(clientJson);
-  const refresh_token = String(tokenJson.refresh_token || '');
+  let client_id = '';
+  let client_secret = '';
+  let refresh_token = '';
+
+  const clientJsonEnv = process.env.GDRIVE_OAUTH_CLIENT_JSON;
+  const tokenJsonEnv = process.env.GDRIVE_OAUTH_TOKEN_JSON;
+  if (clientJsonEnv) {
+    try {
+      const parsed = JSON.parse(clientJsonEnv);
+      const creds = getClientCreds(parsed);
+      client_id = creds.client_id;
+      client_secret = creds.client_secret;
+    } catch {}
+  }
+  if (tokenJsonEnv) {
+    try {
+      const parsed = JSON.parse(tokenJsonEnv);
+      refresh_token = String(parsed.refresh_token || '');
+    } catch {}
+  }
+
+  if (!client_id || !client_secret) {
+    const idEnv = process.env.GDRIVE_CLIENT_ID || '';
+    const secretEnv = process.env.GDRIVE_CLIENT_SECRET || '';
+    if (idEnv && secretEnv) {
+      client_id = idEnv;
+      client_secret = secretEnv;
+    }
+  }
+  if (!refresh_token) {
+    const refreshEnv = process.env.GDRIVE_REFRESH_TOKEN || '';
+    if (refreshEnv) refresh_token = refreshEnv;
+  }
+
+  if (!client_id || !client_secret || !refresh_token) {
+    const clientPath = process.env.GDRIVE_OAUTH_PATH || 'supabase/gdrive-oauth-client.json';
+    const tokenPath = process.env.GDRIVE_CREDENTIALS_PATH || 'supabase/gdrive-oauth-token.json';
+    const clientRaw = fs.readFileSync(clientPath, 'utf-8');
+    const tokenRaw = fs.readFileSync(tokenPath, 'utf-8');
+    const clientJson = JSON.parse(clientRaw);
+    const tokenJson = JSON.parse(tokenRaw);
+    const creds = getClientCreds(clientJson);
+    client_id = client_id || creds.client_id;
+    client_secret = client_secret || creds.client_secret;
+    refresh_token = refresh_token || String(tokenJson.refresh_token || '');
+  }
+
   const params = new URLSearchParams();
   params.set('client_id', client_id);
   params.set('client_secret', client_secret);
