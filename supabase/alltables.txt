@@ -1,0 +1,866 @@
+[
+  {
+    "table_name": "announcement",
+    "column_name": "id",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "title",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "content",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "category",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "duration",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "expiresAt",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "createdAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "announcement",
+    "column_name": "updatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_columns",
+    "column_name": "table_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_columns",
+    "column_name": "column_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_columns",
+    "column_name": "data_type",
+    "data_type": "character varying",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_columns",
+    "column_name": "is_nullable",
+    "data_type": "boolean",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_columns",
+    "column_name": "column_default",
+    "data_type": "character varying",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_columns",
+    "column_name": "ordinal_position",
+    "data_type": "integer",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_foreign_keys",
+    "column_name": "table_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_foreign_keys",
+    "column_name": "column_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_foreign_keys",
+    "column_name": "referenced_table_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_foreign_keys",
+    "column_name": "referenced_column_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_foreign_keys",
+    "column_name": "on_update",
+    "data_type": "character varying",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_foreign_keys",
+    "column_name": "on_delete",
+    "data_type": "character varying",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_primary_keys",
+    "column_name": "table_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_primary_keys",
+    "column_name": "column_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_tables",
+    "column_name": "table_name",
+    "data_type": "name",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "api_tables",
+    "column_name": "table_type",
+    "data_type": "character varying",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "ID",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Team Name",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Proposal ID",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Proposal Title",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Team Leader Username",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Team Leader Email",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Team Leader Name",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Award Date",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Created At",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "awarded_team",
+    "column_name": "Updated At",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "ID",
+    "data_type": "bigint",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Title",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Description",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Content",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Category",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Order",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "Attachments",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "CreatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "processes",
+    "column_name": "UpdatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "ID",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Reviewer Name",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Proposal Title",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Project Category",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Team Size",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Budget Estimate",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Timeline (Weeks)",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Proposal Summary",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Technical Approach",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Additional Notes",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "rd",
+    "column_name": "Submission Date",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "id",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "resources",
+    "column_name": "title",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "description",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "category",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "url",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "fileUrl",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "fileName",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "createdAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "resources",
+    "column_name": "updatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "id",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "name",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "email",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "category",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "message",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "priority",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "assignedTo",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "notes",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "createdAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "support_tickets",
+    "column_name": "updatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "ID",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Team ID",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Reviewer ID",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Assigned By",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Assigned At",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Approved By",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Approved At",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Revoked By",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Revoked At",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Notes",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Created At",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "team_reviewer_assignment",
+    "column_name": "Updated At",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "ID",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Username",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Password",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Name",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Role",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Email",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "CreatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Expertise",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "Organization",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "YearsExperience",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "OtherCircle",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "GitHubIDs",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "CVLink",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "LinkedInURL",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "UpdatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "user_app",
+    "column_name": "MattermostId",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "voteId",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "votes",
+    "column_name": "proposalId",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "userId",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "username",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "voteType",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "votedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "ipAddress",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "votes",
+    "column_name": "userAgent",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "proposalId",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "proposalTitle",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "reviewerName",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "projectCategory",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "teamSize",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "budgetEstimate",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "timelineWeeks",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "proposalSummary",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "technicalApproach",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "submissionDate",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "votingDeadline",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "status",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "totalUpvotes",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "totalDownvotes",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "netScore",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "voterCount",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "isWinner",
+    "data_type": "boolean",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "createdAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_results",
+    "column_name": "updatedAt",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting",
+    "column_name": "settingKey",
+    "data_type": "text",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "voting_setting",
+    "column_name": "settingValue",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting",
+    "column_name": "description",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting",
+    "column_name": "updatedAt",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting_history",
+    "column_name": "id",
+    "data_type": "bigint",
+    "is_primary_key": "✅"
+  },
+  {
+    "table_name": "voting_setting_history",
+    "column_name": "settingKey",
+    "data_type": "text",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting_history",
+    "column_name": "oldValue",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting_history",
+    "column_name": "newValue",
+    "data_type": "bigint",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting_history",
+    "column_name": "effectiveAt",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  },
+  {
+    "table_name": "voting_setting_history",
+    "column_name": "updatedAt",
+    "data_type": "timestamp with time zone",
+    "is_primary_key": ""
+  }
+]
