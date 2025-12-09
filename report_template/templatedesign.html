@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>DEEP - RC Milestone Review Report</title>
+<style>
+    body {
+        font-family: "Inter", Arial, sans-serif;
+        margin: 0;
+        padding: 40px;
+        background: #fafafa;
+        color: #111827;
+    }
+
+    h1, h2, h3 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .page-container {
+        max-width: 900px;
+        margin: auto;
+    }
+
+    /* Header */
+    .header-title {
+        font-size: 28px;
+        color: #5B21B6;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .date-row {
+        color: #4B5563;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        margin-bottom: 35px;
+    }
+
+    /* Verdict Badge */
+    .verdict-box {
+        background: linear-gradient(90deg, #4ade80, #9333EA);
+        padding: 22px 32px;
+        border-radius: 18px;
+        color: white;
+        font-size: 18px;
+        margin-bottom: 40px;
+        font-weight: 600;
+        position: relative;
+    }
+
+    .verdict-box span {
+        display: block;
+        color: #D1FAE5;
+        font-size: 15px;
+        margin-top: 2px;
+        font-weight: 500;
+    }
+
+    /* Section Title */
+    .section-title {
+        margin-top: 40px;
+        font-size: 22px;
+        color: #5B21B6;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    /* Grid (Project Details) */
+    .details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px 40px;
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .detail-label {
+        font-size: 13px;
+        color: #6B7280;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .detail-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    /* Proposal Title */
+    .proposal-title {
+        font-size: 15px;
+        margin-top: 20px;
+    }
+
+    .view-proposal {
+        margin-top: 5px;
+        color: #2563EB;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    /* Review Criteria */
+    .criteria-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-top: 18px;
+    }
+
+    .criteria-card {
+        background: #F5F8FF;
+        padding: 16px 18px;
+        border-radius: 12px;
+        border: 1px solid #E5E7EB;
+    }
+
+    .criteria-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #5B21B6;
+    }
+
+    .badge {
+        background: #E9FFF4;
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #16A34A;
+    }
+
+    /* Justifications */
+    .justification-box {
+        background: #ffffff;
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        padding: 15px 20px;
+        margin-bottom: 12px;
+        display: flex;
+        gap: 14px;
+        font-size: 14px;
+        line-height: 1.5em;
+    }
+
+    .justification-number {
+        background: #6366F1;
+        color: white;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        font-size: 13px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Demo Section */
+    .demo-box {
+        border: 2px solid #BFDBFE;
+        background: #F0F7FF;
+        padding: 18px;
+        border-radius: 12px;
+        margin-top: 25px;
+        margin-bottom: 25px;
+    }
+
+    .demo-title {
+        font-weight: 700;
+        font-size: 15px;
+        margin-bottom: 10px;
+        color: #1E3A8A;
+    }
+
+    .yes-badge {
+        background: #E9FFF4;
+        color: #059669;
+        font-weight: 700;
+        padding: 5px 14px;
+        border-radius: 18px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+
+    /* Final Recommendation */
+    .final-box {
+        background: linear-gradient(120deg, #9333EA, #7C3AED);
+        padding: 32px;
+        border-radius: 18px;
+        color: white;
+        margin-top: 40px;
+    }
+
+    .final-header {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+
+    .approved-badge {
+        background: white;
+        color: #16A34A;
+        padding: 6px 14px;
+        border-radius: 16px;
+        display: inline-block;
+        margin-bottom: 12px;
+        font-weight: 700;
+    }
+
+    .final-stats {
+        margin-top: 25px;
+        display: flex;
+        gap: 20px;
+    }
+
+    .stat-card {
+        background: rgba(255,255,255,0.14);
+        padding: 14px 20px;
+        border-radius: 12px;
+        flex: 1;
+        text-align: center;
+    }
+
+    .stat-label {
+        font-size: 13px;
+        opacity: 0.9;
+        margin-bottom: 4px;
+    }
+
+    .stat-value {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+</style>
+</head>
+
+<body>
+<div class="page-container">
+
+    <h1 class="header-title">DEEP - RC Milestone Review Report</h1>
+
+    <div class="date-row">
+        📅 <span>11/19/2025</span>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict-box">
+        Milestone Review Submitted by Tobias!
+        <span>Milestone Verdict: <b style="color:#22C55E;">Approved</b></span>
+    </div>
+
+    <!-- Project Details -->
+    <h2 class="section-title">Project Details</h2>
+    <div class="details-grid">
+        <div class="detail-item">
+            <div class="detail-label">👤 Reviewer</div>
+            <div class="detail-value">Tobias Mattermost</div>
+        </div>
+
+        <div class="detail-item">
+            <div class="detail-label">📄 Milestone Title</div>
+            <div class="detail-value">Onboarding</div>
+        </div>
+
+        <div class="detail-item">
+            <div class="detail-label">#️⃣ Milestone Number</div>
+            <div class="detail-value">6</div>
+        </div>
+
+        <div class="detail-item">
+            <div class="detail-label">💲 Milestone Budget Amount</div>
+            <div class="detail-value">$20,000</div>
+        </div>
+
+        <div class="detail-item">
+            <div class="detail-label">📅 Date</div>
+            <div class="detail-value">2025-11-19</div>
+        </div>
+
+        <div class="detail-item">
+            <div class="detail-label">🆔 Proposal ID</div>
+            <div class="detail-value">DPR3-NEW8</div>
+        </div>
+    </div>
+
+    <div class="proposal-title">
+        <b>Proposal Title</b><br>
+        NIM Framework | Framework For Integrating AI Services in Singularity Marketplace And Bots In Matrix | Matrix Messenger
+    </div>
+
+    <div class="view-proposal">🔗 View Proposal</div>
+
+    <!-- Review Criteria -->
+    <h2 class="section-title">Review Criteria</h2>
+    <div class="criteria-grid">
+        <div class="criteria-card">
+            <div class="criteria-title">Deliverables Match Milestone Description</div>
+            <div class="badge">Passed</div>
+        </div>
+
+        <div class="criteria-card">
+            <div class="criteria-title">Quality and Completeness of Milestone</div>
+            <div class="badge">Passed</div>
+        </div>
+
+        <div class="criteria-card">
+            <div class="criteria-title">Accessibility of Supporting Evidence</div>
+            <div class="badge">Passed</div>
+        </div>
+
+        <div class="criteria-card">
+            <div class="criteria-title">Budget Alignment (Value for Money)</div>
+            <div class="badge">Passed</div>
+        </div>
+    </div>
+
+    <!-- Justifications -->
+    <h2 class="section-title">Justifications</h2>
+
+    <div class="justification-box">
+        <div class="justification-number">1</div>
+        The team delivered what this milestone asked for...
+    </div>
+
+    <div class="justification-box">
+        <div class="justification-number">2</div>
+        The work delivered is solid and complete...
+    </div>
+
+    <div class="justification-box">
+        <div class="justification-number">3</div>
+        All supporting evidence was easy to access...
+    </div>
+
+    <div class="justification-box">
+        <div class="justification-number">4</div>
+        The team delivered a fully working service now live...
+    </div>
+
+    <!-- Demo Section -->
+    <div class="demo-box">
+        <div class="demo-title">Did the team provide a demo, prototype, repository test run, or marketplace onboarding trial?</div>
+        <div class="yes-badge">Yes</div>
+        <div>Describe (deliverable link):</div>
+        <a href="#" style="color:#2563EB;">https://example.com</a>
+    </div>
+
+    <!-- Verification -->
+    <div class="demo-box">
+        <div class="demo-title">Verification Confirmation</div>
+        Demo, prototype, repository test run, and marketplace onboarding trial were all verified successfully.
+    </div>
+
+    <!-- Final Recommendation -->
+    <div class="final-box">
+        <div class="final-header">Final Recommendation</div>
+
+        <div class="approved-badge">Approved</div>
+
+        <div>
+            It meets the success criteria because the service is deployed, working as expected,
+            and backed with clear evidence—repo, demos, and on-chain links.
+        </div>
+
+        <div class="final-stats">
+            <div class="stat-card">
+                <div class="stat-label">Status</div>
+                <div class="stat-value">✓ Approved</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Criteria Met</div>
+                <div class="stat-value">4/4</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Budget</div>
+                <div class="stat-value">$20,000</div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</body>
+</html>
