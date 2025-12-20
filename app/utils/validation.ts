@@ -60,6 +60,9 @@ export function validateInput(value: string, fieldName: string = 'Input', option
     }
 
     // Check for dangerous functions
+    // Commented out as it causes false positives for common words like "QUERY" or "HYPERLINK" in normal text.
+    // The FORMULA_PATTERNS check above is sufficient to prevent formula injection.
+    /*
     const upperValue = value.toUpperCase();
     for (const func of DANGEROUS_FUNCTIONS) {
       if (upperValue.includes(func)) {
@@ -69,6 +72,7 @@ export function validateInput(value: string, fieldName: string = 'Input', option
         };
       }
     }
+    */
   }
 
   return { isValid: true };

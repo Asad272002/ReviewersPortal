@@ -177,7 +177,7 @@ export default function MilestoneReportPage() {
         newInvalidFields['milestoneBudgetAmount'] = true;
       }
 
-      const descV = validateRequiredText(form.milestoneDescriptionFromProposal, 'Milestone Description From Proposal', 1, 5000);
+      const descV = validateRequiredText(form.milestoneDescriptionFromProposal, 'Milestone Description From Proposal', 1, 5000, { allowFormulas: true });
       if (!descV.isValid) {
         errs.push(descV.error!);
         newInvalidFields['milestoneDescriptionFromProposal'] = true;
