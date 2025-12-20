@@ -43,18 +43,20 @@ const DANGEROUS_FUNCTIONS = [
  * @param fieldName - The name of the field being validated (for error messages)
  * @returns Object with isValid boolean and error message if invalid
  */
-export function validateInput(value: string, fieldName: string = 'Input'): { isValid: boolean; error?: string } {
+export function validateInput(value: string, fieldName: string = 'Input', options: { allowFormulas?: boolean } = {}): { isValid: boolean; error?: string } {
   if (!value || typeof value !== 'string') {
     return { isValid: true }; // Empty or non-string values are safe
   }
 
-  // Check for formula patterns
-  for (const pattern of FORMULA_PATTERNS) {
-    if (pattern.test(value)) {
-      return {
-        isValid: false,
-        error: `${fieldName} cannot start with formula characters (=, +, -, @, etc.)`
-      };
+  // Check for formula patterns (unless allowed)
+  if (!options.allowFormulas) {
+    for (const pattern of FORMULA_PATTERNS) {
+      if (pattern.test(value)) {
+        return {
+          isValid: false,
+          error: `${fieldName} cannot start with formula characters (=, +, -, @, etc.)`
+        };
+      }
     }
   }
 

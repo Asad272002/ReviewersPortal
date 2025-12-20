@@ -66,12 +66,12 @@ export async function POST(request: NextRequest) {
     const budgetV = validateNumber(String(body.milestoneBudgetAmount||''), 'Milestone Budget Amount', 0);
     if (!budgetV.isValid) errors.push(budgetV.error!);
     if (String(body.finalRecommendation||'') === 'Approved') {
-      const v = validateRequiredText(String(body.approvedWhy||''), 'Approved Why', 1, 3000);
+      const v = validateRequiredText(String(body.approvedWhy||''), 'Approved Why', 1, 3000, { allowFormulas: true });
       if (!v.isValid) errors.push(v.error!);
     } else if (String(body.finalRecommendation||'') === 'Rejected') {
-      const v1 = validateRequiredText(String(body.rejectedWhy||''), 'Rejected Why', 1, 3000);
+      const v1 = validateRequiredText(String(body.rejectedWhy||''), 'Rejected Why', 1, 3000, { allowFormulas: true });
       if (!v1.isValid) errors.push(v1.error!);
-      const v2 = validateRequiredText(String(body.suggestedChanges||''), 'Suggested Changes', 1, 3000);
+      const v2 = validateRequiredText(String(body.suggestedChanges||''), 'Suggested Changes', 1, 3000, { allowFormulas: true });
       if (!v2.isValid) errors.push(v2.error!);
     }
     if (errors.length > 0) {
