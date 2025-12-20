@@ -58,16 +58,16 @@ export function validateInput(value: string, fieldName: string = 'Input', option
         };
       }
     }
-  }
 
-  // Check for dangerous functions
-  const upperValue = value.toUpperCase();
-  for (const func of DANGEROUS_FUNCTIONS) {
-    if (upperValue.includes(func)) {
-      return {
-        isValid: false,
-        error: `${fieldName} contains potentially dangerous content`
-      };
+    // Check for dangerous functions
+    const upperValue = value.toUpperCase();
+    for (const func of DANGEROUS_FUNCTIONS) {
+      if (upperValue.includes(func)) {
+        return {
+          isValid: false,
+          error: `${fieldName} contains potentially dangerous content`
+        };
+      }
     }
   }
 
