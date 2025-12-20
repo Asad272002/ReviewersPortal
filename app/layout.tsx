@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
+import { MotionProvider } from "./context/MotionContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <MotionProvider>
+            {children}
+          </MotionProvider>
+        </AuthProvider>
       </body>
     </html>
   );

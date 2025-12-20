@@ -135,7 +135,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={["reviewer"]}>
+    <ProtectedRoute allowedRoles={["reviewer", "admin", "team_leader"]}>
       <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         <Header title="My Profile" />
 

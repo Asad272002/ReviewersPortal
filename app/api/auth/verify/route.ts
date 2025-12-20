@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         user: {
           id: payload.userId,
           username: payload.username,
+          name: payload.name,
           role: payload.role
         }
       });

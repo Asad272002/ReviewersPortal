@@ -9,18 +9,19 @@ import HeroSection from "./components/HeroSection";
 import InfoCard from "./components/InfoCard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from './context/AuthContext';
+import { useMotion } from './context/MotionContext';
 import Image from "next/image";
 import AwardedTeamsConnect from "./components/AwardedTeamsConnect";
 
 export default function Home() {
   const { user } = useAuth();
+  const { motionEnabled } = useMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const animationIdRef = useRef<number | null>(null);
   const [isAwardedTeamMember, setIsAwardedTeamMember] = useState(false);
   const [isCheckingTeamStatus, setIsCheckingTeamStatus] = useState(true);
-  const [motionEnabled, setMotionEnabled] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'team') {
@@ -52,20 +53,7 @@ export default function Home() {
     }
   };
 
-  // Initialize motion preference: honor saved setting and prefers-reduced-motion
-  useEffect(() => {
-    try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('dashboardMotion') : null;
-      if (saved) {
-        setMotionEnabled(saved === 'on');
-      } else {
-        const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        setMotionEnabled(!reduce);
-      }
-    } catch {
-      setMotionEnabled(true);
-    }
-  }, []);
+
 
   useEffect(() => {
     // If motion is disabled, ensure canvas is hidden and any previous animation cleaned up
@@ -234,23 +222,6 @@ export default function Home() {
           {!(user?.role === 'team' && isAwardedTeamMember) && <Sidebar />}
 
           <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
-            {/* Motion toggle accessible control */}
-            <div className="absolute right-2 sm:right-4 top-2 sm:top-4 z-20">
-              <button
-                onClick={() => {
-                  setMotionEnabled(prev => {
-                    const next = !prev;
-                    try { localStorage.setItem('dashboardMotion', next ? 'on' : 'off'); } catch {}
-                    return next;
-                  });
-                }}
-                aria-pressed={motionEnabled}
-                className="px-3 py-1.5 rounded-full border border-[#9D9FA9] bg-[#2A1A4A] text-gray-200 hover:text-white hover:bg-[#3A225A] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#B26BED]"
-                title={motionEnabled ? 'Disable animated background' : 'Enable animated background'}
-              >
-                {motionEnabled ? 'Disable Motion' : 'Enable Motion'}
-              </button>
-            </div>
             {user?.role === 'reviewer' ? (
               // Default Dashboard for Reviewers with Sidebar
               <>
