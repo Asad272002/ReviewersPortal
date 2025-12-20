@@ -42,6 +42,19 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
       <div className="flex items-center gap-3 sm:gap-6">
         {user && (
           <div className="flex items-center gap-3">
+            <Link 
+              href="/analysis" 
+              className="mr-2 sm:mr-4 font-montserrat text-text-secondary hover:text-primary transition-colors duration-300 flex items-center gap-2 group"
+            >
+                <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-primary/20 transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </div>
+                <span className="hidden sm:inline">Analysis</span>
+            </Link>
             <span className="font-montserrat text-text-secondary text-base sm:text-lg hover:text-white transition-colors duration-300 hover:scale-105 inline-block truncate max-w-32 sm:max-w-none">
               {user.name}
             </span>

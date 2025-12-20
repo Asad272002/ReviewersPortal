@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
 import { jwtVerify } from 'jose';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { renderHtmlToPdf } from '@/lib/renderHtmlToPdf';
@@ -7,110 +6,27 @@ import { validateUrl, validateNumber, validateRequiredText } from '../../../util
 
 export const runtime = 'nodejs';
 
-function getClientCreds(clientJson: any): { client_id: string; client_secret: string } {
-  if (!clientJson) return { client_id: '', client_secret: '' };
-  const directId = String(clientJson.client_id || '');
-  const directSecret = String(clientJson.client_secret || '');
-  if (directId && directSecret) return { client_id: directId, client_secret: directSecret };
-  const installed = clientJson.installed || {};
-  if (installed.client_id && installed.client_secret) {
-    return { client_id: String(installed.client_id), client_secret: String(installed.client_secret) };
-  }
-  const web = clientJson.web || {};
-  if (web.client_id && web.client_secret) {
-    return { client_id: String(web.client_id), client_secret: String(web.client_secret) };
-  }
-  return { client_id: '', client_secret: '' };
-}
-
-async function getOAuthAccessToken(): Promise<string> {
-  let client_id = '';
-  let client_secret = '';
-  let refresh_token = '';
-
-  const clientJsonEnv = process.env.GDRIVE_OAUTH_CLIENT_JSON;
-  const tokenJsonEnv = process.env.GDRIVE_OAUTH_TOKEN_JSON;
-  if (clientJsonEnv) {
-    try {
-      const parsed = JSON.parse(clientJsonEnv);
-      const creds = getClientCreds(parsed);
-      client_id = creds.client_id;
-      client_secret = creds.client_secret;
-    } catch {}
-  }
-  if (tokenJsonEnv) {
-    try {
-      const parsed = JSON.parse(tokenJsonEnv);
-      refresh_token = String(parsed.refresh_token || '');
-    } catch {}
-  }
-
-  if (!client_id || !client_secret) {
-    const idEnv = process.env.GDRIVE_CLIENT_ID || '';
-    const secretEnv = process.env.GDRIVE_CLIENT_SECRET || '';
-    if (idEnv && secretEnv) {
-      client_id = idEnv;
-      client_secret = secretEnv;
-    }
-  }
-  if (!refresh_token) {
-    const refreshEnv = process.env.GDRIVE_REFRESH_TOKEN || '';
-    if (refreshEnv) refresh_token = refreshEnv;
-  }
-
-  if (!client_id || !client_secret || !refresh_token) {
-    const clientPath = process.env.GDRIVE_OAUTH_PATH || 'supabase/gdrive-oauth-client.json';
-    const tokenPath = process.env.GDRIVE_CREDENTIALS_PATH || 'supabase/gdrive-oauth-token.json';
-    const clientRaw = fs.readFileSync(clientPath, 'utf-8');
-    const tokenRaw = fs.readFileSync(tokenPath, 'utf-8');
-    const clientJson = JSON.parse(clientRaw);
-    const tokenJson = JSON.parse(tokenRaw);
-    const creds = getClientCreds(clientJson);
-    client_id = client_id || creds.client_id;
-    client_secret = client_secret || creds.client_secret;
-    refresh_token = refresh_token || String(tokenJson.refresh_token || '');
-  }
-
-  const params = new URLSearchParams();
-  params.set('client_id', client_id);
-  params.set('client_secret', client_secret);
-  params.set('refresh_token', refresh_token);
-  params.set('grant_type', 'refresh_token');
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString()
-  });
-  const json = await res.json();
-  const accessToken = String(json.access_token || '');
-  if (!accessToken) throw new Error('Failed to acquire OAuth access token');
-  return accessToken;
-}
+// Notes: Drive upload fallback was removed by request.
+// To reinstate Google Drive:
+// 1) Restore getOAuthAccessToken, uploadPdfToDrive, ensureFolderId functions.
+// 2) Prefer Drive upload path and make Supabase Storage a fallback.
+// 3) Ensure env vars (client id/secret, refresh token, folder id/name) are present.
 
 // HTML builder moved to lib/renderHtmlToPdf.ts
 
-async function uploadPdfToDrive(pdf: Buffer, fileName: string, folderId: string, accessToken: string): Promise<any> {
-  const boundary = 'batch_' + Math.random().toString(36).slice(2);
-  const meta = JSON.stringify({ name: fileName, mimeType: 'application/pdf', parents: [folderId] });
-  const preamble = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`;
-  const header = `--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`;
-  const closing = `\r\n--${boundary}--\r\n`;
-  const body = Buffer.concat([
-    Buffer.from(preamble, 'utf-8'),
-    Buffer.from(header, 'utf-8'),
-    pdf,
-    Buffer.from(closing, 'utf-8')
-  ]);
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`
-    },
-    body
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return await res.json();
+async function uploadPdfToSupabaseStorage(pdf: Buffer, fileName: string): Promise<{ id: string; url: string; folderId: string } | null> {
+  try {
+    await supabaseAdmin.storage.createBucket('milestone-review-reports', { public: true });
+  } catch {}
+  const bucket = supabaseAdmin.storage.from('milestone-review-reports');
+  const ts = Date.now();
+  const path = `reports/${ts}-${fileName.replace(/[^a-zA-Z0-9._-]+/g, '_')}`;
+  const { error: upErr } = await bucket.upload(path, pdf, { contentType: 'application/pdf', upsert: false });
+  if (upErr) return null;
+  const { data } = bucket.getPublicUrl(path);
+  const url = String(data.publicUrl || '');
+  if (!url) return null;
+  return { id: path, url, folderId: 'milestone-review-reports' };
 }
 
 export async function POST(request: NextRequest) {
@@ -157,25 +73,23 @@ export async function POST(request: NextRequest) {
     if (errors.length > 0) {
       return NextResponse.json({ status: 'error', message: errors[0] }, { status: 400 });
     }
-    const accessToken: string = await getOAuthAccessToken();
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    };
-
     const title = `Milestone Report - ${body.proposalId || 'UNKNOWN'} - ${body.milestoneNumber || ''}`;
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID || '1PCRqTGuA3P3MNFaVimUy4Fo-kiyjT5AO';
+    let folderId: string | null = null;
     let reportUrl = '';
+    let documentId: string | null = null;
     const pdfBuffer = await renderHtmlToPdf(body);
-    const uploadRes = await uploadPdfToDrive(pdfBuffer, `${title}.pdf`, folderId, accessToken);
-    const documentId: string = String(uploadRes.id || '');
-    if (!documentId) throw new Error('No documentId returned');
-    await fetch(`https://www.googleapis.com/drive/v3/files/${documentId}/permissions?supportsAllDrives=true`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
-    reportUrl = `https://drive.google.com/file/d/${documentId}/view`;
+    {
+      const sup = await uploadPdfToSupabaseStorage(pdfBuffer, `${title}.pdf`);
+      if (sup) {
+        documentId = sup.id;
+        reportUrl = sup.url;
+        folderId = sup.folderId;
+      }
+    }
+
+    if (!documentId) {
+      return NextResponse.json({ status: 'error', message: 'Report upload failed' }, { status: 500 });
+    }
 
     const token = request.cookies.get('token')?.value;
     let reviewerId = '';
@@ -208,7 +122,7 @@ export async function POST(request: NextRequest) {
       verdict: String(body.finalRecommendation || ''),
       document_id: documentId,
       document_url: reportUrl,
-      folder_id: '1PCRqTGuA3P3MNFaVimUy4Fo-kiyjT5AO',
+      folder_id: folderId || 'milestone-review-reports',
       report_data: body,
       created_at: nowISO,
       updated_at: nowISO,

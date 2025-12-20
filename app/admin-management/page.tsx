@@ -2,6 +2,7 @@
 
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -17,6 +18,7 @@ import UserManager from '../components/admin/UserManager';
 import VotingSettingsManager from '../components/admin/VotingSettingsManager';
 import ReviewerTestsManager from '../components/admin/ReviewerTestsManager';
 import MilestoneReportsManager from '../components/admin/MilestoneReportsManager';
+import AwardedTeamsInfoManager from '../components/admin/AwardedTeamsInfoManager';
 
 
 interface SheetData {
@@ -44,6 +46,11 @@ export default function AdminManagement() {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const animationIdRef = useRef<number | null>(null);
+  const router = useRouter();
+
+  const handleMilestoneReportRedirect = () => {
+    router.push('/milestone-report');
+  };
 
   useEffect(() => {
     if (user && user.role === 'admin') {
@@ -345,6 +352,22 @@ export default function AdminManagement() {
           </button>
 
           <button
+            onClick={() => setActiveSection('awarded-teams-info')}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">ℹ️ Awarded Teams Info</h4>
+            <p className="text-sm text-[#9D9FA9]">Manage project details, milestones, and awards</p>
+          </button>
+
+          <button
+            onClick={handleMilestoneReportRedirect}
+            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
+          >
+            <h4 className="font-montserrat font-medium text-white mb-2">📝 Submit Milestone Report</h4>
+            <p className="text-sm text-[#9D9FA9]">Submit milestone reports as an admin</p>
+          </button>
+
+          <button
             onClick={() => setActiveSection('users')}
             className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
           >
@@ -534,6 +557,23 @@ export default function AdminManagement() {
                   </button>
                 </div>
                 <AwardedTeamsManager onBack={() => setActiveSection('overview')} users={sheetData.users} />
+              </div>
+            </div>
+          );
+        case 'awarded-teams-info':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Awarded Teams Info Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <AwardedTeamsInfoManager />
               </div>
             </div>
           );

@@ -108,7 +108,7 @@ const Sidebar = () => {
             onClick={closeMobileMenu}
           />
         )}
-        {user?.role === 'reviewer' && (
+        {(user?.role === 'reviewer' || user?.role === 'admin') && (
           <NavItem 
             icon="documents-icon.svg" 
             label="Milestone Report Submit" 

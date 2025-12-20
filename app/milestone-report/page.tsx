@@ -15,6 +15,7 @@ export default function MilestoneReportPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [form, setForm] = useState<MilestoneReportData>({
@@ -31,13 +32,13 @@ export default function MilestoneReportPage() {
     verificationStatus: 'Yes',
     milestoneDescriptionFromProposal: '',
     deliverableLink: '',
-    qDeliverablesMet: '1',
+    qDeliverablesMet: '',
     jDeliverablesMet: '',
-    qQualityCompleteness: '1',
+    qQualityCompleteness: '',
     jQualityCompleteness: '',
-    qEvidenceAccessibility: '1',
+    qEvidenceAccessibility: '',
     jEvidenceAccessibility: '',
-    qBudgetAlignment: '1',
+    qBudgetAlignment: '',
     jBudgetAlignment: '',
     finalRecommendation: 'Approved',
     approvedWhy: '',
@@ -46,7 +47,7 @@ export default function MilestoneReportPage() {
   });
 
   const setField = (k: keyof typeof form, v: any) => setForm(prev => ({ ...prev, [k]: v }));
-  const [projects, setProjects] = useState<{ code: string; title: string }[]>([])
+  const [projects, setProjects] = useState<{ code: string; title: string; link?: string }[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
   const [showTitleSug, setShowTitleSug] = useState(false)
   const [showCodeSug, setShowCodeSug] = useState(false)
@@ -123,9 +124,11 @@ export default function MilestoneReportPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true); setError(null); setSuccess(null);
+    setSubmitting(true); setError(null); setSuccess(null); setInvalidFields({});
     try {
       const errs: string[] = [];
+      const newInvalidFields: Record<string, boolean> = {};
+
       const requiredTextFields = [
         ['proposalTitle', 'Proposal Title'],
         ['proposalId', 'Proposal ID'],
@@ -133,7 +136,10 @@ export default function MilestoneReportPage() {
       ] as const;
       requiredTextFields.forEach(([key, label]) => {
         const v = validateRequiredText((form as any)[key], label, 1, 2000);
-        if (!v.isValid) errs.push(v.error!);
+        if (!v.isValid) {
+          errs.push(v.error!);
+          newInvalidFields[key] = true;
+        }
       });
 
       const urlChecks = [
@@ -142,37 +148,87 @@ export default function MilestoneReportPage() {
       ] as const;
       urlChecks.forEach(([key]) => {
         const v = validateUrl((form as any)[key]);
-        if (!v.isValid) errs.push(v.error!);
+        if (!v.isValid) {
+          errs.push(v.error!);
+          newInvalidFields[key] = true;
+        }
       });
       if (form.demoProvided === 'Yes') {
         const v = validateUrl(String(form.testRunLink || ''));
-        if (!v.isValid) errs.push(v.error! || 'Test Run Link must be a valid URL');
+        if (!v.isValid) {
+          errs.push(v.error! || 'Test Run Link must be a valid URL');
+          newInvalidFields['testRunLink'] = true;
+        }
         const req = validateRequiredText(String(form.testRunLink || ''), 'Test Run Link', 1, 2000);
-        if (!req.isValid) errs.push(req.error!);
+        if (!req.isValid && !newInvalidFields['testRunLink']) {
+          errs.push(req.error!);
+          newInvalidFields['testRunLink'] = true;
+        }
       }
 
       const numV = validateNumber(form.milestoneNumber, 'Milestone Number', 0, 100);
-      if (!numV.isValid) errs.push(numV.error!);
+      if (!numV.isValid) {
+        errs.push(numV.error!);
+        newInvalidFields['milestoneNumber'] = true;
+      }
       const budgetV = validateNumber(form.milestoneBudgetAmount, 'Milestone Budget Amount', 0);
-      if (!budgetV.isValid) errs.push(budgetV.error!);
+      if (!budgetV.isValid) {
+        errs.push(budgetV.error!);
+        newInvalidFields['milestoneBudgetAmount'] = true;
+      }
 
       const descV = validateRequiredText(form.milestoneDescriptionFromProposal, 'Milestone Description From Proposal', 1, 5000);
-      if (!descV.isValid) errs.push(descV.error!);
-      const delV = validateRequiredText(form.deliverableLink, 'Deliverable Link', 1, 2000);
-      if (!delV.isValid) errs.push(delV.error!);
+      if (!descV.isValid) {
+        errs.push(descV.error!);
+        newInvalidFields['milestoneDescriptionFromProposal'] = true;
+      }
+
+      // Validate Ratings
+      const ratingFields = [
+        ['qDeliverablesMet', 'Deliverables Rating'],
+        ['qQualityCompleteness', 'Quality Rating'],
+        ['qEvidenceAccessibility', 'Evidence Accessibility Rating'],
+        ['qBudgetAlignment', 'Budget Alignment Rating'],
+      ] as const;
+      
+      ratingFields.forEach(([key, label]) => {
+        if (!form[key]) {
+          errs.push(`${label} is required`);
+          newInvalidFields[key] = true;
+        }
+      });
 
       if (form.finalRecommendation === 'Approved') {
         const v = validateRequiredText(String(form.approvedWhy || ''), 'Approved Why', 1, 3000);
-        if (!v.isValid) errs.push(v.error!);
+        if (!v.isValid) {
+          errs.push(v.error!);
+          newInvalidFields['approvedWhy'] = true;
+        }
       } else if (form.finalRecommendation === 'Rejected') {
         const v1 = validateRequiredText(String(form.rejectedWhy || ''), 'Rejected Why', 1, 3000);
-        if (!v1.isValid) errs.push(v1.error!);
+        if (!v1.isValid) {
+          errs.push(v1.error!);
+          newInvalidFields['rejectedWhy'] = true;
+        }
         const v2 = validateRequiredText(String(form.suggestedChanges || ''), 'Suggested Changes', 1, 3000);
-        if (!v2.isValid) errs.push(v2.error!);
+        if (!v2.isValid) {
+          errs.push(v2.error!);
+          newInvalidFields['suggestedChanges'] = true;
+        }
       }
 
       if (errs.length > 0) {
-        throw new Error(errs[0]);
+        setInvalidFields(newInvalidFields);
+        // Scroll to first invalid field
+        const firstInvalidKey = Object.keys(newInvalidFields)[0];
+        if (firstInvalidKey) {
+          const el = document.getElementById(firstInvalidKey);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.focus();
+          }
+        }
+        throw new Error(errs[0]); // Show first error message
       }
 
       const res = await fetch('/api/milestone-reports/submit', {
@@ -183,6 +239,7 @@ export default function MilestoneReportPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setSuccess({ url: json?.reportUrl || '' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setError(err?.message || 'Submission failed');
     } finally { setSubmitting(false); }
@@ -249,7 +306,10 @@ export default function MilestoneReportPage() {
                         const title = e.target.value
                         setField('proposalTitle', title)
                         const match = projects.find(p => p.title.toLowerCase() === title.toLowerCase())
-                        if (match?.code) setField('proposalId', match.code)
+                        if (match) {
+                          if (match.code) setField('proposalId', match.code)
+                          if (match.link) setField('proposalLink', match.link)
+                        }
                         setShowTitleSug(true)
                       }}
                     />
@@ -277,7 +337,8 @@ export default function MilestoneReportPage() {
                   <div className="flex flex-col gap-2 relative">
                     <label className="text-white text-sm">Proposal Code (search)</label>
                     <input
-                      className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition"
+                      id="proposalId"
+                      className={`bg-[#0C021E] border ${invalidFields['proposalId'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`}
                       placeholder={loadingProjects ? 'Loading codes...' : 'Type to search code'}
                       value={form.proposalId}
                       onFocus={() => setShowCodeSug(true)}
@@ -299,6 +360,7 @@ export default function MilestoneReportPage() {
                             onMouseDown={() => {
                               setField('proposalId', p.code)
                               setField('proposalTitle', p.title)
+                              if (p.link) setField('proposalLink', p.link)
                               setShowCodeSug(false)
                             }}
                             className="flex justify-between w-full text-left px-3 py-2 hover:bg-[#2A1A4A] text-white"
@@ -310,13 +372,13 @@ export default function MilestoneReportPage() {
                       </div>
                     )}
                   </div>
-                  <input className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Milestone Title" required value={form.milestoneTitle} onChange={e=>setField('milestoneTitle', e.target.value)} />
-                  <input type="number" min={0} max={100} step={1} className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Milestone Number (0–100)" required value={form.milestoneNumber} onChange={e=>setField('milestoneNumber', e.target.value)} />
+                  <input id="milestoneTitle" className={`bg-[#0C021E] border ${invalidFields['milestoneTitle'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Title" required value={form.milestoneTitle} onChange={e=>setField('milestoneTitle', e.target.value)} />
+                  <input id="milestoneNumber" type="number" min={0} max={100} step={1} className={`bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Number (0–100)" required value={form.milestoneNumber} onChange={e=>setField('milestoneNumber', e.target.value)} />
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B8BAC4]">$</span>
-                    <input type="number" min={0} className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg pl-7 p-3 text-white w-full focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Milestone Budget Amount" required value={form.milestoneBudgetAmount} onChange={e=>setField('milestoneBudgetAmount', e.target.value)} />
+                    <input id="milestoneBudgetAmount" type="number" min={0} className={`bg-[#0C021E] border ${invalidFields['milestoneBudgetAmount'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg pl-7 p-3 text-white w-full focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Budget Amount" required value={form.milestoneBudgetAmount} onChange={e=>setField('milestoneBudgetAmount', e.target.value)} />
                   </div>
-                  <input type="date" className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition" required value={form.date} onChange={e=>setField('date', e.target.value)} />
+                  <input id="date" type="date" className={`bg-[#0C021E] border ${invalidFields['date'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} required value={form.date} onChange={e=>setField('date', e.target.value)} />
               </div>
               </div>
 
@@ -375,44 +437,116 @@ export default function MilestoneReportPage() {
                   <input className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Deliverable Link (URL)" required value={form.deliverableLink} onChange={e=>setField('deliverableLink', e.target.value)} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                  <div>
+                  <div id="qDeliverablesMet" className={`p-4 rounded-xl border ${invalidFields['qDeliverablesMet'] ? 'border-red-500 bg-red-500/10' : 'border-transparent'}`}>
                     <label className="text-white block mb-2">Deliverables match milestone description</label>
-                    <div role="radiogroup" aria-label="Deliverables rating" className="flex gap-2 mb-2">
+                    <div role="radiogroup" aria-label="Deliverables rating" className="flex gap-3 mb-2">
                       {['1','2','3'].map(val => (
-                        <button type="button" role="radio" aria-checked={form.qDeliverablesMet===val} key={val} onClick={()=>setField('qDeliverablesMet', val)} className={`px-3 py-1 rounded-full border text-black transition-all duration-300 hover:scale-105 ${val==='1' ? 'bg-[#22C55E] border-[#22C55E]' : val==='2' ? 'bg-[#FACC15] border-[#FACC15]' : 'bg-[#EF4444] border-[#EF4444]'} ${form.qDeliverablesMet===val ? 'ring-2 ring-white/70 shadow-md' : 'opacity-80'}`}>{form.qDeliverablesMet===val ? `✓ ${val}` : val}</button>
+                        <button 
+                          type="button" 
+                          role="radio" 
+                          aria-checked={form.qDeliverablesMet===val} 
+                          key={val} 
+                          onClick={()=>setField('qDeliverablesMet', val)} 
+                          className={`
+                            px-4 py-2 rounded-xl border transition-all duration-300 font-montserrat font-medium
+                            ${form.qDeliverablesMet===val 
+                              ? (val==='1' ? 'bg-[#22C55E] border-[#22C55E] text-[#052e0d] ring-2 ring-white/50 shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-105' 
+                                : val==='2' ? 'bg-[#FACC15] border-[#FACC15] text-[#3b3005] ring-2 ring-white/50 shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-105' 
+                                : 'bg-[#EF4444] border-[#EF4444] text-[#3b0b0b] ring-2 ring-white/50 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-105')
+                              : 'bg-white/5 border-white/10 text-[#B8BAC4] hover:bg-white/10 hover:border-white/20'
+                            }
+                          `}
+                        >
+                          {form.qDeliverablesMet===val && <span className="mr-1">✓</span>}
+                          {val}
+                        </button>
                       ))}
                     </div>
                     <div className="text-xs text-[#B8BAC4] mb-2">Selected: {form.qDeliverablesMet==='1' ? '1 – Fully Met' : form.qDeliverablesMet==='2' ? '2 – Partially Met' : '3 – Not Met'}</div>
                     <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white mt-2 focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Justification" value={form.jDeliverablesMet} onChange={e=>setField('jDeliverablesMet', e.target.value)} />
                   </div>
-                  <div>
+                  <div id="qQualityCompleteness" className={`p-4 rounded-xl border ${invalidFields['qQualityCompleteness'] ? 'border-red-500 bg-red-500/10' : 'border-transparent'}`}>
                     <label className="text-white block mb-2">Quality and completeness</label>
-                    <div role="radiogroup" aria-label="Quality rating" className="flex gap-2 mb-2">
+                    <div role="radiogroup" aria-label="Quality rating" className="flex gap-3 mb-2">
                       {['1','2','3'].map(val => (
-                        <button type="button" role="radio" aria-checked={form.qQualityCompleteness===val} key={val} onClick={()=>setField('qQualityCompleteness', val)} className={`px-3 py-1 rounded-full border text-black transition-all duration-300 hover:scale-105 ${val==='1' ? 'bg-[#22C55E] border-[#22C55E]' : val==='2' ? 'bg-[#FACC15] border-[#FACC15]' : 'bg-[#EF4444] border-[#EF4444]'} ${form.qQualityCompleteness===val ? 'ring-2 ring-white/70 shadow-md' : 'opacity-80'}`}>{form.qQualityCompleteness===val ? `✓ ${val}` : val}</button>
+                        <button 
+                          type="button" 
+                          role="radio" 
+                          aria-checked={form.qQualityCompleteness===val} 
+                          key={val} 
+                          onClick={()=>setField('qQualityCompleteness', val)} 
+                          className={`
+                            px-4 py-2 rounded-xl border transition-all duration-300 font-montserrat font-medium
+                            ${form.qQualityCompleteness===val 
+                              ? (val==='1' ? 'bg-[#22C55E] border-[#22C55E] text-[#052e0d] ring-2 ring-white/50 shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-105' 
+                                : val==='2' ? 'bg-[#FACC15] border-[#FACC15] text-[#3b3005] ring-2 ring-white/50 shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-105' 
+                                : 'bg-[#EF4444] border-[#EF4444] text-[#3b0b0b] ring-2 ring-white/50 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-105')
+                              : 'bg-white/5 border-white/10 text-[#B8BAC4] hover:bg-white/10 hover:border-white/20'
+                            }
+                          `}
+                        >
+                          {form.qQualityCompleteness===val && <span className="mr-1">✓</span>}
+                          {val}
+                        </button>
                       ))}
                     </div>
                     <div className="text-xs text-[#B8BAC4] mb-2">Selected: {form.qQualityCompleteness==='1' ? '1 – Fully Met' : form.qQualityCompleteness==='2' ? '2 – Partially Met' : '3 – Not Met'}</div>
                     <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white mt-2 focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Justification" value={form.jQualityCompleteness} onChange={e=>setField('jQualityCompleteness', e.target.value)} />
                   </div>
-                  <div>
+                  <div id="qEvidenceAccessibility" className={`p-4 rounded-xl border ${invalidFields['qEvidenceAccessibility'] ? 'border-red-500 bg-red-500/10' : 'border-transparent'}`}>
                     <label className="text-white block mb-2">Accessibility of supporting evidence</label>
-                    <div role="radiogroup" aria-label="Evidence accessibility rating" className="flex gap-2 mb-2">
+                    <div role="radiogroup" aria-label="Evidence accessibility rating" className="flex gap-3 mb-2">
                       {['1','2','3'].map(val => (
-                        <button type="button" role="radio" aria-checked={form.qEvidenceAccessibility===val} key={val} onClick={()=>setField('qEvidenceAccessibility', val)} className={`px-3 py-1 rounded-full border text-black transition-all duration-300 hover:scale-105 ${val==='1' ? 'bg-[#22C55E] border-[#22C55E]' : val==='2' ? 'bg-[#FACC15] border-[#FACC15]' : 'bg-[#EF4444] border-[#EF4444]'} ${form.qEvidenceAccessibility===val ? 'ring-2 ring-white/70 shadow-md' : 'opacity-80'}`}>{form.qEvidenceAccessibility===val ? `✓ ${val}` : val}</button>
+                        <button 
+                          type="button" 
+                          role="radio" 
+                          aria-checked={form.qEvidenceAccessibility===val} 
+                          key={val} 
+                          onClick={()=>setField('qEvidenceAccessibility', val)} 
+                          className={`
+                            px-4 py-2 rounded-xl border transition-all duration-300 font-montserrat font-medium
+                            ${form.qEvidenceAccessibility===val 
+                              ? (val==='1' ? 'bg-[#22C55E] border-[#22C55E] text-[#052e0d] ring-2 ring-white/50 shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-105' 
+                                : val==='2' ? 'bg-[#FACC15] border-[#FACC15] text-[#3b3005] ring-2 ring-white/50 shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-105' 
+                                : 'bg-[#EF4444] border-[#EF4444] text-[#3b0b0b] ring-2 ring-white/50 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-105')
+                              : 'bg-white/5 border-white/10 text-[#B8BAC4] hover:bg-white/10 hover:border-white/20'
+                            }
+                          `}
+                        >
+                          {form.qEvidenceAccessibility===val && <span className="mr-1">✓</span>}
+                          {val}
+                        </button>
                       ))}
                     </div>
                     <div className="text-xs text-[#B8BAC4] mb-2">Selected: {form.qEvidenceAccessibility==='1' ? '1 – Fully Met' : form.qEvidenceAccessibility==='2' ? '2 – Partially Met' : '3 – Not Met'}</div>
                     <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white mt-2 focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Justification" value={form.jEvidenceAccessibility} onChange={e=>setField('jEvidenceAccessibility', e.target.value)} />
                   </div>
-                  <div>
+                  <div id="qBudgetAlignment" className={`p-4 rounded-xl border ${invalidFields['qBudgetAlignment'] ? 'border-red-500 bg-red-500/10' : 'border-transparent'}`}>
                     <label className="text-white block mb-2">Budget alignment (value for money)</label>
-                    <div role="radiogroup" aria-label="Budget alignment rating" className="flex gap-2 mb-2">
+                    <div role="radiogroup" aria-label="Budget alignment rating" className="flex gap-3 mb-2">
                       {['1','2','3'].map(val => (
-                        <button type="button" role="radio" aria-checked={form.qBudgetAlignment===val} key={val} onClick={()=>setField('qBudgetAlignment', val)} className={`px-3 py-1 rounded-full border text-black transition-all duration-300 hover:scale-105 ${val==='1' ? 'bg-[#22C55E] border-[#22C55E]' : val==='2' ? 'bg-[#FACC15] border-[#FACC15]' : 'bg-[#EF4444] border-[#EF4444]'} ${form.qBudgetAlignment===val ? 'ring-2 ring-white/70 shadow-md' : 'opacity-80'}`}>{form.qBudgetAlignment===val ? `✓ ${val}` : val}</button>
+                        <button 
+                          type="button" 
+                          role="radio" 
+                          aria-checked={form.qBudgetAlignment===val} 
+                          key={val} 
+                          onClick={()=>setField('qBudgetAlignment', val)} 
+                          className={`
+                            px-4 py-2 rounded-xl border transition-all duration-300 font-montserrat font-medium
+                            ${form.qBudgetAlignment===val 
+                              ? (val==='1' ? 'bg-[#22C55E] border-[#22C55E] text-[#052e0d] ring-2 ring-white/50 shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-105' 
+                                : val==='2' ? 'bg-[#FACC15] border-[#FACC15] text-[#3b3005] ring-2 ring-white/50 shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-105' 
+                                : 'bg-[#EF4444] border-[#EF4444] text-[#3b0b0b] ring-2 ring-white/50 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-105')
+                              : 'bg-white/5 border-white/10 text-[#B8BAC4] hover:bg-white/10 hover:border-white/20'
+                            }
+                          `}
+                        >
+                          {form.qBudgetAlignment===val && <span className="mr-1">✓</span>}
+                          {val}
+                        </button>
                       ))}
                     </div>
-                    <div className="text-xs text-[#B8BAC4] mb-2">Selected: {form.qBudgetAlignment==='1' ? '1 – Fully Met' : form.qBudgetAlignment==='2' ? '2 – Partially Met' : '3 – Not Met'}</div>
+                    <div className="text-xs text-[#B8BAC4] mb-2">Selected: {form.qBudgetAlignment==='1' ? '1 – Fully Met' : form.qBudgetAlignment==='2' ? '2 – Partially Met' : form.qBudgetAlignment==='3' ? '3 – Not Met' : 'None'}</div>
                     <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white mt-2 focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Justification" value={form.jBudgetAlignment} onChange={e=>setField('jBudgetAlignment', e.target.value)} />
                   </div>
                 </div>
@@ -430,13 +564,13 @@ export default function MilestoneReportPage() {
                     </div>
                   </div>
                   {form.finalRecommendation === 'Approved' && (
-                    <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Why it meets success criteria" value={form.approvedWhy} onChange={e=>setField('approvedWhy', e.target.value)} />
+                    <textarea id="approvedWhy" className={`bg-[#0C021E] border ${invalidFields['approvedWhy'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Why it meets success criteria" value={form.approvedWhy} onChange={e=>setField('approvedWhy', e.target.value)} />
                   )}
                   {form.finalRecommendation === 'Rejected' && (
-                    <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="What was missing or not satisfactory" value={form.rejectedWhy} onChange={e=>setField('rejectedWhy', e.target.value)} />
+                    <textarea id="rejectedWhy" className={`bg-[#0C021E] border ${invalidFields['rejectedWhy'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="What was missing or not satisfactory" value={form.rejectedWhy} onChange={e=>setField('rejectedWhy', e.target.value)} />
                   )}
                   {form.finalRecommendation === 'Rejected' && (
-                    <textarea className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Suggested Changes" value={form.suggestedChanges} onChange={e=>setField('suggestedChanges', e.target.value)} />
+                    <textarea id="suggestedChanges" className={`bg-[#0C021E] border ${invalidFields['suggestedChanges'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 w-full text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Suggested Changes" value={form.suggestedChanges} onChange={e=>setField('suggestedChanges', e.target.value)} />
                   )}
                 </div>
               </div>

@@ -12,6 +12,7 @@ export async function GET(_request: NextRequest) {
     if (error) throw error;
     const reports = (data || []).map((r: any) => ({
       id: r.id,
+      reviewer: r.reviewer_handle || r.reviewer_username || '',
       reviewerId: r.reviewer_id || '',
       reviewerUsername: r.reviewer_username || '',
       reviewerHandle: r.reviewer_handle || '',

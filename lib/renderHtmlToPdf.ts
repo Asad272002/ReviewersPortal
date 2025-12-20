@@ -1,5 +1,7 @@
 import fs from 'fs'
 import path from 'path'
+import chromium from '@sparticuz/chromium-min'
+import puppeteerCore from 'puppeteer-core'
 import puppeteer from 'puppeteer'
 
 export interface MilestoneReportData {
@@ -16,13 +18,13 @@ export interface MilestoneReportData {
   verificationStatus: 'Yes' | 'No'
   milestoneDescriptionFromProposal: string
   deliverableLink: string
-  qDeliverablesMet: '1' | '2' | '3'
+  qDeliverablesMet: '1' | '2' | '3' | ''
   jDeliverablesMet: string
-  qQualityCompleteness: '1' | '2' | '3'
+  qQualityCompleteness: '1' | '2' | '3' | ''
   jQualityCompleteness: string
-  qEvidenceAccessibility: '1' | '2' | '3'
+  qEvidenceAccessibility: '1' | '2' | '3' | ''
   jEvidenceAccessibility: string
-  qBudgetAlignment: '1' | '2' | '3'
+  qBudgetAlignment: '1' | '2' | '3' | ''
   jBudgetAlignment: string
   finalRecommendation: 'Approved' | 'Rejected'
   approvedWhy?: string
@@ -76,7 +78,7 @@ function buildHtmlFromTemplate(data: MilestoneReportData): string {
   const cssMatch = raw.match(/<style>([\s\S]*?)<\/style>/)
   const css = cssMatch ? cssMatch[1] : ''
 
-  const reviewer = String(data.reviewerHandle || '')
+  const reviewer = 'Review Circle'
   const milestoneNumber = String(data.milestoneNumber || '')
   const dateFmt = formatDateDDMMMYYYY(String(data.date || ''))
   const proposalTitle = String(data.proposalTitle || '')
@@ -205,10 +207,22 @@ function buildHtmlFromTemplate(data: MilestoneReportData): string {
 
 export async function renderHtmlToPdf(data: MilestoneReportData): Promise<Buffer> {
   const html = buildHtmlFromTemplate(data)
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  })
+  const isProd = !!process.env.VERCEL
+  const browser = await (async () => {
+    if (isProd) {
+      const packUrl = process.env.CHROMIUM_PACK_URL
+      const executablePath = packUrl ? await chromium.executablePath(packUrl) : await chromium.executablePath()
+      return puppeteerCore.launch({
+        args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-features=HttpsFirstBalancedModeAutoEnable'],
+        executablePath,
+        headless: chromium.headless
+      })
+    }
+    return puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    })
+  })()
   try {
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })

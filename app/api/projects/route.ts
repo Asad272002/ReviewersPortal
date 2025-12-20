@@ -66,7 +66,29 @@ export async function GET(_req: NextRequest) {
   try {
     let projects: ProjectItem[] = []
 
-    // First, try Supabase awarded teams tables (dynamic, admin CRUD)
+    // 1. Try fetching from the new single source of truth: awarded_teams_info
+    try {
+      const { data: infoData, error: infoError } = await supabaseAdmin
+        .from('awarded_teams_info')
+        .select('project_code, project_title, proposal_link')
+        .limit(3000)
+      
+      if (!infoError && infoData && infoData.length > 0) {
+        // If we have data in the new table, use it as the primary source
+        const newProjects = infoData.map(row => ({
+          code: row.project_code,
+          title: row.project_title,
+          link: row.proposal_link
+        }))
+        // Return immediately if we have data here, assuming this is now the authority
+        // If you want to merge with legacy, remove the return
+        return NextResponse.json({ success: true, data: { projects: newProjects } })
+      }
+    } catch (err) {
+      console.error('Error fetching from awarded_teams_info:', err)
+    }
+
+    // 2. Fallback: try Supabase awarded_teams tables (dynamic, admin CRUD)
     try {
       const { data: teamData, error } = await supabaseAdmin
         .from('awarded_teams')

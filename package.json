@@ -11,16 +11,19 @@
   "dependencies": {
     "@googleapis/drive": "^6.0.0",
     "@googleapis/sheets": "^6.1.0",
+    "@sparticuz/chromium-min": "^141.0.0",
     "@supabase/supabase-js": "^2.76.1",
     "@types/three": "^0.179.0",
     "dotenv": "^17.2.1",
     "google-auth-library": "^9.15.1",
     "google-spreadsheet": "^4.1.5",
     "jose": "^6.1.0",
+    "next": "^16.0.8",
     "puppeteer": "^23.9.0",
-    "next": "15.4.5",
+    "puppeteer-core": "^24.23.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "recharts": "^3.6.0",
     "three": "^0.179.1"
   },
   "devDependencies": {
@@ -30,7 +33,7 @@
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.14",
     "eslint": "^9",
-    "eslint-config-next": "15.4.5",
+    "eslint-config-next": "^16.0.8",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",
     "typescript": "^5"
