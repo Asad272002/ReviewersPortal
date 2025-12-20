@@ -116,14 +116,14 @@ export function validateEmail(email: string): { isValid: boolean; error?: string
  * @param url - URL to validate
  * @returns Object with isValid boolean and error message if invalid
  */
-export function validateUrl(url: string): { isValid: boolean; error?: string } {
+export function validateUrl(url: string, options: { allowFormulas?: boolean } = {}): { isValid: boolean; error?: string } {
   if (!url) {
     return { isValid: true }; // URLs are often optional
   }
   
   try {
     new URL(url);
-    return validateInput(url, 'URL');
+    return validateInput(url, 'URL', options);
   } catch {
     return { isValid: false, error: 'Please enter a valid URL' };
   }
@@ -141,7 +141,8 @@ export function validateRequiredText(
   value: string, 
   fieldName: string, 
   minLength: number = 1, 
-  maxLength: number = 1000
+  maxLength: number = 1000,
+  options: { allowFormulas?: boolean } = {}
 ): { isValid: boolean; error?: string } {
   if (!value || value.trim().length === 0) {
     return { isValid: false, error: `${fieldName} is required` };
@@ -155,7 +156,7 @@ export function validateRequiredText(
     return { isValid: false, error: `${fieldName} must be no more than ${maxLength} characters long` };
   }
   
-  return validateInput(value, fieldName);
+  return validateInput(value, fieldName, options);
 }
 
 /**

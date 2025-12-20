@@ -36,25 +36,29 @@ export async function POST(request: NextRequest) {
     const reqText = [
       ['proposalTitle','Proposal Title'],
       ['proposalId','Proposal ID'],
-      ['milestoneTitle','Milestone Title'],
-      ['milestoneDescriptionFromProposal','Milestone Description From Proposal']
+      ['milestoneTitle','Milestone Title']
     ] as const;
     reqText.forEach(([key,label])=>{
       const v = validateRequiredText(String(body[key]||''), label, 1, 5000);
       if (!v.isValid) errors.push(v.error!);
     });
+    
+    // Validate Milestone Description separately to allow bullet points (starting with -)
+    const descV = validateRequiredText(String(body.milestoneDescriptionFromProposal||''), 'Milestone Description From Proposal', 1, 5000, { allowFormulas: true });
+    if (!descV.isValid) errors.push(descV.error!);
+
     const urlFields = [
       ['proposalLink','Proposal Link'],
       ['deliverableLink','Deliverable Link']
     ] as const;
     urlFields.forEach(([key])=>{
-      const v = validateUrl(String(body[key]||''));
+      const v = validateUrl(String(body[key]||''), { allowFormulas: true });
       if (!v.isValid) errors.push(v.error!);
     });
     if (String(body.demoProvided||'') === 'Yes') {
-      const v = validateUrl(String(body.testRunLink||''));
+      const v = validateUrl(String(body.testRunLink||''), { allowFormulas: true });
       if (!v.isValid) errors.push(v.error!||'Test Run Link must be a valid URL');
-      const req = validateRequiredText(String(body.testRunLink||''), 'Test Run Link', 1, 2000);
+      const req = validateRequiredText(String(body.testRunLink||''), 'Test Run Link', 1, 2000, { allowFormulas: true });
       if (!req.isValid) errors.push(req.error!);
     }
     const numV = validateNumber(String(body.milestoneNumber||''), 'Milestone Number', 0, 100);

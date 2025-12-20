@@ -147,19 +147,19 @@ export default function MilestoneReportPage() {
         ['deliverableLink', 'Deliverable Link'],
       ] as const;
       urlChecks.forEach(([key]) => {
-        const v = validateUrl((form as any)[key]);
+        const v = validateUrl((form as any)[key], { allowFormulas: true });
         if (!v.isValid) {
           errs.push(v.error!);
           newInvalidFields[key] = true;
         }
       });
       if (form.demoProvided === 'Yes') {
-        const v = validateUrl(String(form.testRunLink || ''));
+        const v = validateUrl(String(form.testRunLink || ''), { allowFormulas: true });
         if (!v.isValid) {
           errs.push(v.error! || 'Test Run Link must be a valid URL');
           newInvalidFields['testRunLink'] = true;
         }
-        const req = validateRequiredText(String(form.testRunLink || ''), 'Test Run Link', 1, 2000);
+        const req = validateRequiredText(String(form.testRunLink || ''), 'Test Run Link', 1, 2000, { allowFormulas: true });
         if (!req.isValid && !newInvalidFields['testRunLink']) {
           errs.push(req.error!);
           newInvalidFields['testRunLink'] = true;
@@ -199,18 +199,18 @@ export default function MilestoneReportPage() {
       });
 
       if (form.finalRecommendation === 'Approved') {
-        const v = validateRequiredText(String(form.approvedWhy || ''), 'Approved Why', 1, 3000);
+        const v = validateRequiredText(String(form.approvedWhy || ''), 'Approved Why', 1, 3000, { allowFormulas: true });
         if (!v.isValid) {
           errs.push(v.error!);
           newInvalidFields['approvedWhy'] = true;
         }
       } else if (form.finalRecommendation === 'Rejected') {
-        const v1 = validateRequiredText(String(form.rejectedWhy || ''), 'Rejected Why', 1, 3000);
+        const v1 = validateRequiredText(String(form.rejectedWhy || ''), 'Rejected Why', 1, 3000, { allowFormulas: true });
         if (!v1.isValid) {
           errs.push(v1.error!);
           newInvalidFields['rejectedWhy'] = true;
         }
-        const v2 = validateRequiredText(String(form.suggestedChanges || ''), 'Suggested Changes', 1, 3000);
+        const v2 = validateRequiredText(String(form.suggestedChanges || ''), 'Suggested Changes', 1, 3000, { allowFormulas: true });
         if (!v2.isValid) {
           errs.push(v2.error!);
           newInvalidFields['suggestedChanges'] = true;
