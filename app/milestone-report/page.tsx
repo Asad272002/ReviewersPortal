@@ -261,7 +261,7 @@ export default function MilestoneReportPage() {
             {error && (
               <div className="bg-red-600/20 border border-red-500 text-red-300 rounded-xl p-4 mb-6">❌ {error}</div>
             )}
-            <div className="sticky top-0 z-20 bg-gradient-to-r from-[#1A0A3A] to-[#0C021E] border border-[#9D9FA9] rounded-2xl p-6 mb-6 shadow-2xl backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#1A0A3A] to-[#0C021E] border border-[#9D9FA9] rounded-2xl p-6 mb-6 shadow-2xl backdrop-blur-sm">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
