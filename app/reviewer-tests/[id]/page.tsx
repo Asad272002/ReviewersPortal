@@ -210,12 +210,12 @@ export default function ReviewerTestRunner() {
 
   return (
     <ProtectedRoute allowedRoles={["reviewer"]}>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" style={{ background: 'transparent' }} />
         <Header title="Reviewer Test" />
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
             <div className="max-w-4xl mx-auto">
               {loading ? (
                 <div className="text-white">Loading test...</div>
@@ -286,9 +286,9 @@ export default function ReviewerTestRunner() {
                 <div className="text-[#9D9FA9]">Test not found</div>
               )}
             </div>
+            <Footer />
           </main>
         </div>
-        <Footer />
         {scorePopup.open && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
             <div className="bg-[#1A0A3A] border border-[#9D9FA9] rounded-xl p-6 w-full max-w-md text-center">

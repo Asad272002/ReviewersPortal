@@ -203,7 +203,7 @@ export default function Support() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-[#0C021E] via-[#1A0A3A] to-[#2A1A4A] relative">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-[#0C021E] via-[#1A0A3A] to-[#2A1A4A] relative overflow-hidden">
         <canvas 
           ref={canvasRef}
           className="fixed inset-0 z-0"
@@ -211,10 +211,10 @@ export default function Support() {
         />
         <Header title="Contact & Support" />
         
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-hidden relative z-10">
           <Sidebar />
           
-          <main className="flex-1 p-8 relative z-10">
+          <main className="flex-1 p-8 overflow-y-auto relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6">
                 <h2 className="font-montserrat font-semibold text-2xl text-white mb-4">Contact Information</h2>
@@ -415,10 +415,10 @@ export default function Support() {
                 </div>
               </div>
             </div>
+            
+            <Footer />
           </main>
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

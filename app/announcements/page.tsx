@@ -326,7 +326,7 @@ export default function Announcements() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
         {/* Three.js Canvas Background */}
         <canvas 
           ref={canvasRef}
@@ -335,10 +335,10 @@ export default function Announcements() {
         />
         <Header title="Announcements" />
         
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-8 relative">
+          <main className="flex-1 p-8 relative overflow-y-auto">
             <div className="relative z-10">
               {loading ? (
                 <div className="flex justify-center items-center h-64">
@@ -535,10 +535,9 @@ export default function Announcements() {
                 </div>
               )}
             </div>
+            <Footer />
           </main>
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

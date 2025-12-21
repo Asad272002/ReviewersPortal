@@ -126,17 +126,17 @@ export default function Documents() {
   
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-[#0C021E] relative">
+      <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
         <canvas
           ref={canvasRef}
           className="fixed inset-0 w-full h-full pointer-events-none z-0"
         />
         <Header title="Requirement Documents" />
         
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
             <div className="bg-[#0C021E] border border-[#9D9FA9] rounded-2xl p-8 mb-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-montserrat font-semibold text-2xl text-white">Submit Your Proposal</h2>
@@ -249,10 +249,9 @@ export default function Documents() {
             
             
             
+            <Footer />
           </main>
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

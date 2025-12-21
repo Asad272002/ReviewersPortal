@@ -245,7 +245,7 @@ export default function Guides() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-[#0C021E] relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
         {/* Three.js Background */}
         <div 
           ref={mountRef} 
@@ -253,13 +253,13 @@ export default function Guides() {
           style={{ pointerEvents: 'none' }}
         />
         
-        <div className="relative z-10">
+        <div className="relative z-10 flex flex-col h-full">
           <Header title="Process & Guides" />
 
-          <div className="flex flex-1">
+          <div className="flex flex-1 overflow-hidden">
             <Sidebar />
 
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
               {loading ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
@@ -497,21 +497,18 @@ export default function Guides() {
                 </div>
               </>
             )}
-          </main>
-        </div>
-
-        {user?.role === 'admin' && (
-          <div className="p-8">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl">
-              <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Manage Guides</h2>
-              <GuideManager />
-            </div>
+                {user?.role === 'admin' && (
+                  <div className="mt-8">
+                    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 shadow-2xl">
+                      <h2 className="font-montserrat font-semibold text-2xl text-white mb-6">Manage Guides</h2>
+                      <GuideManager />
+                    </div>
+                  </div>
+                )}
+              <Footer />
+            </main>
           </div>
-        )}
-
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

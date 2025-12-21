@@ -209,7 +209,7 @@ export default function Home() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         {/* Three.js Canvas Background */}
         <canvas 
           ref={canvasRef}
@@ -218,10 +218,10 @@ export default function Home() {
         />
         <Header />
         
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           {!(user?.role === 'team' && isAwardedTeamMember) && <Sidebar />}
 
-          <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-auto animate-fadeIn relative ${(user?.role === 'team' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
+          <main className={`flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fadeIn relative ${(user?.role === 'team' && isAwardedTeamMember) ? 'max-w-4xl mx-auto' : ''} ${!(user?.role === 'team' && isAwardedTeamMember) ? 'lg:ml-0' : ''}`}>
             {user?.role === 'reviewer' ? (
               // Default Dashboard for Reviewers with Sidebar
               <>
@@ -329,12 +329,15 @@ export default function Home() {
                   <div className="relative z-10">
                     <AwardedTeamsConnect />
                   </div>
+                  <div className="mt-8">
+                    <Footer />
+                  </div>
                 </div>
               </div>
             ) : user?.role === 'admin' ? (
               // Admin Dashboard with seven section flyers
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="w-full">
+              <div className="min-h-screen flex flex-col items-center justify-center py-10">
+                <div className="w-full max-w-7xl">
                   <div className="text-center mb-8">
                     <h1 className="font-montserrat font-bold text-4xl text-white mb-4">
                       Admin Dashboard
@@ -429,6 +432,9 @@ export default function Home() {
                       linkHref="/admin-management"
                     />
                   </div>
+                  <div className="mt-8">
+                    <Footer />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -474,12 +480,13 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+                
+                <Footer />
               </>
             )}
           </main>
         </div>
         
-        <Footer />
       </div>
     </ProtectedRoute>
   );

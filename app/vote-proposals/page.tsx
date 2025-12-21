@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import ProtectedRoute from '../components/ProtectedRoute';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import * as THREE from 'three';
 
 interface Proposal {
@@ -524,20 +525,18 @@ export default function VoteProposalsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white relative overflow-hidden">
         {/* Three.js Background */}
         <div 
           ref={mountRef} 
-          className="fixed inset-0 z-0"
-          style={{ pointerEvents: 'none' }}
+          className="fixed inset-0 z-0 pointer-events-none"
         />
         
         {/* Content */}
-        <div className="relative z-10">
-          <Header />
-          <div className="flex flex-col lg:flex-row">
-            <Sidebar />
-            <main className="flex-1 p-4 sm:p-8">
+        <Header />
+        <div className="flex flex-1 relative z-10 overflow-hidden">
+          <Sidebar />
+          <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
               <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="mb-8 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl p-4 sm:p-6">
@@ -747,9 +746,9 @@ export default function VoteProposalsPage() {
                 </div>
               )}
               </div>
+              <Footer />
             </main>
           </div>
-        </div>
       </div>
     </ProtectedRoute>
   );

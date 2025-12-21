@@ -11,13 +11,13 @@ export default function AssignmentsPage() {
 
   return (
     <ProtectedRoute allowedRoles={['reviewer']}>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         <Header />
         
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-8 overflow-auto animate-fadeIn relative">
+          <main className="flex-1 p-8 overflow-y-auto animate-fadeIn relative">
             <div className="mb-8">
               <h1 className="font-montserrat font-bold text-4xl text-white mb-4">
                 My Review Assignments

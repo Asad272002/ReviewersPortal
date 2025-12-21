@@ -20,6 +20,10 @@ export async function POST(request: NextRequest) {
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'image/jpeg',
       'image/jpg',
       'image/png',
@@ -29,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'File type not allowed. Please upload PDF, DOC, DOCX, or image files.' },
+        { error: 'File type not allowed. Please upload PDF, DOC, Excel, PowerPoint, or image files.' },
         { status: 400 }
       );
     }

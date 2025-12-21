@@ -130,14 +130,14 @@ export default function AnalysisPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-[#0C021E] relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
         <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" />
         <Header title={viewMode === 'global' ? "Global Analysis" : "My Analysis"} />
         
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
             <div className="max-w-7xl mx-auto space-y-8">
               
               {/* Role-based Toggle */}
@@ -332,11 +332,10 @@ export default function AnalysisPage() {
                     </div>
                 )}
               </div>
+              <Footer />
             </div>
           </main>
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

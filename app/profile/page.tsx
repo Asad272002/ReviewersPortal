@@ -136,13 +136,13 @@ export default function ProfilePage() {
 
   return (
     <ProtectedRoute allowedRoles={["reviewer", "admin", "team_leader"]}>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         <Header title="My Profile" />
 
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
 
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
             <div className="max-w-3xl mx-auto">
               {loading ? (
                 <div className="flex justify-center items-center h-48">
@@ -253,10 +253,9 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+            <Footer />
           </main>
         </div>
-
-        <Footer />
       </div>
     </ProtectedRoute>
   );

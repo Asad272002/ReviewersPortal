@@ -121,7 +121,7 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
                     src="/icons/profile-icon.svg" 
                     alt="Profile" 
                     fill
-                    className="object-cover p-1 opacity-90 hover:opacity-100 transition-opacity"
+                    className="object-cover opacity-90 hover:opacity-100 transition-opacity"
                   />
                 </div>
               </div>

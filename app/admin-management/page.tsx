@@ -248,7 +248,7 @@ export default function AdminManagement() {
   if (!isAuthorized) {
     return (
       <ProtectedRoute>
-        <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+        <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
           {/* Three.js Canvas Background */}
           <canvas 
             ref={canvasRef}
@@ -256,16 +256,16 @@ export default function AdminManagement() {
             style={{ background: 'transparent' }}
           />
           <Header title="Access Denied" />
-          <div className="flex flex-1 relative z-10">
+          <div className="flex flex-1 relative z-10 overflow-hidden">
             <Sidebar />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
               <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] p-8 text-center">
                 <h2 className="font-montserrat font-semibold text-xl text-white mb-4">Access Denied</h2>
                 <p className="font-montserrat text-gray-300">You need admin privileges to access this page.</p>
               </div>
+              <Footer />
             </main>
           </div>
-          <Footer />
         </div>
       </ProtectedRoute>
     );
@@ -673,7 +673,7 @@ export default function AdminManagement() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         {/* Three.js Canvas Background */}
         <canvas 
           ref={canvasRef}
@@ -682,19 +682,18 @@ export default function AdminManagement() {
         />
         <Header title="Admin Management" />
         
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative overflow-y-auto">
             {/* Background overlay */}
             <div className="absolute inset-0 bg-[rgba(12,2,30,0.3)] rounded-3xl border border-[#9D9FA9] pointer-events-none" />
             <div className="relative z-10">
               {renderContent()}
             </div>
+            <Footer />
           </main>
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

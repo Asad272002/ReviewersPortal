@@ -7,10 +7,12 @@ interface ProcessDoc {
   id: string;
   title: string;
   description: string;
-  content: string;
+  content: string; // Keeping content for backward compatibility if needed, though we will prioritize steps/requirements
   category: 'workflow' | 'guidelines' | 'procedures' | 'templates';
   order: number;
   status: 'published' | 'draft' | 'archived';
+  steps: { title: string; description: string }[];
+  requirements: string[];
   attachments: {
     links: { title: string; url: string }[];
     files: { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[];
@@ -31,12 +33,14 @@ export default function ProcessManager() {
     content: '',
     category: 'workflow' as 'workflow' | 'guidelines' | 'procedures' | 'templates',
     status: 'draft' as 'published' | 'draft' | 'archived',
+    steps: [] as { title: string; description: string }[],
+    requirements: [] as string[],
     attachments: {
       links: [] as { title: string; url: string }[],
       files: [] as { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[]
     }
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // URL validation helper
   const isValidUrl = (url: string): boolean => {
@@ -45,6 +49,63 @@ export default function ProcessManager() {
       return true;
     } catch {
       return false;
+    }
+  };
+
+  const handleFileUpload = async (file: File, index: number) => {
+    setIsUploading(true);
+    try {
+      // Safeguard: Ensure attachments.files array exists
+      if (!formData.attachments || !formData.attachments.files) {
+        throw new Error('Form data attachments structure is invalid');
+      }
+
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+
+      const response = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      
+      // Use functional update to ensure we have latest state
+      setFormData(prev => {
+        const newFiles = [...(prev.attachments?.files || [])];
+        if (!newFiles[index]) {
+             // If index doesn't exist, we can't update it. 
+             // This might happen if user deleted the row while uploading.
+             return prev; 
+        }
+        
+        newFiles[index] = { ...newFiles[index], url: data.url };
+        
+        // Auto-detect type based on extension
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (ext === 'pdf') newFiles[index].type = 'pdf';
+        else if (['doc', 'docx'].includes(ext || '')) newFiles[index].type = 'doc';
+        else if (['xls', 'xlsx'].includes(ext || '')) newFiles[index].type = 'excel';
+        else if (['ppt', 'pptx'].includes(ext || '')) newFiles[index].type = 'powerpoint';
+        
+        return { 
+          ...prev, 
+          attachments: { 
+            ...(prev.attachments || { links: [] }), 
+            files: newFiles 
+          } 
+        };
+      });
+      
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -66,13 +127,16 @@ export default function ProcessManager() {
     }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     // Validate URLs in attachments
     const invalidLinks = formData.attachments.links.filter(link => link.url && !isValidUrl(link.url));
-    const invalidFiles = formData.attachments.files.filter(file => file.url && !isValidUrl(file.url));
+    // For files, we accept local uploads (relative paths) or valid URLs
+    const invalidFiles = formData.attachments.files.filter(file => file.url && !file.url.startsWith('/') && !isValidUrl(file.url));
     
     if (invalidLinks.length > 0 || invalidFiles.length > 0) {
       alert('Please enter valid URLs for all links and files.');
@@ -100,10 +164,13 @@ export default function ProcessManager() {
         resetForm();
         setShowForm(false);
       } else {
-        console.error('Error saving process');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error saving process:', errorData);
+        alert(`Error saving process: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving process:', error);
+      alert('An unexpected error occurred while saving.');
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +184,9 @@ export default function ProcessManager() {
       content: process.content,
       category: process.category,
       status: process.status,
-      attachments: process.attachments
+      steps: process.steps || [],
+      requirements: process.requirements || [],
+      attachments: process.attachments || { links: [], files: [] }
     });
     setShowForm(true);
   };
@@ -145,6 +214,8 @@ export default function ProcessManager() {
       content: '',
       category: 'workflow',
       status: 'draft',
+      steps: [],
+      requirements: [],
       attachments: {
         links: [],
         files: []
@@ -310,17 +381,109 @@ export default function ProcessManager() {
               />
             </div>
 
+            {/* Steps Section */}
             <div>
               <label className="block font-montserrat text-sm font-medium text-white mb-2">
-                Content *
+                Steps
               </label>
-              <textarea
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="w-full bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9] h-40 resize-none"
-                placeholder="Enter the detailed process documentation content..."
-                required
-              />
+              <div className="space-y-4">
+                {formData.steps.map((step, index) => (
+                  <div key={index} className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-medium">Step {index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSteps = formData.steps.filter((_, i) => i !== index);
+                          setFormData({ ...formData, steps: newSteps });
+                        }}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Step Title"
+                        value={step.title}
+                        onChange={(e) => {
+                          const newSteps = [...formData.steps];
+                          newSteps[index].title = e.target.value;
+                          setFormData({ ...formData, steps: newSteps });
+                        }}
+                        className="w-full bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9] text-sm"
+                      />
+                    </div>
+                    <div>
+                      <textarea
+                        placeholder="Step Description"
+                        value={step.description}
+                        onChange={(e) => {
+                          const newSteps = [...formData.steps];
+                          newSteps[index].description = e.target.value;
+                          setFormData({ ...formData, steps: newSteps });
+                        }}
+                        className="w-full bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9] h-20 resize-none text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newSteps = [...formData.steps, { title: '', description: '' }];
+                    setFormData({ ...formData, steps: newSteps });
+                  }}
+                  className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  + Add Step
+                </button>
+              </div>
+            </div>
+
+            {/* Requirements Section */}
+            <div>
+              <label className="block font-montserrat text-sm font-medium text-white mb-2">
+                Requirements
+              </label>
+              <div className="space-y-2">
+                {formData.requirements.map((req, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Requirement"
+                      value={req}
+                      onChange={(e) => {
+                        const newReqs = [...formData.requirements];
+                        newReqs[index] = e.target.value;
+                        setFormData({ ...formData, requirements: newReqs });
+                      }}
+                      className="flex-1 bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newReqs = formData.requirements.filter((_, i) => i !== index);
+                        setFormData({ ...formData, requirements: newReqs });
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newReqs = [...formData.requirements, ''];
+                    setFormData({ ...formData, requirements: newReqs });
+                  }}
+                  className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  + Add Requirement
+                </button>
+              </div>
             </div>
 
             {/* Links Section */}
@@ -385,7 +548,8 @@ export default function ProcessManager() {
               </label>
               <div className="space-y-2">
                 {formData.attachments.files.map((file, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={index} className="flex flex-col gap-2 bg-[#1A0B2E] p-3 rounded-lg border border-[#9D9FA9]">
+                    <div className="flex gap-2">
                     <input
                       type="text"
                       placeholder="File title"
@@ -393,17 +557,6 @@ export default function ProcessManager() {
                       onChange={(e) => {
                         const newFiles = [...formData.attachments.files];
                         newFiles[index].title = e.target.value;
-                        setFormData({ ...formData, attachments: { ...formData.attachments, files: newFiles } });
-                      }}
-                      className="flex-1 bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
-                    />
-                    <input
-                      type="url"
-                      placeholder="https://example.com/file.pdf"
-                      value={file.url}
-                      onChange={(e) => {
-                        const newFiles = [...formData.attachments.files];
-                        newFiles[index].url = e.target.value;
                         setFormData({ ...formData, attachments: { ...formData.attachments, files: newFiles } });
                       }}
                       className="flex-1 bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
@@ -418,9 +571,9 @@ export default function ProcessManager() {
                       className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
                     >
                       <option value="pdf" className="bg-gray-800 text-white">PDF</option>
-                        <option value="doc" className="bg-gray-800 text-white">Document</option>
-                        <option value="excel" className="bg-gray-800 text-white">Excel</option>
-                        <option value="powerpoint" className="bg-gray-800 text-white">PowerPoint</option>
+                      <option value="doc" className="bg-gray-800 text-white">Document</option>
+                      <option value="excel" className="bg-gray-800 text-white">Excel</option>
+                      <option value="powerpoint" className="bg-gray-800 text-white">PowerPoint</option>
                     </select>
                     <button
                       type="button"
@@ -432,6 +585,42 @@ export default function ProcessManager() {
                     >
                       ✕
                     </button>
+                    </div>
+                    
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          placeholder="File URL or upload a file"
+                          value={file.url}
+                          onChange={(e) => {
+                            const newFiles = [...formData.attachments.files];
+                            newFiles[index].url = e.target.value;
+                            setFormData({ ...formData, attachments: { ...formData.attachments, files: newFiles } });
+                          }}
+                          className="w-full bg-[#0C021E] border border-[#9D9FA9] rounded-lg px-3 py-2 text-white font-montserrat focus:outline-none focus:border-[#9050E9]"
+                        />
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id={`file-upload-${index}`}
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleFileUpload(f, index);
+                          }}
+                          disabled={isUploading}
+                        />
+                        <label
+                          htmlFor={`file-upload-${index}`}
+                          className={`cursor-pointer bg-[#9050E9] hover:bg-[#A96AFF] text-white px-3 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap text-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {isUploading ? '...' : 'Upload File'}
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 <button

@@ -38,7 +38,23 @@ export async function GET() {
         return attachments;
       };
 
-      const processesData = (data as any[]).map((row) => ({
+    const processesData = (data as any[]).map((row) => {
+      // Steps and Requirements are now stored in dedicated JSONB columns
+      // We parse them if they are strings (unlikely with Supabase JSONB but possible if using text) or use them directly
+      let steps = [];
+      let requirements = [];
+      
+      try {
+        if (typeof row.Steps === 'string') steps = JSON.parse(row.Steps);
+        else if (Array.isArray(row.Steps)) steps = row.Steps;
+        
+        if (typeof row.Requirements === 'string') requirements = JSON.parse(row.Requirements);
+        else if (Array.isArray(row.Requirements)) requirements = row.Requirements;
+      } catch (e) {
+        console.error('Error parsing steps/requirements:', e);
+      }
+
+      return {
         id: row.ID || row.id || '',
         title: row.Title || row.title || '',
         description: row.Description || row.description || '',
@@ -47,9 +63,12 @@ export async function GET() {
         order: Number(row.Order ?? row.order ?? 0),
         status: (row.Status || row.status || 'draft').toString().toLowerCase(),
         attachments: parseAttachments(row.Attachments ?? row.attachments),
+        steps,
+        requirements,
         createdAt: row.CreatedAt || row.createdAt || new Date().toISOString(),
         updatedAt: row.UpdatedAt || row.updatedAt || new Date().toISOString(),
-      })).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      };
+    }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
       return NextResponse.json({ success: true, processes: processesData });
     }
@@ -68,10 +87,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, content, category, status = 'draft', attachments = { links: [], files: [] } } = body;
+    const { title, description, content, category, status = 'draft', attachments = { links: [], files: [] }, steps = [], requirements = [] } = body;
 
     // Validate required fields
-    if (!title || !description || !content || !category) {
+    if (!title || !description || !category) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -82,6 +101,9 @@ export async function POST(request: NextRequest) {
     const normalizedStatus = typeof status === 'string' && allowedStatuses.includes(status.toLowerCase() as any)
       ? (status.toLowerCase() as typeof allowedStatuses[number])
       : 'draft';
+
+    // Store steps and requirements in dedicated columns
+    // const content = JSON.stringify({ steps, requirements }); // Deprecated
 
     const serializeAttachments = (att: any): string => {
       if (!att) return '';
@@ -107,7 +129,9 @@ export async function POST(request: NextRequest) {
         ID: id, 
         Title: title, 
         Description: description, 
-        Content: content, 
+        Content: content || '', // Use content if provided, otherwise empty
+        Steps: steps,
+        Requirements: requirements,
         Category: category, 
         Order: 0, 
         Status: normalizedStatus, 
@@ -119,7 +143,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Supabase processes POST error:', error);
       return NextResponse.json(
-        { success: false, error: 'Failed to save process' },
+        { success: false, error: `Failed to save process: ${error.message}` },
         { status: 500 }
       );
     }
@@ -130,11 +154,13 @@ export async function POST(request: NextRequest) {
         id,
         title,
         description,
-        content,
+        content: '',
         category,
         order: 0,
         status: normalizedStatus,
         attachments,
+        steps,
+        requirements,
         createdAt: now,
         updatedAt: now,
       },

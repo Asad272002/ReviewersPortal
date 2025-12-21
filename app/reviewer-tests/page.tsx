@@ -131,9 +131,9 @@ export default function ReviewerTestsPage() {
                 </div>
               )}
             </div>
+            <Footer />
           </main>
         </div>
-        <Footer />
       </div>
     </ProtectedRoute>
   );

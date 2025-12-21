@@ -20,22 +20,27 @@ const NavItem = ({ icon, label, href, active = false, multiline = false, onClick
     <Link 
       href={href} 
       onClick={onClick}
-      className={`flex items-center gap-3 sm:gap-4 py-2.5 sm:py-3 px-3 sm:px-4 w-full rounded-lg transition-all duration-300 transform ${active 
-        ? 'bg-card-bg-hover text-primary-light' 
-        : 'text-text-secondary hover:bg-card-bg hover:text-white hover:translate-x-1 hover:shadow-md'}`}
+      className={`relative group flex items-center gap-4 py-3 px-4 w-full rounded-xl transition-all duration-300 ${
+        active 
+          ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_0_20px_rgba(139,92,246,0.3)]' 
+          : 'text-gray-400 hover:text-white hover:bg-white/5 hover:translate-x-1'
+      }`}
     >
-      <div className={`w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center ${active ? 'text-primary-light' : 'text-text-secondary'}`}>
+      <div className={`relative z-10 w-6 h-6 flex items-center justify-center transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>
         <Image 
           src={`/icons/${icon}`} 
           alt={label} 
-          width={18} 
-          height={18} 
-          className={`sm:w-5 sm:h-5 transition-all duration-300 ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}
+          width={20} 
+          height={20} 
+          className={`transition-all duration-300 ${active ? 'brightness-100' : 'brightness-75 group-hover:brightness-100'}`}
         />
       </div>
-      <span className={`font-montserrat text-base sm:text-xl ${multiline ? 'leading-tight' : ''} transition-colors duration-300`}>
+      <span className={`relative z-10 font-montserrat text-sm font-medium ${multiline ? 'leading-tight' : ''} tracking-wide`}>
         {label}
       </span>
+      {active && (
+        <div className="absolute inset-0 rounded-xl bg-white/10 animate-pulse-slow"></div>
+      )}
     </Link>
   );
 };
@@ -58,19 +63,19 @@ const Sidebar = () => {
       {/* Mobile Menu Button */}
       <button
         onClick={toggleMobileMenu}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-card-bg border border-border-color rounded-lg shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-[#0f0728]/90 backdrop-blur-md border border-white/10 rounded-xl shadow-lg text-white"
       >
-        <div className="w-6 h-6 flex flex-col justify-center items-center">
-          <span className={`block w-5 h-0.5 bg-text-secondary transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
-          <span className={`block w-5 h-0.5 bg-text-secondary transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
-          <span className={`block w-5 h-0.5 bg-text-secondary transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
+        <div className="w-6 h-6 flex flex-col justify-center items-center gap-1.5">
+          <span className={`block w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+          <span className={`block w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+          <span className={`block w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
         </div>
       </button>
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300"
           onClick={closeMobileMenu}
         ></div>
       )}
@@ -78,26 +83,37 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside className={`
         fixed lg:relative top-0 left-0 z-40 lg:z-auto
-        flex flex-col gap-2 py-4 sm:py-6 px-3 sm:px-4 
-        w-64 sm:w-[280px] h-full lg:h-auto lg:min-h-[calc(100vh-80px)] 
-        border-r border-border-color bg-background shadow-lg
+        flex flex-col h-full lg:h-full
+        w-72 sm:w-[280px]
+        bg-[#0C021E] lg:bg-[#0C021E]/90 backdrop-blur-xl
+        border-r border-white/10 shadow-2xl
         transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="mb-4 sm:mb-6 px-2 sm:px-4">
-          <h2 className="font-montserrat font-bold text-xl sm:text-2xl text-primary-light mb-1">Review Circle</h2>
-          <p className="font-montserrat text-xs sm:text-sm text-text-secondary">
-            {user?.role === 'admin' ? 'Admin Portal' : user?.role === 'reviewer' ? 'Reviewer Portal' : user?.role === 'team' ? 'Team Portal' : 'Portal'}
-          </p>
+        {/* Logo / Header Area */}
+        <div className="pt-8 pb-8 px-6 mb-2">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-montserrat font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+              Review Circle
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className="h-px w-8 bg-gradient-to-r from-[#6366f1] to-transparent"></div>
+              <p className="font-montserrat text-xs font-medium text-[#a855f7] uppercase tracking-wider">
+                {user?.role === 'admin' ? 'Admin Portal' : user?.role === 'reviewer' ? 'Reviewer Portal' : user?.role === 'team' ? 'Team Portal' : 'Portal'}
+              </p>
+            </div>
+          </div>
         </div>
         
-        <NavItem 
-          icon="dashboard-icon.svg" 
-          label="Dashboard" 
-          href="/"
-          active={pathname === '/'} 
-          onClick={closeMobileMenu}
-        />
+        {/* Navigation Items */}
+        <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-1.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <NavItem 
+            icon="dashboard-icon.svg" 
+            label="Dashboard" 
+            href="/"
+            active={pathname === '/'} 
+            onClick={closeMobileMenu}
+          />
         {user?.role === 'reviewer' && (
           <NavItem 
             icon="profile-icon.svg" 
@@ -185,6 +201,7 @@ const Sidebar = () => {
             onClick={closeMobileMenu}
           />
         )}
+        </div>
       </aside>
     </>
   );

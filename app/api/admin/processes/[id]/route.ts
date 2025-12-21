@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const numericId = isNaN(Number(id)) ? id : Number(id);
     const body = await request.json();
-    const { title, description, content, category, status, order, attachments } = body;
+    const { title, description, content, category, status, order, attachments, steps = [], requirements = [] } = body;
 
     // Validate required fields
-    if (!title || !description || !content || !category) {
+    if (!title || !description || !category) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
+
+    // Store steps and requirements in dedicated columns
+    // const content = JSON.stringify({ steps, requirements }); // Deprecated
 
     // Check if process exists
     const { data: existingRows, error: fetchError } = await supabaseAdmin
@@ -64,7 +67,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const payload: any = {
       Title: title,
       Description: description,
-      Content: content,
+      Content: content || '', // Use content if provided, otherwise empty
+      Steps: steps,
+      Requirements: requirements,
       Category: category,
       Status: normalizedStatus,
       Order: order ?? 0,
@@ -80,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (updateError) {
       console.error('Supabase processes update error:', updateError);
       return NextResponse.json(
-        { success: false, error: 'Failed to update process' },
+        { success: false, error: `Failed to update process: ${updateError.message}` },
         { status: 500 }
       );
     }
@@ -102,9 +107,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const numericId = isNaN(Number(id)) ? id : Number(id);
 
     // Fetch existing for return value

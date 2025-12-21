@@ -247,12 +247,12 @@ export default function MilestoneReportPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-[#0C021E] relative">
+      <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
         <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" />
         <Header title="Milestone Report Submit" />
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto relative">
             {success && (
               <div className="bg-green-600/20 border border-green-500 text-green-300 rounded-xl p-4 mb-6">
                 ✅ Report submitted successfully. <a className="underline" href={success.url} target="_blank" rel="noreferrer">Open Sheet</a>

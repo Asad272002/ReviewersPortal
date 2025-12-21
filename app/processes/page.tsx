@@ -9,6 +9,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from '../context/AuthContext';
 import ProcessManager from "../components/admin/ProcessManager";
 import Image from "next/image";
+import { FileText, CheckCircle, ExternalLink, Link as LinkIcon, FileSpreadsheet, File } from 'lucide-react';
 
 interface Process {
   id: string;
@@ -18,6 +19,8 @@ interface Process {
   category: string;
   order: number;
   status: 'published' | 'draft' | 'archived';
+  steps: { title: string; description: string }[];
+  requirements: string[];
   attachments: {
     links: { title: string; url: string }[];
     files: { title: string; url: string; type: 'pdf' | 'doc' | 'excel' | 'powerpoint' }[];
@@ -28,6 +31,7 @@ interface Process {
 
 export default function Processes() {
   const [processes, setProcesses] = useState<Process[]>([]);
+  const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { user } = useAuth();
@@ -104,7 +108,17 @@ export default function Processes() {
         throw new Error('Failed to fetch processes');
       }
       const data = await response.json();
-      setProcesses(data.processes || []);
+      const loadedProcesses = data.processes || [];
+      setProcesses(loadedProcesses);
+      
+      // Set the first published process as selected by default
+      const published = loadedProcesses
+        .filter((p: Process) => p.status === 'published')
+        .sort((a: Process, b: Process) => a.order - b.order);
+        
+      if (published.length > 0) {
+        setSelectedProcess(published[0]);
+      }
     } catch (err) {
       console.error('Error fetching processes:', err);
       setError('Failed to load processes');
@@ -117,106 +131,146 @@ export default function Processes() {
 
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-        {/* Three.js Canvas Background */}
-        <canvas 
-          ref={canvasRef}
-          className="fixed inset-0 w-full h-full pointer-events-none z-0"
-          style={{ background: 'transparent' }}
-        />
+      <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+        <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" style={{ background: 'transparent' }} />
         <Header title="Process Documentation" />
-        
-        <div className="flex flex-1 relative z-10">
+        <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
-          
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10">
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="text-white font-montserrat text-sm sm:text-base">Loading processes...</div>
-              </div>
-            ) : error ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="text-red-400 font-montserrat text-sm sm:text-base">{error}</div>
-              </div>
-            ) : (
-              <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-8 sm:mb-12">
-                  <h1 className="font-montserrat font-bold text-2xl sm:text-3xl lg:text-4xl text-white mb-3 sm:mb-4">
-                    Process Documentation
-                  </h1>
-                  <p className="font-montserrat text-lg sm:text-xl text-gray-200 max-w-3xl mx-auto px-4">
-                    Comprehensive documentation of our processes and procedures to help you understand our workflows and standards.
-                  </p>
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            <div className="max-w-7xl mx-auto">
+              {/* Process Navigation */}
+              <div className="mb-8">
+                <div className="flex flex-wrap gap-4">
+                  {publishedProcesses.map((process) => (
+                    <button
+                      key={process.id}
+                      onClick={() => setSelectedProcess(process)}
+                      className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                        selectedProcess?.id === process.id
+                          ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                          : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 hover:text-white border border-slate-700/50'
+                      }`}
+                    >
+                      {process.title}
+                    </button>
+                  ))}
                 </div>
+              </div>
 
-                <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-4 sm:p-6">
-                  <h2 className="font-montserrat font-semibold text-xl sm:text-2xl text-white mb-4 sm:mb-6">Process Documentation</h2>
-                  <div className="space-y-4 sm:space-y-6">
-                    {publishedProcesses.length > 0 ? (
-                      publishedProcesses.map((process, index) => (
-                        <div key={process.id} className={index < publishedProcesses.length - 1 ? "border-b border-[#9D9FA9] pb-4 sm:pb-6" : ""}>
-                          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
-                            <Image src="/icons/document-icon.svg" alt="Process" width={20} height={20} className="sm:w-6 sm:h-6" />
-                            <h3 className="font-montserrat font-medium text-lg sm:text-xl text-white">{process.title}</h3>
-                            <span className="bg-[#9050E9] text-white px-2 py-1 rounded text-xs font-montserrat">
-                              {process.category}
-                            </span>
+              {/* Process Content */}
+              {selectedProcess ? (
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Main Content */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Overview Card */}
+                  <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6">
+                    <h2 className="text-xl font-bold text-white mb-4">Overview</h2>
+                    <p className="text-slate-300 leading-relaxed">{selectedProcess.description}</p>
+                  </div>
+
+                  {/* Steps */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Process Steps</h3>
+                    {selectedProcess.steps?.map((step, index) => (
+                      <div 
+                        key={index}
+                        className="bg-slate-800/30 backdrop-blur-md rounded-xl border border-slate-700/30 p-4 hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="flex gap-4">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold border border-purple-500/30">
+                            {index + 1}
                           </div>
-                          <p className="font-montserrat text-sm sm:text-base text-[#9D9FA9] mb-2 sm:mb-3 pl-6 sm:pl-9">{process.description}</p>
-                          {process.content && (
-                            <div className="font-montserrat text-xs sm:text-sm text-[#B8BAC4] mb-2 sm:mb-3 pl-6 sm:pl-9 whitespace-pre-wrap">
-                              {process.content}
-                            </div>
-                          )}
-                          {process.attachments && (process.attachments.links.length > 0 || process.attachments.files.length > 0) && (
-                            <div className="ml-9 mt-3">
-                              {process.attachments.links.length > 0 && (
-                                <div className="mb-3">
-                                  <p className="font-montserrat text-sm text-[#9D9FA9] mb-2">Related Links:</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {process.attachments.links.map((link, idx) => (
-                                      <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="font-montserrat text-sm text-[#9050E9] hover:text-[#A96AFF] transition-colors bg-[rgba(144,80,233,0.1)] px-3 py-1 rounded border border-[#9050E9] flex items-center gap-1">
-                                        🔗 {link.title}
-                                      </a>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              {process.attachments.files.length > 0 && (
-                                <div>
-                                  <p className="font-montserrat text-sm text-[#9D9FA9] mb-2">Files & Documents:</p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {process.attachments.files.map((file, idx) => (
-                                      <a key={idx} href={file.url} target="_blank" rel="noopener noreferrer" className="font-montserrat text-sm text-[#9050E9] hover:text-[#A96AFF] transition-colors bg-[rgba(144,80,233,0.1)] px-3 py-1 rounded border border-[#9050E9] flex items-center gap-1">
-                                        {file.type === 'pdf' ? '📄' : file.type === 'doc' ? '📝' : file.type === 'excel' ? '📊' : file.type === 'powerpoint' ? '📽️' : '📎'} {file.title}
-                                      </a>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          <div className="ml-9 mt-3 text-xs text-[#9D9FA9] font-montserrat">
-                            Created: {new Date(process.createdAt).toLocaleDateString()}
-                            {process.updatedAt !== process.createdAt && (
-                              <span className="ml-4">Updated: {new Date(process.updatedAt).toLocaleDateString()}</span>
-                            )}
+                          <div>
+                            <h4 className="text-white font-medium mb-1">{step.title}</h4>
+                            <p className="text-sm text-slate-400">{step.description}</p>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-[#9D9FA9] font-montserrat text-center py-8">
-                        No process documentation available at this time.
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
+
+                {/* Sidebar Info */}
+                <div className="space-y-6">
+                  {/* Requirements */}
+                  <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-purple-400" />
+                      Requirements
+                    </h3>
+                    <ul className="space-y-3">
+                      {selectedProcess.requirements?.map((req, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm text-slate-300">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                          {req}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Resources (Links & Files) */}
+                  {(selectedProcess.attachments?.links?.length > 0 || selectedProcess.attachments?.files?.length > 0) && (
+                  <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <ExternalLink className="w-5 h-5 text-purple-400" />
+                      Resources
+                    </h3>
+                    <div className="space-y-3">
+                      {/* Files */}
+                      {selectedProcess.attachments?.files?.map((file, idx) => (
+                        <a 
+                          key={`file-${idx}`} 
+                          href={file.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="block p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors border border-slate-600/30 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="bg-slate-800 p-2 rounded-lg">
+                                {file.type === 'excel' ? <FileSpreadsheet className="w-5 h-5 text-green-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-white group-hover:text-purple-300 transition-colors">{file.title}</div>
+                              <div className="text-xs text-slate-400 uppercase">{file.type}</div>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+
+                      {/* Links */}
+                      {selectedProcess.attachments?.links?.map((link, idx) => (
+                        <a 
+                          key={`link-${idx}`} 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="block p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors border border-slate-600/30 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="bg-slate-800 p-2 rounded-lg">
+                                <LinkIcon className="w-5 h-5 text-purple-400" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-white group-hover:text-purple-300 transition-colors">{link.title}</div>
+                              <div className="text-xs text-slate-400">External Link</div>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                  )}
+                </div>
               </div>
-            )}
+              ) : (
+                <div className="text-center text-slate-400 py-12">
+                  <p>No process selected or available.</p>
+                </div>
+              )}
+              <Footer />
+            </div>
           </main>
         </div>
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );

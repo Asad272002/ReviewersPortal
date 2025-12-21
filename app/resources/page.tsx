@@ -189,7 +189,7 @@ export default function Resources() {
   };
   return (
     <ProtectedRoute>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-[#0C021E] via-[#1A0A3A] to-[#2A1A4A] relative">
+      <div className="flex flex-col h-screen bg-gradient-to-br from-[#0C021E] via-[#1A0A3A] to-[#2A1A4A] relative overflow-hidden">
         <div 
           ref={mountRef} 
           className="fixed inset-0 z-0"
@@ -197,10 +197,10 @@ export default function Resources() {
         />
         <Header title="Resources" />
         
-        <div className="flex flex-1">
+        <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative z-10 overflow-y-auto">
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="bg-[#0C021E] rounded-2xl border border-[#9D9FA9] p-6 sm:p-8">
@@ -352,12 +352,9 @@ export default function Resources() {
                 </div>
               </div>
             )}
+            <Footer />
           </main>
         </div>
-        
-
-        
-        <Footer />
       </div>
     </ProtectedRoute>
   );
