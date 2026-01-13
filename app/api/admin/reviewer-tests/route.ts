@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     const guidelines = String(body?.guidelines || '');
     const durationSeconds = Number(body?.durationSeconds || 0);
     const status = String(body?.status || 'draft');
+    const gradingMode = String(body?.gradingMode || 'auto');
 
     if (!name || !durationSeconds || durationSeconds <= 0) {
       return NextResponse.json({ success: false, error: 'Invalid name or durationSeconds' }, { status: 400 });
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
       guidelines,
       duration_seconds: durationSeconds,
       status,
+      grading_mode: gradingMode,
       created_by: verified.userId,
       created_by_username: verified.username,
       created_at: new Date().toISOString(),

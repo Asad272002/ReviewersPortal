@@ -9,7 +9,7 @@ type QuestionForm = {
   orderIndex: number;
   type: QuestionType;
   prompt: string;
-  options: string[];
+  options: any;
   correctAnswers: string[];
   marks: number;
   required: boolean;
@@ -20,6 +20,7 @@ type TestForm = {
   guidelines: string;
   durationSeconds: number;
   status: 'draft' | 'active' | 'archived';
+  gradingMode?: 'auto' | 'manual';
   questions: QuestionForm[];
 };
 
@@ -28,6 +29,7 @@ const defaultTest: TestForm = {
   guidelines: '',
   durationSeconds: 900,
   status: 'draft',
+  gradingMode: 'auto',
   questions: [],
 };
 
@@ -57,6 +59,14 @@ export default function ReviewerTestsManager() {
   const [subViewLoading, setSubViewLoading] = useState(false);
   const [subViewError, setSubViewError] = useState<string | null>(null);
   const [subViewData, setSubViewData] = useState<any[]>([]);
+  const [gradingOpen, setGradingOpen] = useState(false);
+  const [gradingSubmissionId, setGradingSubmissionId] = useState<string | null>(null);
+  const [gradingLoading, setGradingLoading] = useState(false);
+  const [gradingError, setGradingError] = useState<string | null>(null);
+  const [gradingSubmission, setGradingSubmission] = useState<any | null>(null);
+  const [gradingAnswers, setGradingAnswers] = useState<any[]>([]);
+  const [gradingQuestions, setGradingQuestions] = useState<any[]>([]);
+  const [finalDecision, setFinalDecision] = useState<string>('');
 
   const fetchTests = async () => {
     setLoading(true);
@@ -110,14 +120,12 @@ export default function ReviewerTestsManager() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to fetch test');
       const t = json.test;
-      const qs = (json.questions || [])
-        .filter((q: any) => q?.type === 'mcq')
-        .map((q: any, idx: number) => ({
+      const qs = (json.questions || []).map((q: any, idx: number) => ({
         localId: q.id || Math.random().toString(36).slice(2),
         orderIndex: q.order_index ?? idx + 1,
-        type: 'mcq',
+        type: (q.type === 'text' ? 'text' : 'mcq') as QuestionType,
         prompt: q.prompt || '',
-        options: q.options || [],
+        options: q.options ?? (q.type === 'mcq' ? [] : null),
         correctAnswers: q.correct_answers || [],
         marks: Number(q.marks || 1),
         required: !!q.required,
@@ -127,6 +135,7 @@ export default function ReviewerTestsManager() {
         guidelines: t.guidelines || '',
         durationSeconds: Number(t.duration_seconds || 900),
         status: t.status || 'draft',
+        gradingMode: (t.grading_mode === 'manual' ? 'manual' : 'auto'),
         questions: qs,
       });
       setEditingId(t.id);
@@ -190,11 +199,12 @@ export default function ReviewerTestsManager() {
         guidelines: form.guidelines,
         durationSeconds: form.durationSeconds,
         status: form.status,
+        gradingMode: form.gradingMode,
         questions: form.questions.map(q => ({
           orderIndex: q.orderIndex,
           type: q.type,
           prompt: q.prompt,
-          options: q.type === 'mcq' ? q.options : undefined,
+          options: q.type === 'mcq' ? q.options : (q.options && typeof q.options === 'object' ? q.options : undefined),
           correctAnswers: q.type === 'mcq' ? q.correctAnswers : undefined,
           marks: q.marks,
           required: q.required,
@@ -216,6 +226,18 @@ export default function ReviewerTestsManager() {
       }
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to save');
+      if (!editingId) {
+        const newId = json.test?.id;
+        if (newId) {
+          const res2 = await fetch(`/api/admin/reviewer-tests/${newId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const j2 = await res2.json();
+          if (!j2.success) throw new Error(j2.error || 'Failed to save questions');
+        }
+      }
       resetForm();
       await fetchTests();
     } catch (e: any) {
@@ -315,6 +337,17 @@ export default function ReviewerTestsManager() {
                   <option value="archived">Archived</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-white mb-1">Grading Mode</label>
+                <select
+                  value={form.gradingMode}
+                  onChange={e => setForm(prev => ({ ...prev, gradingMode: e.target.value as 'auto' | 'manual' }))}
+                  className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                >
+                  <option value="auto">Auto score (use answer keys for MCQ; scenario graded by admin)</option>
+                  <option value="manual">Manual grading (admin grades all questions)</option>
+                </select>
+              </div>
             </div>
 
             <div>
@@ -354,7 +387,14 @@ export default function ReviewerTestsManager() {
                   <div key={q.localId} className="bg-[#2A1A4A] border border-[#9D9FA9] rounded p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[#9D9FA9]">#{q.orderIndex}</span>
-                      <span className="text-white px-2 py-1 bg-[#0C021E] border border-[#9D9FA9] rounded">Type: MCQ</span>
+                      <select
+                        value={q.type}
+                        onChange={e => onUpdateQuestion(q.localId, { type: e.target.value as QuestionType, options: e.target.value === 'mcq' ? (Array.isArray(q.options) ? q.options : ['Option 1','Option 2']) : (q.options && typeof q.options === 'object' ? q.options : null), correctAnswers: e.target.value === 'mcq' ? q.correctAnswers : [] })}
+                        className="text-white px-2 py-1 bg-[#0C021E] border border-[#9D9FA9] rounded"
+                      >
+                        <option value="mcq">Type: MCQ</option>
+                        <option value="text">Type: Scenario (Text)</option>
+                      </select>
                       <input
                         type="number"
                         value={q.marks}
@@ -385,7 +425,7 @@ export default function ReviewerTestsManager() {
                       />
                     </div>
 
-                    {true ? (
+                    {q.type === 'mcq' ? (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <button
@@ -437,7 +477,17 @@ export default function ReviewerTestsManager() {
                           </div>
                         ))}
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-white mb-1">Optional Answer Key (for guided grading)</label>
+                        <textarea
+                          value={q.options?.answerKey || ''}
+                          onChange={e => onUpdateQuestion(q.localId, { options: { ...(q.options || {}), answerKey: e.target.value } })}
+                          className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2 h-24"
+                          placeholder="Provide a reference answer or rubric notes"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -479,6 +529,7 @@ export default function ReviewerTestsManager() {
                   <thead>
                     <tr className="border-b border-[#9D9FA9]">
                       <th className="py-2">Reviewer</th>
+                      <th className="py-2">Status</th>
                       <th className="py-2">Score</th>
                       <th className="py-2">Submitted</th>
                       <th className="py-2">Time Taken</th>
@@ -488,9 +539,45 @@ export default function ReviewerTestsManager() {
                     {subViewData.map((s: any) => (
                       <tr key={s.id} className="border-b border-[#2A1A4A]">
                         <td className="py-2">{s.username || s.user_id}</td>
-                        <td className="py-2">{s.total_score ?? '-'}</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-1 rounded text-xs border ${s.status === 'graded' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'}`}>
+                            {s.status === 'graded' ? 'Graded' : 'Pending grading'}
+                          </span>
+                        </td>
+                        <td className="py-2">{s.status === 'graded' ? (s.total_score ?? '-') : '-'}</td>
                         <td className="py-2">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '-'}</td>
                         <td className="py-2">{s.time_taken_seconds != null ? `${s.time_taken_seconds}s` : '-'}</td>
+                        <td className="py-2">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                setGradingOpen(true);
+                                setGradingSubmissionId(s.id);
+                                setGradingLoading(true);
+                                setGradingError(null);
+                                setGradingSubmission(null);
+                                setGradingAnswers([]);
+                                setGradingQuestions([]);
+                                setFinalDecision(s.final_decision || '');
+                                try {
+                                  const res = await fetch(`/api/admin/reviewer-tests/submissions/${s.id}`);
+                                  const json = await res.json();
+                                  if (!json.success) throw new Error(json.error || 'Failed to load submission');
+                                  setGradingSubmission(json.submission);
+                                  setGradingAnswers(json.answers || []);
+                                  setGradingQuestions(json.questions || []);
+                                } catch (e: any) {
+                                  setGradingError(e?.message || 'Failed to load submission');
+                                } finally {
+                                  setGradingLoading(false);
+                                }
+                              }}
+                              className="px-2 py-1 bg-[#9050E9] text-white rounded"
+                            >
+                              Grade
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {subViewData.length === 0 && (
@@ -502,6 +589,127 @@ export default function ReviewerTestsManager() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {gradingOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-[#1A0A3A] border border-[#9D9FA9] rounded-xl p-6 w-full max-w-3xl">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-montserrat text-lg">Grade Submission</h4>
+              <button
+                onClick={() => { setGradingOpen(false); setGradingSubmissionId(null); }}
+                className="px-2 py-1 bg-[#2A1A4A] text-white rounded border border-[#9D9FA9]"
+              >
+                Close
+              </button>
+            </div>
+            {gradingLoading ? (
+              <div className="text-white">Loading...</div>
+            ) : gradingError ? (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-300 rounded p-3">{gradingError}</div>
+            ) : gradingSubmission ? (
+              <div className="space-y-4">
+                <div className="text-[#9D9FA9]">Reviewer: {gradingSubmission.username || gradingSubmission.user_id}</div>
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+                  {gradingQuestions.map((q: any, idx: number) => {
+                    const ans = gradingAnswers.find((a: any) => String(a.question_id) === String(q.id));
+                    const isText = q.type === 'text';
+                    return (
+                      <div key={q.id} className="bg-[#0C021E] border border-[#9D9FA9] rounded p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h5 className="text-white">Q{idx + 1}. {q.prompt}</h5>
+                          <span className="text-[#9D9FA9]">Marks: {q.marks}</span>
+                        </div>
+                        {isText ? (
+                          <div className="space-y-2">
+                            <div className="text-white">
+                              <span className="text-[#9D9FA9]">Answer:</span>
+                              <div className="mt-1 bg-[#1A0A3A] border border-[#9D9FA9]/40 rounded p-2 text-white whitespace-pre-wrap">
+                                {String(ans?.answer_text || '')}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-white mb-1">Score</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={Number(q.marks || 0)}
+                                value={ans?.score != null ? Number(ans.score) : ''}
+                                onChange={e => {
+                                  const scoreVal = e.target.value === '' ? null : Number(e.target.value);
+                                  setGradingAnswers(prev => prev.map(a => a.id === ans.id ? { ...a, score: scoreVal } : a));
+                                }}
+                                className="w-32 bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-2 py-1"
+                              />
+                            </div>
+                            {q.options?.answerKey && (
+                              <div className="text-[#9D9FA9] text-sm">
+                                Reference: {String(q.options.answerKey)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2 text-white">
+                            <div className="text-[#9D9FA9]">Selected: {Array.isArray(ans?.selected_options) ? (ans.selected_options || []).join(', ') : '-'}</div>
+                            <div className="text-[#9D9FA9]">Auto Score: {ans?.score != null ? Number(ans.score) : 0}</div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-white mb-1">Final Decision</label>
+                    <select
+                      value={finalDecision}
+                      onChange={e => setFinalDecision(e.target.value)}
+                      className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
+                    >
+                      <option value="">Select decision</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Needs Improvement">Needs Improvement</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!gradingSubmissionId) return;
+                      setGradingLoading(true);
+                      setGradingError(null);
+                      try {
+                        const payload = {
+                          answers: gradingAnswers
+                            .filter((a: any) => gradingQuestions.find((q: any) => String(q.id) === String(a.question_id))?.type === 'text')
+                            .map((a: any) => ({ answerId: a.id, score: a.score })),
+                          finalDecision: finalDecision || undefined,
+                        };
+                        const res = await fetch(`/api/admin/reviewer-tests/submissions/${gradingSubmissionId}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload),
+                        });
+                        const json = await res.json();
+                        if (!json.success) throw new Error(json.error || 'Failed to save grading');
+                        setGradingOpen(false);
+                        if (subViewTestId) await openSubmissions(subViewTestId);
+                      } catch (e: any) {
+                        setGradingError(e?.message || 'Failed to save grading');
+                      } finally {
+                        setGradingLoading(false);
+                      }
+                    }}
+                    className="px-4 py-2 bg-[#9050E9] text-white rounded"
+                  >
+                    Save Grading
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

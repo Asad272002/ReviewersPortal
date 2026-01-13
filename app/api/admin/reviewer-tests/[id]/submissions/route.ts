@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   try {
     const { data, error } = await supabaseAdmin
       .from('reviewer_test_submissions')
-      .select('id,user_id,username,total_score,submitted_at,time_taken_seconds')
+      .select('id,user_id,username,status,total_score,submitted_at,time_taken_seconds,final_decision')
       .eq('test_id', testId)
       .order('submitted_at', { ascending: false });
     if (error) throw error;

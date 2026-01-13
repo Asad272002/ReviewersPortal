@@ -88,7 +88,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const qMap = new Map<string, any>();
     (questions || []).forEach((q: any) => qMap.set(String(q.id), q));
 
-    // Compute scoring for MCQs
+    const gradingMode = String((test as any)?.grading_mode || 'auto');
+
+    // Compute scoring for MCQs (or defer all to admin when manual)
     let totalScore = 0;
     let autoScoreCompleted = true;
 
@@ -99,21 +101,32 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       if (!q) continue;
       let score: number | null = null;
       let ansStored: any = null;
-      if (q.type === 'mcq') {
-        const correct = Array.isArray(q.correct_answers) ? q.correct_answers : [];
-        const given = Array.isArray(a?.answer) ? a.answer : [a?.answer].filter(Boolean);
-        if (arraysEqualIgnoreOrder(given.map(String), correct.map(String))) {
-          score = Number(q.marks || 0);
-        } else {
-          score = 0;
-        }
-        totalScore += score || 0;
-        ansStored = given;
-      } else {
-        // text question requires manual grading
+      if (gradingMode === 'manual') {
         score = null;
         autoScoreCompleted = false;
-        ansStored = a?.answer ?? null;
+        if (q.type === 'mcq') {
+          const given = Array.isArray(a?.answer) ? a.answer : [a?.answer].filter(Boolean);
+          ansStored = given;
+        } else {
+          ansStored = a?.answer ?? null;
+        }
+      } else {
+        if (q.type === 'mcq') {
+          const correct = Array.isArray(q.correct_answers) ? q.correct_answers : [];
+          const given = Array.isArray(a?.answer) ? a.answer : [a?.answer].filter(Boolean);
+          if (arraysEqualIgnoreOrder(given.map(String), correct.map(String))) {
+            score = Number(q.marks || 0);
+          } else {
+            score = 0;
+          }
+          totalScore += score || 0;
+          ansStored = given;
+        } else {
+          // text question requires manual grading
+          score = null;
+          autoScoreCompleted = false;
+          ansStored = a?.answer ?? null;
+        }
       }
       answerRows.push({
         test_id: testId,

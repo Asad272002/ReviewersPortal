@@ -29,6 +29,7 @@ export default function ReviewerTestRunner() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [mySubmission, setMySubmission] = useState<any | null>(null);
   const [scorePopup, setScorePopup] = useState<{ open: boolean; score: number | null }>(() => ({ open: false, score: null }));
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [startTs] = useState<number>(() => Date.now());
@@ -79,9 +80,7 @@ export default function ReviewerTestRunner() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Failed to load');
       setTest(json.test);
-      setQuestions((json.questions || [])
-        .filter((q: any) => q?.type === 'mcq')
-        .map((q: any) => ({
+      setQuestions((json.questions || []).map((q: any) => ({
         id: String(q.id),
         type: q.type,
         prompt: q.prompt,
@@ -95,10 +94,13 @@ export default function ReviewerTestRunner() {
       const subRes = await fetch('/api/reviewer-tests/submissions');
       const subJson = await subRes.json();
       if (subJson?.success) {
-        const has = (subJson.submissions || []).some((s: any) => String(s?.test_id || '') === String(id) && String(s?.status || '') === 'submitted');
-        if (has) {
+        const sub = (subJson.submissions || []).find((s: any) => String(s?.test_id || '') === String(id));
+        if (sub && (String(sub?.status || '') === 'submitted' || String(sub?.status || '') === 'graded')) {
           setAlreadySubmitted(true);
           setError('You have already submitted this test. Only one attempt is allowed.');
+        }
+        if (sub) {
+          setMySubmission(sub);
         }
       }
     } catch (e: any) {
@@ -169,8 +171,15 @@ export default function ReviewerTestRunner() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Submission failed');
-      setSuccess(`Submitted! Auto score: ${json.totalScore}.`);
-      setScorePopup({ open: true, score: Number(json.totalScore ?? 0) });
+      const autoCompleted = !!json.autoScoreCompleted;
+      const manualOrPending = String(test?.grading_mode || '') === 'manual' || !autoCompleted;
+      if (manualOrPending) {
+        setSuccess('Submitted. Admins will review and grade your test. You will receive your score soon.');
+        setScorePopup({ open: false, score: null });
+      } else {
+        setSuccess(`Submitted! Your score: ${json.totalScore}.`);
+        setScorePopup({ open: true, score: Number(json.totalScore ?? 0) });
+      }
       setAlreadySubmitted(true);
     } catch (e: any) {
       setError(e?.message || 'Failed to submit');
@@ -198,8 +207,15 @@ export default function ReviewerTestRunner() {
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Submission failed');
-      setSuccess(`Time's up. Auto-submitted. Score: ${json.totalScore}.`);
-      setScorePopup({ open: true, score: Number(json.totalScore ?? 0) });
+      const autoCompleted = !!json.autoScoreCompleted;
+      const manualOrPending = String(test?.grading_mode || '') === 'manual' || !autoCompleted;
+      if (manualOrPending) {
+        setSuccess('Time is up and your test was auto-submitted. Admins will review and grade your answers. You will receive your score soon.');
+        setScorePopup({ open: false, score: null });
+      } else {
+        setSuccess(`Time's up. Auto-submitted. Your score: ${json.totalScore}.`);
+        setScorePopup({ open: true, score: Number(json.totalScore ?? 0) });
+      }
       setAlreadySubmitted(true);
     } catch (e: any) {
       setError(e?.message || 'Auto submission failed');
@@ -260,27 +276,38 @@ export default function ReviewerTestRunner() {
                               );
                             })}
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="space-y-2">
+                            <textarea
+                              value={String(answers[q.id] || '')}
+                              onChange={e => onSetText(q.id, e.target.value)}
+                              disabled={alreadySubmitted || timeUp}
+                              className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2 h-28"
+                              placeholder="Write your answer here..."
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
-                  </div>
+                </div>
 
-                  {success && (
-                    <div className="bg-green-500/10 border border-green-500/20 text-green-300 rounded p-3 mt-4">{success}</div>
-                  )}
-                  {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-300 rounded p-3 mt-4">{error}</div>
-                  )}
+                {success && (
+                  <div className="bg-green-500/10 border border-green-500/20 text-green-300 rounded p-3 mt-4">{success}</div>
+                )}
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-300 rounded p-3 mt-4">{error}</div>
+                )}
 
-                  <div className="mt-6 flex gap-2">
-                    <button
-                      onClick={onSubmit}
-                      disabled={submitting || alreadySubmitted || timeUp}
-                      className="px-4 py-2 bg-[#9050E9] hover:bg-[#A96AFF] text-white rounded disabled:opacity-60"
-                    >
-                      {submitting ? 'Submitting...' : (alreadySubmitted ? 'Already Submitted' : (timeUp ? 'Time Up' : 'Submit Test'))}
-                    </button>
-                  </div>
+                <div className="mt-6 flex gap-2">
+                  <button
+                    onClick={onSubmit}
+                    disabled={submitting || alreadySubmitted || timeUp}
+                    className="px-4 py-2 bg-[#9050E9] hover:bg-[#A96AFF] text-white rounded disabled:opacity-60"
+                  >
+                    {submitting ? 'Submitting...' : (alreadySubmitted ? 'Already Submitted' : (timeUp ? 'Time Up' : 'Submit Test'))}
+                  </button>
+                </div>
+
                 </div>
               ) : (
                 <div className="text-[#9D9FA9]">Test not found</div>
