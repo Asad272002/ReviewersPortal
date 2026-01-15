@@ -45,7 +45,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       .limit(1);
     if (tErr) throw tErr;
     const test = (tests && tests[0]) || null;
-    if (!test || test.status !== 'active') {
+    
+    if (!test) {
+      return NextResponse.json({ success: false, error: 'Test not found' }, { status: 404 });
+    }
+
+    // Only reviewers are restricted to active tests. Admins can view any status (e.g. for preview).
+    if (verified.role !== 'admin' && test.status !== 'active') {
       return NextResponse.json({ success: false, error: 'Test not found or inactive' }, { status: 404 });
     }
     const { data: questions, error: qErr } = await supabaseAdmin

@@ -214,7 +214,7 @@ export default function Support() {
         <div className="flex flex-1 overflow-hidden relative z-10">
           <Sidebar />
           
-          <main className="flex-1 p-8 overflow-y-auto relative z-10">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#1A0A3A] rounded-lg border border-[#9D9FA9] p-6">
                 <h2 className="font-montserrat font-semibold text-2xl text-white mb-4">Contact Information</h2>

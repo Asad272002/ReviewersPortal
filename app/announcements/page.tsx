@@ -338,7 +338,7 @@ export default function Announcements() {
         <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-8 relative overflow-y-auto">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 relative overflow-y-auto">
             <div className="relative z-10">
               {loading ? (
                 <div className="flex justify-center items-center h-64">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -51,27 +51,27 @@ const Sidebar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+    setIsMobileMenuOpen((prev) => !prev);
   };
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    const handleToggle = () => {
+      setIsMobileMenuOpen((prev) => !prev);
+    };
+
+    window.addEventListener('sidebar-toggle', handleToggle);
+
+    return () => {
+      window.removeEventListener('sidebar-toggle', handleToggle);
+    };
+  }, []);
   
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={toggleMobileMenu}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-[#0f0728]/90 backdrop-blur-md border border-white/10 rounded-xl shadow-lg text-white"
-      >
-        <div className="w-6 h-6 flex flex-col justify-center items-center gap-1.5">
-          <span className={`block w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
-          <span className={`block w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
-          <span className={`block w-5 h-0.5 bg-current rounded-full transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
-        </div>
-      </button>
-
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 

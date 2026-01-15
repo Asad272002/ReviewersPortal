@@ -36,14 +36,31 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
   };
   
   return (
-    <header className="flex justify-between items-center py-3 pl-14 pr-4 sm:py-4 sm:pl-20 sm:pr-6 lg:px-8 w-full bg-[#1A0A3A]/80 backdrop-blur-md border-b border-[#9D9FA9]/30 shadow-lg sticky top-0 z-40 transition-all duration-300">
-      <div className="flex items-center gap-2 sm:gap-4">
+    <header className="flex justify-between items-center py-3 pl-14 pr-3 sm:py-4 sm:pl-20 sm:pr-5 lg:px-8 w-full bg-[#1A0A3A]/80 backdrop-blur-md border-b border-[#9D9FA9]/30 shadow-lg sticky top-0 z-40 transition-all duration-300">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <button
+          type="button"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#0f0728]/90 border border-white/10 text-white lg:hidden"
+          aria-label="Toggle navigation menu"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('sidebar-toggle'));
+            }
+          }}
+        >
+          <span className="sr-only">Toggle navigation menu</span>
+          <div className="w-5 h-5 flex flex-col justify-center items-center gap-1.5">
+            <span className="block w-5 h-0.5 bg-current rounded-full"></span>
+            <span className="block w-5 h-0.5 bg-current rounded-full"></span>
+            <span className="block w-5 h-0.5 bg-current rounded-full"></span>
+          </div>
+        </button>
         <h1 className="font-montserrat font-bold text-xl sm:text-2xl lg:text-3xl text-white tracking-wide drop-shadow-md truncate">
           {title}
         </h1>
       </div>
       
-      <div className="flex items-center gap-3 sm:gap-6">
+      <div className="flex items-center gap-2 sm:gap-4 md:gap-5">
         {isLoading ? (
           // Loading Skeleton
           <div className="flex items-center gap-3 animate-pulse">
@@ -53,12 +70,12 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
             <div className="w-8 h-8 bg-white/10 rounded-full"></div>
           </div>
         ) : user ? (
-          <div className="flex items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-5">
             {/* Motion Toggle */}
             <button
               onClick={toggleMotion}
               className={`
-                group p-2 rounded-full transition-all duration-300 border
+                hidden sm:inline-flex group p-2 rounded-full transition-all duration-300 border
                 ${motionEnabled 
                   ? 'bg-primary/10 border-primary/30 hover:bg-primary/20 hover:border-primary/50' 
                   : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'}
@@ -87,7 +104,7 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
 
             <Link 
               href="/analysis" 
-              className="mr-2 sm:mr-4 font-montserrat text-white hover:text-white transition-all duration-300 flex items-center gap-2 group relative px-3 py-1.5 rounded-full hover:bg-white/10 border border-transparent hover:border-white/10"
+              className="hidden md:flex mr-2 md:mr-4 font-montserrat text-white hover:text-white transition-all duration-300 items-center gap-2 group relative px-3 py-1.5 rounded-full hover:bg-white/10 border border-transparent hover:border-white/10"
             >
                 <div className="p-1.5 rounded-full bg-primary/20 text-primary-light group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-[0_0_10px_rgba(144,80,233,0.3)] group-hover:shadow-[0_0_15px_rgba(144,80,233,0.6)]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -64,8 +64,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       return NextResponse.json({ success: false, error: 'Test not found or inactive' }, { status: 404 });
     }
 
-    // Prevent duplicate final submissions by same user
-    const { data: existingSubs, error: sErr } = await supabaseAdmin
+    // Prevent duplicate final submissions by same user; prefer updating in_progress
+    const { data: existingSubmitted, error: sErr } = await supabaseAdmin
       .from('reviewer_test_submissions')
       .select('id,status')
       .eq('test_id', testId)
@@ -73,9 +73,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       .eq('status', 'submitted')
       .limit(1);
     if (sErr) throw sErr;
-    if (existingSubs && existingSubs.length > 0) {
+    if (existingSubmitted && existingSubmitted.length > 0) {
       return NextResponse.json({ success: false, error: 'You have already submitted this test' }, { status: 409 });
     }
+    const { data: existingProgress, error: pErr } = await supabaseAdmin
+      .from('reviewer_test_submissions')
+      .select('id,status,started_at')
+      .eq('test_id', testId)
+      .eq('user_id', verified.userId)
+      .eq('status', 'in_progress')
+      .limit(1);
+    if (pErr) throw pErr;
 
     const { data: questions, error: qErr } = await supabaseAdmin
       .from('reviewer_test_questions')
@@ -140,25 +148,45 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       });
     }
 
-    // Create submission record (align with Supabase schema)
-    const submissionRow = {
-      test_id: testId,
-      user_id: verified.userId,
-      username: verified.username,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-      time_taken_seconds: elapsedSeconds,
-      total_score: totalScore,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    const { data: subIns, error: subErr } = await supabaseAdmin
-      .from('reviewer_test_submissions')
-      .insert([submissionRow])
-      .select('id')
-      .limit(1);
-    if (subErr) throw subErr;
-    const submissionId = subIns && subIns[0]?.id;
+    // Create or update submission record
+    const nowIso = new Date().toISOString();
+    let submissionId: string | null = null;
+    if (existingProgress && existingProgress.length > 0) {
+      const sub = existingProgress[0];
+      const { data: upd, error: updErr } = await supabaseAdmin
+        .from('reviewer_test_submissions')
+        .update({
+          status: 'submitted',
+          submitted_at: nowIso,
+          time_taken_seconds: elapsedSeconds,
+          total_score: totalScore,
+          updated_at: nowIso,
+        })
+        .eq('id', sub.id)
+        .select('id')
+        .limit(1);
+      if (updErr) throw updErr;
+      submissionId = upd && upd[0]?.id;
+    } else {
+      const submissionRow = {
+        test_id: testId,
+        user_id: verified.userId,
+        username: verified.username,
+        status: 'submitted',
+        submitted_at: nowIso,
+        time_taken_seconds: elapsedSeconds,
+        total_score: totalScore,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      const { data: subIns, error: subErr } = await supabaseAdmin
+        .from('reviewer_test_submissions')
+        .insert([submissionRow])
+        .select('id')
+        .limit(1);
+      if (subErr) throw subErr;
+      submissionId = subIns && subIns[0]?.id;
+    }
 
     // Insert answers (link to submission_id per schema)
     if (answerRows.length > 0) {

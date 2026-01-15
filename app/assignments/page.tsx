@@ -17,7 +17,7 @@ export default function AssignmentsPage() {
         <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           
-          <main className="flex-1 p-8 overflow-y-auto animate-fadeIn relative">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fadeIn relative">
             <div className="mb-8">
               <h1 className="font-montserrat font-bold text-4xl text-white mb-4">
                 My Review Assignments

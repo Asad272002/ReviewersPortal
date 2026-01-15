@@ -294,6 +294,7 @@ export default function ReviewerTestsManager() {
                   <td className="py-2">{new Date(t.created_at).toLocaleString()}</td>
                   <td className="py-2 flex gap-2">
                     <button onClick={() => openSubmissions(t.id)} className="px-2 py-1 bg-[#2A1A4A] text-white rounded border border-[#9D9FA9]">Submissions</button>
+                    <button onClick={() => window.open(`/reviewer-tests/${t.id}?preview=true`, '_blank')} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded border border-purple-400/30">Preview</button>
                     <button onClick={() => onEditTest(t.id)} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded border border-blue-400/30">Edit</button>
                     <button onClick={() => onDeleteTest(t.id)} className="px-2 py-1 bg-red-500/20 text-red-300 rounded border border-red-400/30">Delete</button>
                   </td>
@@ -416,12 +417,11 @@ export default function ReviewerTestsManager() {
                     </div>
 
                     <div className="mb-2">
-                      <input
-                        type="text"
+                      <textarea
                         value={q.prompt}
                         onChange={e => onUpdateQuestion(q.localId, { prompt: e.target.value })}
-                        className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2"
-                        placeholder="Question prompt"
+                        className="w-full bg-[#0C021E] text-white border border-[#9D9FA9] rounded px-3 py-2 h-24 whitespace-pre-wrap"
+                        placeholder="Question prompt (supports Markdown)"
                       />
                     </div>
 
