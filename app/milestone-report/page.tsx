@@ -248,16 +248,39 @@ export default function MilestoneReportPage() {
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
+        {success && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4 animate-in slide-in-from-top-10 fade-in duration-300">
+            <div className="bg-[#1A0A3A]/90 backdrop-blur-md border border-[#22C55E] text-white rounded-2xl shadow-[0_0_30px_rgba(34,197,94,0.3)] p-4 relative">
+              <button 
+                onClick={() => setSuccess(null)}
+                className="absolute top-2 right-2 text-[#B8BAC4] hover:text-white transition-colors p-1"
+              >
+                ✕
+              </button>
+              <div className="flex gap-4">
+                <div className="bg-[#22C55E]/20 rounded-full p-2 h-fit text-xl">✅</div>
+                <div className="flex-1">
+                  <h4 className="font-montserrat font-semibold text-[#22C55E] mb-1">Report Submitted!</h4>
+                  <div className="text-sm text-gray-200 space-y-2">
+                    <p>
+                      Your PDF report is ready: <a className="underline font-bold text-[#A96AFF] hover:text-[#c490ff]" href={success.url} target="_blank" rel="noreferrer">View PDF</a>
+                    </p>
+                    <p className="border-t border-white/10 pt-2 text-[#B8BAC4] text-xs uppercase font-bold tracking-wider">Next Step Required</p>
+                    <p>
+                      Please submit this data to the Operations Form: <br/>
+                      <a href="https://docs.google.com/forms/d/e/1FAIpQLSdl2YJjNWzHvvNeE6095Hqw9mDdDHPFWu64CFUXuy4MTcHAJw/viewform" target="_blank" rel="noreferrer" className="underline font-bold text-[#22C55E] hover:text-[#4ade80]">Open Google Form →</a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" />
         <Header title="Milestone Report Submit" />
         <div className="flex flex-1 relative z-10 overflow-hidden">
           <Sidebar />
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto relative">
-            {success && (
-              <div className="bg-green-600/20 border border-green-500 text-green-300 rounded-xl p-4 mb-6">
-                ✅ Report submitted successfully. <a className="underline" href={success.url} target="_blank" rel="noreferrer">Open Sheet</a>
-              </div>
-            )}
             {error && (
               <div className="bg-red-600/20 border border-red-500 text-red-300 rounded-xl p-4 mb-6">❌ {error}</div>
             )}
