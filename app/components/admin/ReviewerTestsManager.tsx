@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type QuestionType = 'mcq' | 'text';
 
@@ -67,6 +68,9 @@ export default function ReviewerTestsManager() {
   const [gradingAnswers, setGradingAnswers] = useState<any[]>([]);
   const [gradingQuestions, setGradingQuestions] = useState<any[]>([]);
   const [finalDecision, setFinalDecision] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const fetchTests = async () => {
     setLoading(true);
@@ -512,14 +516,15 @@ export default function ReviewerTestsManager() {
           </form>
         </div>
       )}
-      {subViewOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-[#1A0A3A] border border-[#9D9FA9] rounded-xl p-6 w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-3">
+      {subViewOpen && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-[#1A0A3A] border border-[#9D9FA9] rounded-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3 shrink-0">
               <h4 className="text-white font-montserrat text-lg">Submissions</h4>
               <button onClick={closeSubmissions} className="px-2 py-1 bg-[#2A1A4A] text-white rounded border border-[#9D9FA9]">Close</button>
             </div>
-            {subViewLoading ? (
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {subViewLoading ? (
               <div className="text-white">Loading submissions...</div>
             ) : subViewError ? (
               <div className="bg-red-500/10 border border-red-500/20 text-red-300 rounded p-3">{subViewError}</div>
@@ -589,12 +594,14 @@ export default function ReviewerTestsManager() {
                 </table>
               </div>
             )}
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {gradingOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      {gradingOpen && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4">
           <div className="bg-[#1A0A3A] border border-[#9D9FA9] rounded-xl p-6 w-full max-w-3xl">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-white font-montserrat text-lg">Grade Submission</h4>
@@ -711,7 +718,8 @@ export default function ReviewerTestsManager() {
               </div>
             ) : null}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
