@@ -44,6 +44,15 @@ export default function BotpressChat() {
         "clientId": "9fdf924e-0ab1-458f-af70-d643bc7e3027"
       });
     }
+
+    return () => {
+      // Cleanup Botpress widget on unmount
+      const widget = document.getElementById('bp-web-widget');
+      if (widget) widget.remove();
+      
+      const container = document.getElementById('bp-web-widget-container');
+      if (container) container.remove();
+    };
   }, [isLoaded]);
 
   return (
