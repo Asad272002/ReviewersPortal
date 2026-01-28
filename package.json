@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@botpress/webchat": "^4.3.2",
     "@googleapis/drive": "^6.0.0",
     "@googleapis/sheets": "^6.1.0",
     "@sparticuz/chromium-min": "^141.0.0",

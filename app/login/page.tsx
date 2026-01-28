@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '../context/AuthContext';
 import * as THREE from 'three';
+import dynamic from 'next/dynamic';
+
+const BotpressChat = dynamic(() => import('../components/BotpressChat'), { ssr: false });
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -170,6 +173,7 @@ export default function Login() {
   };
 
   return (
+    <>
     <div className="min-h-screen relative overflow-hidden">
       {/* Three.js Canvas Background */}
       <canvas 
@@ -313,5 +317,9 @@ export default function Login() {
         </div>
       </div>
     </div>
+      
+      {/* Botpress Webchat UI */}
+      <BotpressChat />
+    </>
   );
 }
