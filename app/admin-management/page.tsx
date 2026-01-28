@@ -651,18 +651,7 @@ export default function AdminManagement() {
         case 'milestone-reports':
           return (
             <div className="space-y-6">
-              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-                  <h3 className="font-montserrat font-semibold text-xl text-white">Milestone Reports</h3>
-                  <button
-                    onClick={() => setActiveSection('overview')}
-                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
-                  >
-                    ← Back to Overview
-                  </button>
-                </div>
-                <MilestoneReportsManager />
-              </div>
+              <MilestoneReportsManager onBack={() => setActiveSection('overview')} />
             </div>
           );
 
