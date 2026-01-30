@@ -49,6 +49,7 @@ export default function MilestoneReportPage() {
   const setField = (k: keyof typeof form, v: any) => setForm(prev => ({ ...prev, [k]: v }));
   const [projects, setProjects] = useState<{ code: string; title: string; link?: string }[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
+  const [availableMilestones, setAvailableMilestones] = useState<any[]>([])
   const [showTitleSug, setShowTitleSug] = useState(false)
   const [showCodeSug, setShowCodeSug] = useState(false)
 
@@ -121,6 +122,28 @@ export default function MilestoneReportPage() {
     window.addEventListener('resize', handleResize);
     return () => { window.removeEventListener('resize', handleResize); renderer.dispose(); };
   }, []);
+
+  useEffect(() => {
+    if (!form.proposalId) {
+      setAvailableMilestones([]);
+      return;
+    }
+    
+    (async () => {
+      try {
+        const res = await fetch(`/api/projects/${form.proposalId}/milestones`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setAvailableMilestones(json.data);
+        } else {
+          setAvailableMilestones([]);
+        }
+      } catch (e) {
+        console.error(e);
+        setAvailableMilestones([]);
+      }
+    })();
+  }, [form.proposalId]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,7 +338,24 @@ export default function MilestoneReportPage() {
                 <h2 className="font-montserrat font-semibold text-xl text-white mb-4">Section 1: Reviewer Identification and Project Context</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Reviewer Mattermost Handle" required value={form.reviewerHandle} readOnly />
-                  <input className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition" placeholder="Proposal Link" required value={form.proposalLink} onChange={e=>setField('proposalLink', e.target.value)} />
+                  <div className="relative">
+                    <input className="bg-[#0C021E] border border-[#9D9FA9] rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition w-full pr-10" placeholder="Proposal Link" required value={form.proposalLink} onChange={e=>setField('proposalLink', e.target.value)} />
+                    {form.proposalLink && (
+                      <a 
+                        href={form.proposalLink.startsWith('http') ? form.proposalLink : `https://${form.proposalLink}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A96AFF] hover:text-white transition-colors"
+                        title="Open Link"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                      </a>
+                    )}
+                  </div>
 
                   <div className="flex flex-col gap-2 relative">
                     <label className="text-white text-sm">Proposal Title (search)</label>
@@ -396,7 +436,41 @@ export default function MilestoneReportPage() {
                     )}
                   </div>
                   <input id="milestoneTitle" className={`bg-[#0C021E] border ${invalidFields['milestoneTitle'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Title" required value={form.milestoneTitle} onChange={e=>setField('milestoneTitle', e.target.value)} />
-                  <input id="milestoneNumber" type="number" min={0} max={100} step={1} className={`bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Number (0–100)" required value={form.milestoneNumber} onChange={e=>setField('milestoneNumber', e.target.value)} />
+                  <div className="flex flex-col gap-2">
+                    {availableMilestones.length > 0 ? (
+                      <div className="relative">
+                        <select
+                          id="milestoneNumber"
+                          className={`w-full bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition appearance-none`}
+                          value={form.milestoneNumber}
+                          onChange={e => {
+                              const num = e.target.value;
+                              setField('milestoneNumber', num);
+                              const m = availableMilestones.find(x => x.milestone_number.toString() === num);
+                              if (m) {
+                                  setField('milestoneTitle', m.title);
+                                  setField('milestoneBudgetAmount', m.budget?.toString() || '');
+                                  setField('milestoneDescriptionFromProposal', [m.description, m.deliverables ? `Deliverables:\n${m.deliverables}` : ''].filter(Boolean).join('\n\n'));
+                              }
+                          }}
+                        >
+                          <option value="">Select Milestone</option>
+                          {availableMilestones.map(m => (
+                              <option key={m.id} value={m.milestone_number}>
+                                  Milestone {m.milestone_number}: {m.title}
+                              </option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="#9D9FA9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                    ) : (
+                      <input id="milestoneNumber" type="number" min={0} max={100} step={1} className={`bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Number (0–100)" required value={form.milestoneNumber} onChange={e=>setField('milestoneNumber', e.target.value)} />
+                    )}
+                  </div>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B8BAC4]">$</span>
                     <input id="milestoneBudgetAmount" type="number" min={0} className={`bg-[#0C021E] border ${invalidFields['milestoneBudgetAmount'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg pl-7 p-3 text-white w-full focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Budget Amount" required value={form.milestoneBudgetAmount} onChange={e=>setField('milestoneBudgetAmount', e.target.value)} />
