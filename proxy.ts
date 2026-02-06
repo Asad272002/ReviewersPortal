@@ -30,7 +30,7 @@ const roleBasedRoutes = {
   team: ['/announcements', '/documents', '/guides', '/processes', '/resources', '/support', '/vote-proposals', '/reviewer-tests', '/chat']
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Special-case: if user hits /login and already has a valid session, redirect to dashboard
