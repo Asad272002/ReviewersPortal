@@ -143,7 +143,7 @@ const Sidebar = () => {
         />
         <NavItem 
           icon="documents-icon.svg" 
-          label="Requirement Documents" 
+          label="Idea Box" 
           href="/documents"
           active={pathname === '/documents'} 
           multiline={true} 

@@ -406,7 +406,7 @@ export default function Support() {
                 
                 <div className="border-b border-[#9D9FA9] pb-4">
                   <h3 className="font-montserrat font-medium text-lg text-gray-200">How do I submit a proposal for review?</h3>
-                  <p className="font-montserrat text-gray-300">Navigate to the "Requirement Documents" section and click on "Submit Your Proposal" to access the submission form.</p>
+                  <p className="font-montserrat text-gray-300">Navigate to the "Idea Box" section and click on "Submit Your Proposal" to access the submission form.</p>
                 </div>
                 
                 <div>

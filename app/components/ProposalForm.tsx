@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import Image from 'next/image';
 import { validateInput, validateRequiredText, validateNumber, sanitizeInput } from '../utils/validation';
+import { FileText, CheckCircle, AlertCircle, Loader2, Send } from 'lucide-react';
 
 interface FormData {
   reviewerName: string;
@@ -208,26 +208,22 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
   };
 
   return (
-    <div className="bg-card-bg border border-border-color rounded-lg p-6 animate-fadeIn">
+    <div className="w-full">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover-glow">
-          <Image src="/icons/document-icon.svg" alt="Proposal" width={24} height={24} />
+        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <FileText className="w-5 h-5 text-white" />
         </div>
         <h2 className="font-montserrat font-semibold text-2xl text-white">Proposal Submission Form</h2>
       </div>
       
       {submitStatus && (
-        <div className={`mb-6 p-4 rounded-lg ${submitStatus.success ? 'bg-success bg-opacity-20' : 'bg-error bg-opacity-20'}`}>
+        <div className={`mb-6 p-4 rounded-lg border ${submitStatus.success ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${submitStatus.success ? 'bg-success' : 'bg-error'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${submitStatus.success ? 'bg-green-500' : 'bg-red-500'}`}>
               {submitStatus.success ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <CheckCircle className="w-4 h-4 text-white" />
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <AlertCircle className="w-4 h-4 text-white" />
               )}
             </div>
             <p className="font-montserrat text-white">{submitStatus.message}</p>
@@ -245,9 +241,10 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               name="reviewerName"
               value={formData.reviewerName}
               onChange={handleChange}
-              className="input"
+              className="input bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
               required
             />
+            {validationErrors.reviewerName && <p className="form-error">{validationErrors.reviewerName}</p>}
           </div>
           
           <div className="form-group">
@@ -258,9 +255,10 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               name="proposalTitle"
               value={formData.proposalTitle}
               onChange={handleChange}
-              className="input"
+              className="input bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
               required
             />
+            {validationErrors.proposalTitle && <p className="form-error">{validationErrors.proposalTitle}</p>}
           </div>
         </div>
         
@@ -272,7 +270,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               name="projectCategory"
               value={formData.projectCategory}
               onChange={handleChange}
-              className="input"
+              className="input bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
               required
             >
               <option value="">Select category</option>
@@ -282,6 +280,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               <option value="community">Community</option>
               <option value="other">Other</option>
             </select>
+            {validationErrors.projectCategory && <p className="form-error">{validationErrors.projectCategory}</p>}
           </div>
           
           <div className="form-group">
@@ -291,7 +290,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               name="teamSize"
               value={formData.teamSize}
               onChange={handleChange}
-              className="input"
+              className="input bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
               required
             >
               <option value="">Select size</option>
@@ -300,6 +299,7 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               <option value="6-10">Medium (6-10 people)</option>
               <option value="11+">Large (11+ people)</option>
             </select>
+            {validationErrors.teamSize && <p className="form-error">{validationErrors.teamSize}</p>}
           </div>
           
           <div className="form-group">
@@ -310,10 +310,11 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
               name="budgetEstimate"
               value={formData.budgetEstimate}
               onChange={handleChange}
-              className="input"
+              className="input bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
               placeholder="e.g. 5000"
               required
             />
+            {validationErrors.budgetEstimate && <p className="form-error">{validationErrors.budgetEstimate}</p>}
           </div>
         </div>
         
@@ -325,11 +326,12 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
             name="timelineWeeks"
             value={formData.timelineWeeks}
             onChange={handleChange}
-            className="input"
+            className="input bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
             min="1"
             max="52"
             required
           />
+          {validationErrors.timelineWeeks && <p className="form-error">{validationErrors.timelineWeeks}</p>}
         </div>
         
         <div className="form-group">
@@ -339,9 +341,10 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
             name="proposalSummary"
             value={formData.proposalSummary}
             onChange={handleChange}
-            className="input min-h-[100px]"
+            className="input min-h-[100px] bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
             required
           ></textarea>
+          {validationErrors.proposalSummary && <p className="form-error">{validationErrors.proposalSummary}</p>}
         </div>
         
         <div className="form-group">
@@ -351,9 +354,10 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
             name="technicalApproach"
             value={formData.technicalApproach}
             onChange={handleChange}
-            className="input min-h-[100px]"
+            className="input min-h-[100px] bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
             required
           ></textarea>
+          {validationErrors.technicalApproach && <p className="form-error">{validationErrors.technicalApproach}</p>}
         </div>
         
         <div className="form-group">
@@ -363,31 +367,26 @@ export default function ProposalForm({ onSubmitSuccess }: ProposalFormProps) {
             name="additionalNotes"
             value={formData.additionalNotes}
             onChange={handleChange}
-            className="input min-h-[100px]"
+            className="input min-h-[100px] bg-[#1A0A3A]/50 border-white/10 focus:border-[#9050E9] focus:ring-1 focus:ring-[#9050E9]"
           ></textarea>
         </div>
         
         <div className="flex justify-end">
           <button 
             type="submit" 
-            className="btn btn-submit px-6 py-3 hover-lift"
+            className="btn btn-submit px-6 py-3 hover-lift flex items-center gap-2"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
                 <span>Submitting...</span>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center gap-2">
+              <>
                 <span>Submit Proposal</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </div>
+                <Send className="w-5 h-5" />
+              </>
             )}
           </button>
         </div>

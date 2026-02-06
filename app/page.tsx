@@ -240,7 +240,7 @@ export default function Home() {
                   />
                   
                   <InfoCard 
-                    title="Requirement Documents" 
+                    title="Idea Box" 
                     icon="requirement-header-icon.svg"
                     content={[
                       "Project Requirements",
@@ -361,7 +361,7 @@ export default function Home() {
                     />
 
                     <InfoCard 
-                      title="Requirement Documents" 
+                      title="Idea Box" 
                       icon="requirement-header-icon.svg"
                       content={[
                         "Project Requirements",
