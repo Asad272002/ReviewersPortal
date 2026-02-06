@@ -441,7 +441,7 @@ export default function ReviewerTestsManager() {
                           </button>
                           <span className="text-[#9D9FA9]">Select correct answer(s)</span>
                         </div>
-                        {q.options.map((opt, idx) => (
+                        {q.options.map((opt: string, idx: number) => (
                           <div key={idx} className="flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -450,7 +450,7 @@ export default function ReviewerTestsManager() {
                                 const id = String(idx);
                                 const next = e.target.checked
                                   ? Array.from(new Set([...q.correctAnswers, id]))
-                                  : q.correctAnswers.filter(x => x !== id);
+                                  : q.correctAnswers.filter((x: string) => x !== id);
                                 onUpdateQuestion(q.localId, { correctAnswers: next });
                               }}
                             />
@@ -467,8 +467,8 @@ export default function ReviewerTestsManager() {
                             <button
                               type="button"
                               onClick={() => {
-                                const nextOpts = q.options.filter((_, i) => i !== idx);
-                                const nextCorrect = q.correctAnswers.filter(x => x !== String(idx)).map(x => {
+                                const nextOpts = q.options.filter((_: string, i: number) => i !== idx);
+                                const nextCorrect = q.correctAnswers.filter((x: string) => x !== String(idx)).map((x: string) => {
                                   const xi = Number(x);
                                   return xi > idx ? String(xi - 1) : x;
                                 });
