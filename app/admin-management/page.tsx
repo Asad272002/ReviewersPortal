@@ -19,6 +19,20 @@ import VotingSettingsManager from '../components/admin/VotingSettingsManager';
 import ReviewerTestsManager from '../components/admin/ReviewerTestsManager';
 import MilestoneReportsManager from '../components/admin/MilestoneReportsManager';
 import AwardedTeamsInfoManager from '../components/admin/AwardedTeamsInfoManager';
+import { 
+  Users, 
+  HelpCircle, 
+  Megaphone, 
+  FileText, 
+  FolderOpen, 
+  PenTool, 
+  BarChart2, 
+  Settings, 
+  Award, 
+  Activity, 
+  RotateCw,
+  Info
+} from 'lucide-react';
 
 
 interface SheetData {
@@ -271,146 +285,144 @@ export default function AdminManagement() {
     );
   }
 
-  const renderOverview = () => (
-    <div className="space-y-6">
-      <div className="bg-[#0C021E] rounded-lg border border-[#9D9FA9] p-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-          <h3 className="font-montserrat font-semibold text-xl text-white">Data Overview</h3>
-          <button
-            onClick={refreshAllData}
-            className="bg-[#9050E9] hover:bg-[#A96AFF] text-white font-montserrat font-medium py-2 px-4 rounded transition-colors w-full sm:w-auto"
-          >
-            🔄 Refresh All Data
-          </button>
+  const renderOverview = () => {
+    // Calculate derived stats
+    const totalUsers = sheetData.users.length;
+    const reviewersCount = sheetData.users.filter((u: any) => u.role === 'reviewer').length;
+    const teamCount = sheetData.users.filter((u: any) => u.role === 'team').length;
+    
+    const totalTickets = sheetData.supportTickets.length;
+    const openTickets = sheetData.supportTickets.filter((t: any) => t.status === 'open' || t.status === 'pending').length;
+    
+    const stats = [
+      { 
+        label: 'Total Users', 
+        value: totalUsers, 
+        subValue: `${reviewersCount} Reviewers • ${teamCount} Teams`,
+        icon: Users, 
+        color: 'from-blue-500 to-cyan-400' 
+      },
+      { 
+        label: 'Support Tickets', 
+        value: totalTickets, 
+        subValue: `${openTickets > 0 ? openTickets : 'No'} Pending`, 
+        icon: HelpCircle, 
+        color: 'from-orange-500 to-red-400' 
+      },
+      { 
+        label: 'Announcements', 
+        value: sheetData.announcements.length, 
+        subValue: 'Active updates', 
+        icon: Megaphone, 
+        color: 'from-purple-500 to-pink-400' 
+      },
+      { 
+        label: 'Resources', 
+        value: sheetData.resources.length, 
+        subValue: 'Files & Links', 
+        icon: FileText, 
+        color: 'from-emerald-500 to-teal-400' 
+      }
+    ];
+
+    const quickActions = [
+      { id: 'announcements', label: 'Announcements', desc: 'Manage system updates', icon: Megaphone },
+      { id: 'resources', label: 'Resources', desc: 'Manage files & links', icon: FolderOpen },
+      { id: 'processes', label: 'Process Docs', desc: 'Update workflows', icon: FileText },
+      { id: 'users', label: 'Manage Users', desc: 'Add or edit users', icon: Users },
+      { id: 'support-tickets', label: 'Support Tickets', desc: 'View user inquiries', icon: HelpCircle },
+      { id: 'reviewer-tests', label: 'Reviewer Tests', desc: 'Manage quizzes', icon: PenTool },
+      { id: 'milestone-reports', label: 'Milestone Reports', desc: 'View submissions', icon: BarChart2 },
+      { id: 'voting-settings', label: 'Voting Settings', desc: 'Configure polls', icon: Settings },
+      { id: 'awarded-teams', label: 'Awarded Teams Connect', desc: 'Manage awards', icon: Award },
+      { id: 'awarded-teams-info', label: 'Teams Info', desc: 'Project details', icon: Info },
+    ];
+
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <div key={index} className="group relative bg-[#130b29]/80 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6 overflow-hidden transition-all duration-300 hover:bg-[#1A0B2E] hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/10">
+              <div className={`absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br ${stat.color} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity duration-500 rounded-full`}></div>
+              
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} bg-opacity-10`}>
+                    <stat.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 text-gray-400 border border-white/5">
+                    Live
+                  </span>
+                </div>
+                
+                <h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3>
+                <p className="text-sm font-medium text-gray-300 mb-1">{stat.label}</p>
+                <p className="text-xs text-gray-500">{stat.subValue}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-            <h4 className="font-montserrat font-medium text-white mb-2">Announcements</h4>
-            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.announcements.length}</p>
-            <p className="text-sm text-[#9D9FA9]">Total entries</p>
+
+        {/* Quick Actions */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Activity className="w-5 h-5 text-purple-400" />
+              Quick Actions
+            </h3>
+            <button
+              onClick={refreshAllData}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-sm font-medium text-white transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:-translate-y-0.5"
+            >
+              <RotateCw className="w-4 h-4 animate-spin-slow" />
+              Refresh Data
+            </button>
           </div>
-          
-          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-            <h4 className="font-montserrat font-medium text-white mb-2">Resources</h4>
-            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.resources.length}</p>
-            <p className="text-sm text-[#9D9FA9]">Total entries</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {quickActions.map((action) => (
+              <button
+                key={action.id}
+                onClick={() => setActiveSection(action.id)}
+                className="flex items-start gap-4 p-4 rounded-xl bg-[#130b29]/80 backdrop-blur-md border border-purple-500/20 hover:bg-[#1A0B2E] hover:border-purple-500/50 transition-all duration-300 text-left group hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-1"
+              >
+                <div className="p-2.5 rounded-lg bg-gray-800/50 group-hover:bg-purple-500/20 text-gray-400 group-hover:text-purple-300 transition-colors">
+                  <action.icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white group-hover:text-purple-300 transition-colors text-sm mb-1">
+                    {action.label}
+                  </h4>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    {action.desc}
+                  </p>
+                </div>
+              </button>
+            ))}
+            
+            {/* Special Actions */}
+            <button
+              onClick={handleMilestoneReportRedirect}
+              className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-purple-500/30 hover:border-purple-500/60 transition-all duration-300 text-left group hover:shadow-lg hover:shadow-purple-500/20 hover:-translate-y-1 backdrop-blur-md"
+            >
+              <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 transition-colors">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-white group-hover:text-purple-300 transition-colors text-sm mb-1">
+                  Submit Report
+                </h4>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Admin submission
+                </p>
+              </div>
+            </button>
           </div>
-          
-          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-            <h4 className="font-montserrat font-medium text-white mb-2">Process Docs</h4>
-            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.processes.length}</p>
-            <p className="text-sm text-[#9D9FA9]">Total entries</p>
-          </div>
-          
-          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-            <h4 className="font-montserrat font-medium text-white mb-2">Support Tickets</h4>
-            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.supportTickets.length}</p>
-            <p className="text-sm text-[#9D9FA9]">Total tickets</p>
-          </div>
-          <div className="bg-[#0C021E] rounded-lg p-4 border border-[#9D9FA9]">
-            <h4 className="font-montserrat font-medium text-white mb-2">Users</h4>
-            <p className="text-2xl font-bold text-[#9050E9]">{sheetData.users.length}</p>
-            <p className="text-sm text-[#9D9FA9]">Total users</p>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-[rgba(144,80,233,0.1)] rounded-lg border border-[#9D9FA9] p-6">
-        <h3 className="font-montserrat font-semibold text-lg text-white mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button
-            onClick={() => setActiveSection('announcements')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">📢 Manage Announcements</h4>
-            <p className="text-sm text-[#9D9FA9]">Create, edit, delete announcements with full CRUD operations</p>
-          </button>
-          
-          <button
-            onClick={() => setActiveSection('resources')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">📚 Manage Resources</h4>
-            <p className="text-sm text-[#9D9FA9]">Create, edit, delete resources with file upload support</p>
-          </button>
-          
-          <button
-            onClick={() => setActiveSection('processes')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">📚 Manage Process Documentation</h4>
-            <p className="text-sm text-[#9D9FA9]">Create, edit, delete process documents, workflows, and procedures</p>
-          </button>
-          
-          <button
-            onClick={() => setActiveSection('awarded-teams')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">🏆 Awarded Teams Connect</h4>
-            <p className="text-sm text-[#9D9FA9]">Manage team-reviewer assignments and chat connections</p>
-          </button>
-
-          <button
-            onClick={() => setActiveSection('awarded-teams-info')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">ℹ️ Awarded Teams Info</h4>
-            <p className="text-sm text-[#9D9FA9]">Manage project details, milestones, and awards</p>
-          </button>
-
-          <button
-            onClick={handleMilestoneReportRedirect}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">📝 Submit Milestone Report</h4>
-            <p className="text-sm text-[#9D9FA9]">Submit milestone reports as an admin</p>
-          </button>
-
-          <button
-            onClick={() => setActiveSection('users')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">👤 Manage Users</h4>
-            <p className="text-sm text-[#9D9FA9]">Add, update, delete users; reviewer-specific fields</p>
-          </button>
-          
-          <button
-            onClick={() => setActiveSection('support-tickets')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">🎫 Support Tickets Management</h4>
-            <p className="text-sm text-[#9D9FA9]">View, manage, and respond to user support tickets</p>
-          </button>
-
-          <button
-            onClick={() => setActiveSection('voting-settings')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">⚙️ Voting Settings</h4>
-            <p className="text-sm text-[#9D9FA9]">Configure voting duration, vote changes, and minimum votes</p>
-          </button>
-
-          <button
-            onClick={() => setActiveSection('reviewer-tests')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">🧪 Reviewer Tests</h4>
-            <p className="text-sm text-[#9D9FA9]">Create, edit, and manage reviewer test quizzes</p>
-          </button>
-
-          <button
-            onClick={() => setActiveSection('milestone-reports')}
-            className="bg-[#0C021E] hover:bg-[#1A0B2E] border border-[#9D9FA9] rounded-lg p-4 text-left transition-colors"
-          >
-            <h4 className="font-montserrat font-medium text-white mb-2">📝 Milestone Reports</h4>
-            <p className="text-sm text-[#9D9FA9]">View submitted milestone review reports</p>
-          </button>
-
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDataSection = (sectionName: string, data: any[]) => (
     <div className="space-y-6">

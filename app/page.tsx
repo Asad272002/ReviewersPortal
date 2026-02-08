@@ -12,6 +12,7 @@ import { useAuth } from './context/AuthContext';
 import { useMotion } from './context/MotionContext';
 import Image from "next/image";
 import AwardedTeamsConnect from "./components/AwardedTeamsConnect";
+import { Vote, ClipboardList } from 'lucide-react';
 
 export default function Home() {
   const { user } = useAuth();
@@ -265,7 +266,7 @@ export default function Home() {
                   
                   <InfoCard 
                     title="Vote for Proposals" 
-                    icon="vote-icon.svg"
+                    LucideIcon={Vote}
                     content={[
                       "Review Proposals",
                       "Cast Your Vote",
@@ -277,7 +278,7 @@ export default function Home() {
 
                   <InfoCard 
                     title="Reviewer Tests" 
-                    icon="documents-icon.svg"
+                    LucideIcon={ClipboardList}
                     content={[
                       "Assessments",
                       "Timed quizzes",

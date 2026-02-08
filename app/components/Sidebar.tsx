@@ -5,9 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { LucideIcon, Vote, ClipboardList } from 'lucide-react';
 
 interface NavItemProps {
-  icon: string;
+  icon?: string;
+  LucideIcon?: LucideIcon;
   label: string;
   href: string;
   active?: boolean;
@@ -15,7 +17,7 @@ interface NavItemProps {
   onClick?: () => void;
 }
 
-const NavItem = ({ icon, label, href, active = false, multiline = false, onClick }: NavItemProps) => {
+const NavItem = ({ icon, LucideIcon, label, href, active = false, multiline = false, onClick }: NavItemProps) => {
   return (
     <Link 
       href={href} 
@@ -27,13 +29,19 @@ const NavItem = ({ icon, label, href, active = false, multiline = false, onClick
       }`}
     >
       <div className={`relative z-10 w-6 h-6 flex items-center justify-center transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`}>
-        <Image 
-          src={`/icons/${icon}`} 
-          alt={label} 
-          width={20} 
-          height={20} 
-          className={`transition-all duration-300 ${active ? 'brightness-100' : 'brightness-75 group-hover:brightness-100'}`}
-        />
+        {LucideIcon ? (
+          <LucideIcon 
+            className={`w-5 h-5 transition-all duration-300 ${active ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}
+          />
+        ) : icon ? (
+          <Image 
+            src={`/icons/${icon}`} 
+            alt={label} 
+            width={20} 
+            height={20} 
+            className={`transition-all duration-300 ${active ? 'brightness-100' : 'brightness-75 group-hover:brightness-100'}`}
+          />
+        ) : null}
       </div>
       <span className={`relative z-10 font-montserrat text-sm font-medium ${multiline ? 'leading-tight' : ''} tracking-wide`}>
         {label}
@@ -158,7 +166,7 @@ const Sidebar = () => {
         />
 
         <NavItem 
-          icon="vote-icon.svg" 
+          LucideIcon={Vote} 
           label="Vote for Proposals" 
           href="/vote-proposals"
           active={pathname === '/vote-proposals'} 
@@ -167,7 +175,7 @@ const Sidebar = () => {
         />
         {user?.role === 'reviewer' && (
           <NavItem 
-            icon="vote-icon.svg" 
+            LucideIcon={ClipboardList} 
             label="Reviewer Test" 
             href="/reviewer-tests"
             active={pathname?.startsWith('/reviewer-tests') || false} 

@@ -52,6 +52,8 @@ export default function MilestoneReportPage() {
   const [availableMilestones, setAvailableMilestones] = useState<any[]>([])
   const [showTitleSug, setShowTitleSug] = useState(false)
   const [showCodeSug, setShowCodeSug] = useState(false)
+  const [showGuide, setShowGuide] = useState(true)
+  const [highlightFields, setHighlightFields] = useState(false)
 
   const s1 = ['proposalLink','proposalTitle','proposalId','milestoneTitle','milestoneNumber','milestoneBudgetAmount','date']
   const s2 = ['demoProvided','verificationStatus'].concat(form.demoProvided === 'Yes' ? ['testRunLink'] : [])
@@ -299,6 +301,7 @@ export default function MilestoneReportPage() {
             </div>
           </div>
         )}
+
         <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" />
         <Header title="Milestone Report Submit" />
         <div className="flex flex-1 relative z-10 overflow-hidden">
@@ -334,6 +337,30 @@ export default function MilestoneReportPage() {
               </div>
             </div>
           <form onSubmit={onSubmit} className="space-y-6">
+            {showGuide && !success && (
+              <div className="bg-gradient-to-r from-[#A96AFF]/10 to-[#9050E9]/5 border border-[#A96AFF]/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="flex-shrink-0 w-10 h-10 bg-[#A96AFF]/20 rounded-xl flex items-center justify-center text-xl shadow-[0_0_15px_rgba(169,106,255,0.3)]">
+                  💡
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-200 text-sm leading-relaxed">
+                    <span className="text-white font-semibold block sm:inline mb-1 sm:mb-0">Pro Tip: </span>
+                    Start by selecting the <span className="text-[#A96AFF] font-bold">Proposal Code</span> and <span className="text-[#A96AFF] font-bold">Milestone Number</span> to auto-fill project details instantly.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGuide(false);
+                    setHighlightFields(true);
+                    setTimeout(() => setHighlightFields(false), 6000);
+                  }}
+                  className="flex-shrink-0 w-full sm:w-auto px-4 py-2 bg-[#A96AFF]/10 hover:bg-[#A96AFF]/20 border border-[#A96AFF]/30 rounded-lg text-xs font-semibold text-[#A96AFF] transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                >
+                  Got it, thanks!
+                </button>
+              </div>
+            )}
               <div className="bg-white/5 hover:bg-white/10 transition-all duration-300 border border-white/20 rounded-2xl p-6">
                 <h2 className="font-montserrat font-semibold text-xl text-white mb-4">Section 1: Reviewer Identification and Project Context</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,7 +428,7 @@ export default function MilestoneReportPage() {
                     <label className="text-white text-sm">Proposal Code (search)</label>
                     <input
                       id="proposalId"
-                      className={`bg-[#0C021E] border ${invalidFields['proposalId'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`}
+                      className={`bg-[#0C021E] border ${invalidFields['proposalId'] ? 'border-red-500 ring-1 ring-red-500' : highlightFields ? 'border-[#A96AFF] ring-2 ring-[#A96AFF] shadow-[0_0_15px_rgba(169,106,255,0.5)]' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition duration-500`}
                       placeholder={loadingProjects ? 'Loading codes...' : 'Type to search code'}
                       value={form.proposalId}
                       onFocus={() => setShowCodeSug(true)}
@@ -441,7 +468,7 @@ export default function MilestoneReportPage() {
                       <div className="relative">
                         <select
                           id="milestoneNumber"
-                          className={`w-full bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition appearance-none`}
+                          className={`w-full bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : highlightFields ? 'border-[#A96AFF] ring-2 ring-[#A96AFF] shadow-[0_0_15px_rgba(169,106,255,0.5)]' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition appearance-none duration-500`}
                           value={form.milestoneNumber}
                           onChange={e => {
                               const num = e.target.value;
@@ -468,7 +495,7 @@ export default function MilestoneReportPage() {
                         </div>
                       </div>
                     ) : (
-                      <input id="milestoneNumber" type="number" min={0} max={100} step={1} className={`bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition`} placeholder="Milestone Number (0–100)" required value={form.milestoneNumber} onChange={e=>setField('milestoneNumber', e.target.value)} />
+                      <input id="milestoneNumber" type="number" min={0} max={100} step={1} className={`bg-[#0C021E] border ${invalidFields['milestoneNumber'] ? 'border-red-500 ring-1 ring-red-500' : highlightFields ? 'border-[#A96AFF] ring-2 ring-[#A96AFF] shadow-[0_0_15px_rgba(169,106,255,0.5)]' : 'border-[#9D9FA9]'} rounded-lg p-3 text-white focus:ring-2 focus:ring-[#A96AFF] transition duration-500`} placeholder="Milestone Number (0–100)" required value={form.milestoneNumber} onChange={e=>setField('milestoneNumber', e.target.value)} />
                     )}
                   </div>
                   <div className="relative">
