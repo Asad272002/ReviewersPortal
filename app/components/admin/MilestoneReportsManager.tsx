@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { 
   RefreshCw, 
   Search, 
@@ -12,17 +12,31 @@ import {
   Calendar,
   User,
   Hash,
-  ArrowLeft
+  ArrowLeft,
+  Share2,
+  MessageSquare,
+  Eye
 } from 'lucide-react';
 
+interface PartnerReview {
+  id: string;
+  verdict: 'Approve' | 'Reject';
+  comment: string;
+  updated_at: string;
+}
+
 interface ReportRow {
+  id: string; // Added ID
   reviewer: string;
   proposalId: string;
   proposalTitle: string;
   milestoneTitle: string;
+  milestoneNumber: string;
   date: string;
   verdict: string;
   reportLink: string;
+  isSharedWithPartner: boolean;
+  partnerReview: PartnerReview | null;
 }
 
 interface MilestoneReportsManagerProps {
@@ -35,6 +49,8 @@ export default function MilestoneReportsManager({ onBack }: MilestoneReportsMana
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true); 
@@ -50,6 +66,28 @@ export default function MilestoneReportsManager({ onBack }: MilestoneReportsMana
       setError(err?.message || 'Failed to load reports');
     } finally { 
       setLoading(false); 
+    }
+  };
+
+  const toggleShare = async (id: string, currentStatus: boolean) => {
+    setToggling(id);
+    try {
+      const res = await fetch(`/api/admin/milestone-reports/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isSharedWithPartner: !currentStatus })
+      });
+      
+      if (res.ok) {
+        setReports(prev => prev.map(r => r.id === id ? { ...r, isSharedWithPartner: !currentStatus } : r));
+      } else {
+        const err = await res.json();
+        alert(`Failed to update: ${err.error}`);
+      }
+    } catch (e) {
+      alert('Error updating share status');
+    } finally {
+      setToggling(null);
     }
   };
 
@@ -176,12 +214,14 @@ export default function MilestoneReportsManager({ onBack }: MilestoneReportsMana
                   <th className="p-4 text-gray-300 font-bold text-xs uppercase tracking-wider">Milestone</th>
                   <th className="p-4 text-gray-300 font-bold text-xs uppercase tracking-wider">Date</th>
                   <th className="p-4 text-gray-300 font-bold text-xs uppercase tracking-wider">Status</th>
+                  <th className="p-4 text-gray-300 font-bold text-xs uppercase tracking-wider text-center">Shared</th>
                   <th className="p-4 text-gray-300 font-bold text-xs uppercase tracking-wider text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
                 {filteredReports.map((r, idx) => (
-                  <tr key={idx} className="hover:bg-white/5 transition-colors group">
+                  <Fragment key={r.id}>
+                  <tr className="hover:bg-white/5 transition-colors group">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center border border-white/20 text-xs font-bold text-white shadow-sm">
@@ -200,7 +240,7 @@ export default function MilestoneReportsManager({ onBack }: MilestoneReportsMana
                       </div>
                     </td>
                     <td className="p-4 text-gray-300 text-sm font-medium">
-                      {r.milestoneTitle}
+                      {r.milestoneTitle} <span className="text-white/40 text-xs">#{r.milestoneNumber}</span>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2 text-gray-300 text-sm">
@@ -209,23 +249,83 @@ export default function MilestoneReportsManager({ onBack }: MilestoneReportsMana
                       </div>
                     </td>
                     <td className="p-4">
-                      {getVerdictBadge(r.verdict)}
+                      <div className="flex flex-col gap-1">
+                        {getVerdictBadge(r.verdict)}
+                        {r.partnerReview && (
+                          <div className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full inline-flex self-start ${
+                            r.partnerReview.verdict === 'Approve' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            Partner: {r.partnerReview.verdict}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button 
+                        onClick={() => toggleShare(r.id, r.isSharedWithPartner)}
+                        disabled={toggling === r.id}
+                        className={`p-2 rounded-lg transition-all ${
+                          r.isSharedWithPartner 
+                            ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' 
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        } ${toggling === r.id ? 'opacity-50 cursor-wait' : ''}`}
+                        title={r.isSharedWithPartner ? "Shared with partner" : "Not shared with partner"}
+                      >
+                        <Share2 size={18} />
+                      </button>
                     </td>
                     <td className="p-4 text-right">
-                      {r.reportLink ? (
-                        <a 
-                          href={r.reportLink} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#9050E9]/10 hover:bg-[#9050E9]/20 text-[#9050E9] hover:text-[#A96AFF] text-xs font-medium transition-colors border border-[#9050E9]/20"
-                        >
-                          View Sheet <ExternalLink size={12} />
-                        </a>
-                      ) : (
-                        <span className="text-gray-600 text-xs italic">No Link</span>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {r.partnerReview && (
+                          <button
+                            onClick={() => setExpandedReport(expandedReport === r.id ? null : r.id)}
+                            className={`p-2 rounded-lg transition-all ${expandedReport === r.id ? 'bg-purple-500/30 text-purple-300' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                            title="View Partner Comments"
+                          >
+                            <MessageSquare size={16} />
+                          </button>
+                        )}
+                        {r.reportLink ? (
+                          <a 
+                            href={r.reportLink} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#9050E9]/10 hover:bg-[#9050E9]/20 text-[#9050E9] hover:text-[#A96AFF] text-xs font-medium transition-colors border border-[#9050E9]/20"
+                          >
+                            View <ExternalLink size={12} />
+                          </a>
+                        ) : (
+                          <span className="text-gray-600 text-xs italic">No Link</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
+                  {/* Expanded Partner Review Details */}
+                  {expandedReport === r.id && r.partnerReview && (
+                    <tr className="bg-white/5 border-b border-white/5 animate-in fade-in slide-in-from-top-2">
+                      <td colSpan={7} className="p-4">
+                        <div className="bg-black/20 rounded-xl p-4 border border-white/5 ml-12">
+                          <div className="flex items-start gap-4">
+                            <div className={`p-2 rounded-full ${r.partnerReview.verdict === 'Approve' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                              {r.partnerReview.verdict === 'Approve' ? <CheckCircle size={20} /> : <XCircle size={20} />}
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-sm font-semibold text-white mb-1">
+                                Partner Feedback: <span className={r.partnerReview.verdict === 'Approve' ? 'text-green-400' : 'text-red-400'}>{r.partnerReview.verdict}</span>
+                              </h5>
+                              <p className="text-gray-300 text-sm leading-relaxed">
+                                {r.partnerReview.comment || "No comments provided."}
+                              </p>
+                              <div className="mt-2 text-xs text-gray-500">
+                                Submitted on {new Date(r.partnerReview.updated_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

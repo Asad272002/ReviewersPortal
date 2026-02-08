@@ -1,34 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { verifyJwtAndGetUser } from '@/lib/auth/admin-auth';
 
 export const runtime = 'nodejs';
-
-type Role = 'admin' | 'reviewer' | 'team';
-
-function normalizeRole(roleRaw: any): Role {
-  const roleNorm = String(roleRaw || '').toLowerCase().replace(/\s+/g, '_');
-  if (roleNorm === 'admin') return 'admin';
-  if (roleNorm === 'team' || roleNorm === 'team_leader') return 'team';
-  return 'reviewer';
-}
-
-async function verifyJwtAndGetUser(req: NextRequest): Promise<{ userId: string; username: string; role: Role } | null> {
-  const token = req.cookies.get('token')?.value;
-  if (!token) return null;
-  try {
-    const secretKey = process.env.JWT_SECRET || 'your-secret-key';
-    const secret = new TextEncoder().encode(secretKey);
-    const { payload } = await jwtVerify(token, secret);
-    const userId = String((payload as any)?.userId || '');
-    const username = String((payload as any)?.username || '');
-    const role = normalizeRole((payload as any)?.role);
-    if (!userId) return null;
-    return { userId, username, role };
-  } catch (e) {
-    return null;
-  }
-}
 
 // GET: Fetch a test with questions (admin only)
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {

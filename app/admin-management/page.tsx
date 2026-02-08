@@ -19,19 +19,23 @@ import VotingSettingsManager from '../components/admin/VotingSettingsManager';
 import ReviewerTestsManager from '../components/admin/ReviewerTestsManager';
 import MilestoneReportsManager from '../components/admin/MilestoneReportsManager';
 import AwardedTeamsInfoManager from '../components/admin/AwardedTeamsInfoManager';
+import PartnerManager from '../components/admin/PartnerManager';
+import OrganizationManager from '../components/admin/OrganizationManager';
 import { 
-  Users, 
-  HelpCircle, 
-  Megaphone, 
-  FileText, 
-  FolderOpen, 
-  PenTool, 
-  BarChart2, 
-  Settings, 
-  Award, 
-  Activity, 
+  Activity,
+  Award,
+  BarChart2,
+  Briefcase,
+  Building,
+  FileText,
+  FolderOpen,
+  HelpCircle,
+  Info,
+  Megaphone,
+  PenTool,
   RotateCw,
-  Info
+  Settings,
+  Users
 } from 'lucide-react';
 
 
@@ -336,6 +340,8 @@ export default function AdminManagement() {
       { id: 'voting-settings', label: 'Voting Settings', desc: 'Configure polls', icon: Settings },
       { id: 'awarded-teams', label: 'Awarded Teams Connect', desc: 'Manage awards', icon: Award },
       { id: 'awarded-teams-info', label: 'Teams Info', desc: 'Project details', icon: Info },
+      { id: 'organizations', label: 'Organizations', desc: 'Manage partner orgs', icon: Building },
+      { id: 'partners', label: 'Partner Portal', desc: 'Manage partners', icon: Briefcase },
     ];
 
     return (
@@ -664,6 +670,42 @@ export default function AdminManagement() {
           return (
             <div className="space-y-6">
               <MilestoneReportsManager onBack={() => setActiveSection('overview')} />
+            </div>
+          );
+
+        case 'partners':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Partner Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <PartnerManager />
+              </div>
+            </div>
+          );
+
+        case 'organizations':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Organization Management</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <OrganizationManager />
+              </div>
             </div>
           );
 

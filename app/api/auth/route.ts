@@ -9,11 +9,13 @@ export async function POST(request: NextRequest) {
 
     let username = ''
     let password = ''
+    let isPartnerLogin = false
 
     if (contentType.includes('application/json')) {
       const data = await request.json()
       username = String(data?.username || '').trim()
       password = String(data?.password || '')
+      isPartnerLogin = Boolean(data?.isPartnerLogin)
     } else if (contentType.includes('application/x-www-form-urlencoded')) {
       const raw = await request.text()
       const params = new URLSearchParams(raw)
@@ -54,6 +56,29 @@ export async function POST(request: NextRequest) {
 
     const roleLower = String(dbUser.role || '').toLowerCase().replace(/\s+/g, '_')
     const normalizedRole = roleLower === 'admin' ? 'admin' : roleLower === 'team_leader' ? 'team' : roleLower === 'team' ? 'team' : roleLower === 'partner' ? 'partner' : 'reviewer'
+
+    // Strict role check
+    console.log(`[Auth] Login attempt: User=${username}, Role=${normalizedRole}, IsPartnerLogin=${isPartnerLogin}`);
+
+    if (isPartnerLogin) {
+      // If logging in via Partner Portal, MUST be a partner
+      if (normalizedRole !== 'partner') {
+        console.log(`[Auth] Blocked: Non-partner (${normalizedRole}) tried to login via Partner Portal`);
+        return NextResponse.json(
+          { success: false, message: 'Invalid credentials for Partner Portal' },
+          { status: 401 }
+        )
+      }
+    } else {
+      // If logging in via Review Circle (standard login), MUST NOT be a partner
+      if (normalizedRole === 'partner') {
+        console.log(`[Auth] Blocked: Partner tried to login via Review Circle`);
+        return NextResponse.json(
+          { success: false, message: 'Please use the Partner Portal to login' },
+          { status: 401 }
+        )
+      }
+    }
 
     const secretKey = process.env.JWT_SECRET || 'your-secret-key'
     const secret = new TextEncoder().encode(secretKey)

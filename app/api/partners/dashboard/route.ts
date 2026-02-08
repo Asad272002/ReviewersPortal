@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { supabaseService } from '@/lib/supabase/service';
-import fs from 'fs';
-import path from 'path';
 
 export const runtime = 'nodejs';
 
-// RFP Projects from projectdetails.txt
-const RFP_PROJECTS = [
+// Fallback if no organization config found
+const DEFAULT_RFP_PROJECTS = [
   { code: 'DFR3-RFP1', name: 'Community Engagement scores' },
   { code: 'DFR3-RFP2', name: 'Unique Knowledge Graph for Source and Content Reliability' },
   { code: 'DFR3-RFP3', name: 'DeFiGraph - Knowledge Graph (KG) for DeFi' },
@@ -22,61 +20,122 @@ const RFP_PROJECTS = [
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Fetch all proposals to match with RFP codes
-    // Note: We assume the proposal ID or Title might contain the code, or we just return the static list 
-    // populated with data if found.
-    // Since the current system uses PROP-XXX IDs, we might not find a direct match for 'DFR3-RFP1' 
-    // unless it's stored in a specific column.
-    // However, for the purpose of this task, we will try to find proposals that might match, 
-    // but primarily we will return the structure based on the RFP list.
+    // 1. Authenticate User
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    let userRole = '';
+    let userId = '';
+
+    try {
+      const { jwtVerify } = await import('jose');
+      const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+      const secret = new TextEncoder().encode(secretKey);
+      const { payload } = await jwtVerify(token, secret);
+      userRole = payload.role as string;
+      userId = payload.userId as string;
+    } catch {
+      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
+    }
+
+    if (userRole !== 'partner') {
+      return NextResponse.json({ success: false, message: 'Access denied' }, { status: 403 });
+    }
+
+    // 2. Fetch Partner's Organization Config
+    // First get partner record using userId (which maps to partners.id or users.id? 
+    // In auth route: userId: dbUser.id. 
+    // dbUser comes from validateUserCredentials.
+    // If it's a partner, it might be from 'partners' table directly or 'users' table.
+    // Let's assume userId is the partner's ID if they logged in as partner.
+    // Wait, validateUserCredentials checks both tables?
+    // Let's check supabaseService.validateUserCredentials.
     
-    // Actually, looking at the previous analysis, the user implies these projects EXIST in the system.
-    // Let's fetch all milestone reports first, as they contain proposal_id and proposal_title.
-    
+    // Assuming userId is the ID in 'partners' table.
+    const { data: partner, error: partnerError } = await supabaseAdmin
+      .from('partners')
+      .select('organization_id')
+      .eq('id', userId)
+      .single();
+
+    let projectConfig = DEFAULT_RFP_PROJECTS;
+
+    if (partner && partner.organization_id) {
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('project_config')
+        .eq('id', partner.organization_id)
+        .single();
+      
+      if (org && org.project_config && Array.isArray(org.project_config) && org.project_config.length > 0) {
+        projectConfig = org.project_config;
+      }
+    }
+
+    // 3. Fetch all reports and reviews
+    // Only fetch shared reports
     const { data: reports, error: reportsError } = await supabaseAdmin
       .from('milestone_review_reports')
       .select('*')
+      .eq('is_shared_with_partner', true)
       .order('created_at', { ascending: false });
 
     if (reportsError) throw reportsError;
 
-    // Fetch partner reviews
     const { data: partnerReviews, error: prError } = await supabaseAdmin
       .from('partner_reviews')
       .select('*');
 
     if (prError) throw prError;
 
-    // We will group reports by proposal_id.
-    // And also try to map them to our RFP projects if possible.
-    // If the proposal_id matches one of the RFP codes, great.
-    // If not, we might need to look at the title.
+    // Fetch project milestones info
+    const projectCodes = Array.from(new Set(reports?.map((r: any) => r.proposal_id) || []));
+    
+    const { data: milestonesInfo } = await supabaseAdmin
+      .from('project_milestones')
+      .select('*')
+      .in('project_code', projectCodes);
 
+    const { data: projectsInfo } = await supabaseAdmin
+      .from('awarded_teams_info')
+      .select('project_code, proposal_link')
+      .in('project_code', projectCodes);
+
+    const linksMap = new Map();
+    projectsInfo?.forEach((p: any) => {
+      if (p.proposal_link) linksMap.set(p.project_code, p.proposal_link);
+    });
+
+    const milestonesMap = new Map();
+    milestonesInfo?.forEach((m: any) => {
+      // Map by project_code and milestone_number
+      // Convert milestone_number to string for consistent key
+      const key = `${m.project_code}-${m.milestone_number}`;
+      milestonesMap.set(key, m);
+    });
+
+    // 4. Map projects
     const projectsMap = new Map();
 
-    // Initialize with RFP projects
-    RFP_PROJECTS.forEach(p => {
+    projectConfig.forEach((p: any) => {
       projectsMap.set(p.code, {
         id: p.code,
         title: p.name,
         isRfp: true,
+        projectLink: linksMap.get(p.code) || null,
         reports: [],
         stats: { total: 0, approved: 0, rejected: 0, pending: 0 }
       });
     });
 
-    // Process reports
     reports?.forEach(report => {
-      // Check if this report belongs to an RFP project
-      // We check if the proposal_id matches or if the title contains the RFP name
       let matchedCode = null;
 
-      // Direct ID match?
       if (projectsMap.has(report.proposal_id)) {
         matchedCode = report.proposal_id;
-      } 
-      // Title match?
-      else {
+      } else {
         for (const [code, project] of projectsMap.entries()) {
           if (report.proposal_title?.includes(project.title) || 
               report.proposal_id?.includes(code) ||
@@ -90,15 +149,39 @@ export async function GET(request: NextRequest) {
       if (matchedCode) {
         const project = projectsMap.get(matchedCode);
         
-        // Attach partner review if exists
+        // Update link if not set and we found a match
+        if (!project.projectLink && linksMap.has(matchedCode)) {
+            project.projectLink = linksMap.get(matchedCode);
+        }
+
         const partnerReview = partnerReviews?.find(pr => pr.report_id === report.id);
+        
+        // Find milestone info
+        const milestoneKey = `${matchedCode}-${report.milestone_number}`;
+        const rawMilestoneInfo = milestonesMap.get(milestoneKey) || null;
+        
+        let milestoneInfo = null;
+        if (rawMilestoneInfo) {
+            let deliverables: string[] = [];
+            if (typeof rawMilestoneInfo.deliverables === 'string') {
+                deliverables = rawMilestoneInfo.deliverables.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+            } else if (Array.isArray(rawMilestoneInfo.deliverables)) {
+                deliverables = rawMilestoneInfo.deliverables;
+            }
+
+            milestoneInfo = {
+                description: rawMilestoneInfo.description,
+                objectives: [],
+                deliverables: deliverables
+            };
+        }
 
         project.reports.push({
           ...report,
-          partner_review: partnerReview || null
+          partner_review: partnerReview || null,
+          milestone_info: milestoneInfo
         });
 
-        // Update stats
         project.stats.total++;
         if (partnerReview?.verdict === 'Approve') project.stats.approved++;
         else if (partnerReview?.verdict === 'Reject') project.stats.rejected++;

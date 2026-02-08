@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ExternalLink, BookOpen, Globe, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import * as THREE from 'three';
 import dynamic from 'next/dynamic';
@@ -20,15 +21,19 @@ export default function Login() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const animationIdRef = useRef<number | null>(null);
   
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
 
   // Client-side guard: if already authenticated, go to dashboard
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.replace('/');
+      if (user?.role === 'partner') {
+        router.replace('/partner-dashboard');
+      } else {
+        router.replace('/');
+      }
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router, user]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -158,10 +163,14 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const success = await login(username, password);
+      const success = await login(username, password, isPartnerLogin);
       
       if (success) {
-        router.push('/');
+        if (isPartnerLogin) {
+          router.push('/partner-dashboard');
+        } else {
+          router.push('/');
+        }
       } else {
         setError('Invalid username or password');
       }
@@ -187,7 +196,7 @@ export default function Login() {
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/30 to-indigo-900/40" style={{ zIndex: 1 }} />
       
       {/* Partner Login Toggle - Top Right */}
-      <div className="absolute top-8 right-8 z-20 animate-fadeIn hidden md:block">
+      <div className="absolute top-8 right-8 z-20 animate-fadeIn">
         <button
           onClick={() => setIsPartnerLogin(!isPartnerLogin)}
           className={`
@@ -206,74 +215,64 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Review Circle Information - Centered Left */}
-      <div className="absolute top-1/2 -translate-y-1/2 left-8 z-20 max-w-sm hidden md:block animate-fadeIn">
-        <div className="backdrop-blur-md bg-white/10 p-6 rounded-2xl border border-white/10 shadow-xl hover:bg-white/15 transition-all duration-300 group">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-300">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-300">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-            </div>
-            <h2 className="font-montserrat font-bold text-lg text-white">Review Circle Info</h2>
-          </div>
-          
-          <div className="space-y-3">
-            <a 
-              href="https://df-manual.gitbook.io/df-book/review-circle/structure-and-governance" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all duration-300 group/link"
-            >
-              <div className="p-2 rounded-lg bg-blue-500/20 text-blue-300 group-hover/link:text-blue-200 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                </svg>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-white/90 group-hover/link:text-white">Review Circle Gitbook</div>
-                <div className="text-xs text-white/50 group-hover/link:text-white/70">Structure & Governance</div>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-white/30 group-hover/link:text-white/60 group-hover/link:translate-x-1 transition-all">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                <polyline points="15 3 21 3 21 9"></polyline>
-                <line x1="10" y1="14" x2="21" y2="3"></line>
-              </svg>
-            </a>
-
-            <a 
-              href="https://deepfunding.ai/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all duration-300 group/link"
-            >
-              <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300 group-hover/link:text-purple-200 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="2" y1="12" x2="22" y2="12"></line>
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                </svg>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-white/90 group-hover/link:text-white">Deep Funding Site</div>
-                <div className="text-xs text-white/50 group-hover/link:text-white/70">Official Website</div>
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-auto text-white/30 group-hover/link:text-white/60 group-hover/link:translate-x-1 transition-all">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                <polyline points="15 3 21 3 21 9"></polyline>
-                <line x1="10" y1="14" x2="21" y2="3"></line>
-              </svg>
-            </a>
-          </div>
-        </div>
-      </div>
       
       {/* Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
+        {/* Left Side - Info Card (Desktop - Absolute Positioned) */}
+        <div className="hidden lg:block absolute left-12 top-1/2 -translate-y-1/2 w-80 animate-fadeInRight z-20">
+          <div className="backdrop-blur-xl bg-white/5 p-6 rounded-2xl border border-white/10 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+                <Info size={18} className="text-purple-300" />
+              </div>
+              <h3 className="font-montserrat font-bold text-lg text-white">Review Circle Info</h3>
+            </div>
+            
+            <div className="space-y-4">
+              <a 
+                href="https://df-manual.gitbook.io/df-book/review-circle" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block group"
+              >
+                <div className="p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all duration-300 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                      <BookOpen size={20} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors">Review Circle Gitbook</div>
+                      <div className="text-xs text-white/50">Structure & Governance</div>
+                    </div>
+                  </div>
+                  <ExternalLink size={14} className="text-white/30 group-hover:text-white/70 transition-colors" />
+                </div>
+              </a>
+
+              <a 
+                href="https://deepfunding.ai/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block group"
+              >
+                <div className="p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all duration-300 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
+                      <Globe size={20} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white group-hover:text-purple-300 transition-colors">Deep Funding Site</div>
+                      <div className="text-xs text-white/50">Official Website</div>
+                    </div>
+                  </div>
+                  <ExternalLink size={14} className="text-white/30 group-hover:text-white/70 transition-colors" />
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
           {/* Glassmorphism Login Card */}
           <div className="backdrop-blur-xl bg-white/10 p-8 rounded-2xl border border-white/20 shadow-2xl animate-fadeIn">
             <div className="text-center mb-8">
@@ -380,22 +379,29 @@ export default function Login() {
                 )}
               </button>
             </form>
-            
-            {/* Demo Credentials */}
-            <div className="mt-8 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <h3 className="font-montserrat font-semibold text-white text-sm">Demo Credentials</h3>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
-                  <span className="font-montserrat text-blue-300 font-medium">Reviewer</span>
-                  <code className="font-mono text-white/80 bg-black/20 px-2 py-1 rounded text-xs">reviewer1 / password123</code>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
-                  <span className="font-montserrat text-purple-300 font-medium">Admin</span>
-                  <code className="font-mono text-white/80 bg-black/20 px-2 py-1 rounded text-xs">admin1 / admin123</code>
-                </div>
+
+            {/* Mobile/Tablet Resources Links */}
+            <div className="lg:hidden mt-8 border-t border-white/10 pt-6">
+              <h3 className="font-montserrat font-bold text-sm text-white/80 mb-4 uppercase tracking-wider">Resources</h3>
+              <div className="space-y-3">
+                <a 
+                  href="https://df-manual.gitbook.io/df-book/review-circle" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block p-3 rounded-lg bg-white/5 border border-white/5 flex items-center justify-between"
+                >
+                  <span className="text-sm text-white/90">Review Circle Gitbook</span>
+                  <ExternalLink size={14} className="text-white/50" />
+                </a>
+                <a 
+                  href="https://deepfunding.ai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block p-3 rounded-lg bg-white/5 border border-white/5 flex items-center justify-between"
+                >
+                  <span className="text-sm text-white/90">Deep Funding Site</span>
+                  <ExternalLink size={14} className="text-white/50" />
+                </a>
               </div>
             </div>
           </div>

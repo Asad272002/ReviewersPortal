@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import * as THREE from 'three';
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
@@ -16,6 +17,7 @@ import { Vote, ClipboardList } from 'lucide-react';
 
 export default function Home() {
   const { user } = useAuth();
+  const router = useRouter();
   const { motionEnabled } = useMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -23,6 +25,12 @@ export default function Home() {
   const animationIdRef = useRef<number | null>(null);
   const [isAwardedTeamMember, setIsAwardedTeamMember] = useState(false);
   const [isCheckingTeamStatus, setIsCheckingTeamStatus] = useState(true);
+
+  useEffect(() => {
+    if (user?.role === 'partner') {
+      router.replace('/partner-dashboard');
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (user?.role === 'team') {

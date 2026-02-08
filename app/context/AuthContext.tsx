@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { User, AuthState } from '../types/auth';
 
 interface AuthContextType extends AuthState {
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, isPartnerLogin?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   isLoading: boolean;
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string, isPartnerLogin: boolean = false): Promise<boolean> => {
     try {
       // Call the API route for authentication
       const response = await fetch('/api/auth', {
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, isPartnerLogin }),
       });
       
       const data = await response.json();

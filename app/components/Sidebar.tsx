@@ -107,7 +107,7 @@ const Sidebar = () => {
             <div className="flex items-center gap-2">
               <div className="h-px w-8 bg-gradient-to-r from-[#6366f1] to-transparent"></div>
               <p className="font-montserrat text-xs font-medium text-[#a855f7] uppercase tracking-wider">
-                {user?.role === 'admin' ? 'Admin Portal' : user?.role === 'reviewer' ? 'Reviewer Portal' : user?.role === 'team' ? 'Team Portal' : 'Portal'}
+                {user?.role === 'admin' ? 'Admin Portal' : user?.role === 'reviewer' ? 'Reviewer Portal' : user?.role === 'team' ? 'Team Portal' : user?.role === 'partner' ? 'Partner Portal' : 'Portal'}
               </p>
             </div>
           </div>
@@ -115,100 +115,122 @@ const Sidebar = () => {
         
         {/* Navigation Items */}
         <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-1.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-          <NavItem 
-            icon="dashboard-icon.svg" 
-            label="Dashboard" 
-            href="/"
-            active={pathname === '/'} 
-            onClick={closeMobileMenu}
-          />
-        {user?.role === 'reviewer' && (
-          <NavItem 
-            icon="profile-icon.svg" 
-            label="My Assignments" 
-            href="/assignments"
-            active={pathname === '/assignments'} 
-            multiline={true} 
-            onClick={closeMobileMenu}
-          />
-        )}
-        {(user?.role === 'reviewer' || user?.role === 'admin') && (
-          <NavItem 
-            icon="documents-icon.svg" 
-            label="Milestone Report Submit" 
-            href="/milestone-report"
-            active={pathname === '/milestone-report'} 
-            multiline={true} 
-            onClick={closeMobileMenu}
-          />
-        )}
-        <NavItem 
-          icon="announcements-icon.svg" 
-          label="Announcements" 
-          href="/announcements"
-          active={pathname === '/announcements'} 
-          onClick={closeMobileMenu}
-        />
-        <NavItem 
-          icon="documents-icon.svg" 
-          label="Idea Box" 
-          href="/documents"
-          active={pathname === '/documents'} 
-          multiline={true} 
-          onClick={closeMobileMenu}
-        />
-        <NavItem 
-          icon="resources-icon.svg" 
-          label="Resources" 
-          href="/resources"
-          active={pathname === '/resources'} 
-          onClick={closeMobileMenu}
-        />
+          {user?.role === 'partner' ? (
+            <>
+              <NavItem 
+                icon="dashboard-icon.svg" 
+                label="Dashboard" 
+                href="/partner-dashboard"
+                active={pathname === '/partner-dashboard'} 
+                onClick={closeMobileMenu}
+              />
+              <NavItem 
+                icon="support-icon.svg" 
+                label="Contact & Support" 
+                href="/support"
+                active={pathname === '/support'} 
+                multiline={true} 
+                onClick={closeMobileMenu}
+              />
+            </>
+          ) : (
+            <>
+              <NavItem 
+                icon="dashboard-icon.svg" 
+                label="Dashboard" 
+                href="/"
+                active={pathname === '/'} 
+                onClick={closeMobileMenu}
+              />
+              {user?.role === 'reviewer' && (
+                <NavItem 
+                  icon="profile-icon.svg" 
+                  label="My Assignments" 
+                  href="/assignments"
+                  active={pathname === '/assignments'} 
+                  multiline={true} 
+                  onClick={closeMobileMenu}
+                />
+              )}
+              {(user?.role === 'reviewer' || user?.role === 'admin') && (
+                <NavItem 
+                  icon="documents-icon.svg" 
+                  label="Milestone Report Submit" 
+                  href="/milestone-report"
+                  active={pathname === '/milestone-report'} 
+                  multiline={true} 
+                  onClick={closeMobileMenu}
+                />
+              )}
+              <NavItem 
+                icon="announcements-icon.svg" 
+                label="Announcements" 
+                href="/announcements"
+                active={pathname === '/announcements'} 
+                onClick={closeMobileMenu}
+              />
+              <NavItem 
+                icon="documents-icon.svg" 
+                label="Idea Box" 
+                href="/documents"
+                active={pathname === '/documents'} 
+                multiline={true} 
+                onClick={closeMobileMenu}
+              />
+              <NavItem 
+                icon="resources-icon.svg" 
+                label="Resources" 
+                href="/resources"
+                active={pathname === '/resources'} 
+                onClick={closeMobileMenu}
+              />
 
-        <NavItem 
-          LucideIcon={Vote} 
-          label="Vote for Proposals" 
-          href="/vote-proposals"
-          active={pathname === '/vote-proposals'} 
-          multiline={true} 
-          onClick={closeMobileMenu}
-        />
-        {user?.role === 'reviewer' && (
-          <NavItem 
-            LucideIcon={ClipboardList} 
-            label="Reviewer Test" 
-            href="/reviewer-tests"
-            active={pathname?.startsWith('/reviewer-tests') || false} 
-            multiline={true} 
-            onClick={closeMobileMenu}
-          />
-        )}
-        <NavItem 
-          icon="document-icon.svg" 
-          label="Process Documentation" 
-          href="/processes"
-          active={pathname === '/processes'} 
-          multiline={true} 
-          onClick={closeMobileMenu}
-        />
-        <NavItem 
-          icon="support-icon.svg" 
-          label="Contact & Support" 
-          href="/support"
-          active={pathname === '/support'} 
-          multiline={true} 
-          onClick={closeMobileMenu}
-        />
-        {user?.role === 'admin' && (
-          <NavItem 
-            icon="admin-icon.svg" 
-            label="Admin Management" 
-            href="/admin-management"
-            active={pathname === '/admin-management'} 
-            multiline={true} 
-            onClick={closeMobileMenu}
-          />
-        )}
+              <NavItem 
+                LucideIcon={Vote} 
+                label="Vote for Proposals" 
+                href="/vote-proposals"
+                active={pathname === '/vote-proposals'} 
+                multiline={true} 
+                onClick={closeMobileMenu}
+              />
+              {user?.role === 'reviewer' && (
+                <NavItem 
+                  LucideIcon={ClipboardList} 
+                  label="Reviewer Test" 
+                  href="/reviewer-tests"
+                  active={pathname?.startsWith('/reviewer-tests') || false} 
+                  multiline={true} 
+                  onClick={closeMobileMenu}
+                />
+              )}
+              <NavItem 
+                icon="document-icon.svg" 
+                label="Process Documentation" 
+                href="/processes"
+                active={pathname === '/processes'} 
+                multiline={true} 
+                onClick={closeMobileMenu}
+              />
+              <NavItem 
+                icon="support-icon.svg" 
+                label="Contact & Support" 
+                href="/support"
+                active={pathname === '/support'} 
+                multiline={true} 
+                onClick={closeMobileMenu}
+              />
+              {user?.role === 'admin' && (
+                <NavItem 
+                  icon="admin-icon.svg" 
+                  label="Admin Management" 
+                  href="/admin-management"
+                  active={pathname === '/admin-management'} 
+                  multiline={true} 
+                  onClick={closeMobileMenu}
+                />
+              )}
+            </>
+          )}
         </div>
       </aside>
     </>
