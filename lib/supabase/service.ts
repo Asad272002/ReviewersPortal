@@ -492,6 +492,30 @@ export const supabaseService = {
       return undefined;
     };
 
+    // 0) Check PARTNERS table
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('partners')
+        .select('*')
+        .eq('username', trimmed)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const partner = data[0];
+        // Simple password comparison (should be hashed in production)
+        if (String(partner.password) === String(password)) {
+          return {
+            id: partner.id,
+            username: partner.username,
+            name: partner.name,
+            role: 'partner',
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Error checking partners table:', e);
+    }
+
     // 1) PRIORITIZE team authentication via awarded_team
     {
       const { data, error } = await supabaseAdmin

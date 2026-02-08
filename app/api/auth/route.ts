@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const roleLower = String(dbUser.role || '').toLowerCase().replace(/\s+/g, '_')
-    const normalizedRole = roleLower === 'admin' ? 'admin' : roleLower === 'team_leader' ? 'team' : roleLower === 'team' ? 'team' : 'reviewer'
+    const normalizedRole = roleLower === 'admin' ? 'admin' : roleLower === 'team_leader' ? 'team' : roleLower === 'team' ? 'team' : roleLower === 'partner' ? 'partner' : 'reviewer'
 
     const secretKey = process.env.JWT_SECRET || 'your-secret-key'
     const secret = new TextEncoder().encode(secretKey)

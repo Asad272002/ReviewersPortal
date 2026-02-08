@@ -14,6 +14,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPartnerLogin, setIsPartnerLogin] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -185,6 +186,26 @@ export default function Login() {
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/30 to-indigo-900/40" style={{ zIndex: 1 }} />
       
+      {/* Partner Login Toggle - Top Right */}
+      <div className="absolute top-8 right-8 z-20 animate-fadeIn hidden md:block">
+        <button
+          onClick={() => setIsPartnerLogin(!isPartnerLogin)}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300
+            ${isPartnerLogin 
+              ? 'bg-purple-500/20 border-purple-400/50 text-purple-200 hover:bg-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
+              : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'}
+          `}
+        >
+          <span className="text-sm font-semibold">
+            {isPartnerLogin ? 'Partner Portal Active' : 'Partners Login'}
+          </span>
+          {isPartnerLogin && (
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_5px_#4ade80]" />
+          )}
+        </button>
+      </div>
+
       {/* Review Circle Information - Centered Left */}
       <div className="absolute top-1/2 -translate-y-1/2 left-8 z-20 max-w-sm hidden md:block animate-fadeIn">
         <div className="backdrop-blur-md bg-white/10 p-6 rounded-2xl border border-white/10 shadow-xl hover:bg-white/15 transition-all duration-300 group">
@@ -277,10 +298,13 @@ export default function Login() {
               </div>
               
               <h1 className="font-montserrat font-bold text-4xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
-                Review Circle
+                {isPartnerLogin ? 'Partner Portal' : 'Review Circle'}
               </h1>
               <p className="font-montserrat text-white/80 text-lg">
-                Your Gateway To <span className="text-transparent bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text font-semibold">Proposal Excellence</span>
+                {isPartnerLogin 
+                  ? <span className="text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text font-semibold">Project Oversight & Approvals</span>
+                  : <>Your Gateway To <span className="text-transparent bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text font-semibold">Proposal Excellence</span></>
+                }
               </p>
             </div>
             

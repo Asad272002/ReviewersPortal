@@ -215,7 +215,7 @@ export async function renderHtmlToPdf(data: MilestoneReportData): Promise<Buffer
       return puppeteerCore.launch({
         args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-features=HttpsFirstBalancedModeAutoEnable'],
         executablePath,
-        headless: chromium.headless
+        headless: true
       })
     }
     return puppeteer.launch({

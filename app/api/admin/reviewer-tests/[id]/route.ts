@@ -140,12 +140,12 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 }
 
 // DELETE: Remove test and cascading questions/submissions (admin only)
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const verified = await verifyJwtAndGetUser(req);
   if (!verified || verified.role !== 'admin') {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
-  const { id } = params;
+  const { id } = await params;
   try {
     const { error } = await supabaseAdmin
       .from('reviewer_tests')
