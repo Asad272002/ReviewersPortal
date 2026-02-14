@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deepid:register": "tsx scripts/deepid-register-client.ts",
+    "deepid:sync-local": "tsx scripts/deepid-sync-local.ts",
+    "deepid:setup-local": "npm run deepid:register && npm run deepid:sync-local"
   },
   "dependencies": {
     "@botpress/webchat": "^4.3.2",
@@ -39,6 +42,7 @@
     "eslint-config-next": "^16.0.8",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "tsx": "^4.7.0"
   }
 }

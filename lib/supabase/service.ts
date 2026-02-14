@@ -639,4 +639,106 @@ export const supabaseService = {
 
     return null;
   },
+
+  async getUserByDeepDid(did: string): Promise<{ id: string; username: string; name: string; role: string } | null> {
+    const trimmedDid = String(did).trim();
+    if (!trimmedDid) return null;
+    const normalizedDid = trimmedDid.replace(/^did:/i, ''); // normalize optional did: prefix
+
+    const getFirst = (row: any, keys: string[]): any => {
+      for (const k of keys) {
+        const v = row?.[k];
+        if (v !== undefined && v !== null && String(v).length > 0) return v;
+      }
+      return undefined;
+    };
+
+    // 1) Check PARTNERS table
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('partners')
+        .select('*')
+        .eq('deep_did', normalizedDid)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const partner = data[0];
+        return {
+          id: partner.id,
+          username: partner.username,
+          name: partner.name,
+          role: 'partner',
+        };
+      }
+    } catch (e) {
+      console.warn('Error checking partners table for DID:', e);
+    }
+
+    // 2) Check awarded_team table
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('awarded_team')
+        .select('*')
+        .eq('deep_did', normalizedDid)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const candidate = data[0];
+        const uid = getFirst(candidate, ['ID', 'id']) ?? '';
+        const uname = getFirst(candidate, ['Team Username', 'Team Leader Username']) ?? '';
+        const name = getFirst(candidate, ['Team Name', 'Name']) ?? uname;
+
+        return {
+          id: String(uid),
+          username: String(uname),
+          name: String(name),
+          role: 'team',
+        };
+      }
+    } catch (e) {
+      console.warn('Error checking awarded_team table for DID:', e);
+    }
+
+    // 3) Check user_app table
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('user_app')
+        .select('*')
+        .eq('deep_did', normalizedDid)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const candidate = data[0];
+        const uid = getFirst(candidate, ['id', 'ID', 'user_id', 'userId']) ?? '';
+        const uname = getFirst(candidate, ['username', 'user_name', 'Username', 'User Name']) ?? '';
+        const name = getFirst(candidate, ['name', 'Name', 'full_name', 'Full Name', 'displayName']) ?? uname;
+        const roleRaw = getFirst(candidate, ['role', 'Role', 'user_role', 'userRole']);
+
+        if (roleRaw) {
+          const roleNorm = String(roleRaw).toLowerCase().replace(/\s+/g, '_');
+          
+          if (roleNorm === 'admin' || roleNorm === 'reviewer') {
+            return {
+              id: String(uid),
+              username: String(uname),
+              name: String(name),
+              role: roleNorm,
+            };
+          }
+          if (roleNorm === 'team' || roleNorm === 'team_leader') {
+            return {
+              id: String(uid),
+              username: String(uname),
+              name: String(name),
+              role: 'team',
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error checking user_app table for DID:', e);
+    }
+
+    return null;
+  },
 };

@@ -342,6 +342,7 @@ export default function AdminManagement() {
       { id: 'awarded-teams-info', label: 'Teams Info', desc: 'Project details', icon: Info },
       { id: 'organizations', label: 'Organizations', desc: 'Manage partner orgs', icon: Building },
       { id: 'partners', label: 'Partner Portal', desc: 'Manage partners', icon: Briefcase },
+      { id: 'sso-did-link', label: 'Link Deep-ID', desc: 'Attach DID to account', icon: Settings },
     ];
 
     return (
@@ -691,6 +692,24 @@ export default function AdminManagement() {
             </div>
           );
 
+        case 'sso-did-link':
+          return (
+            <div className="space-y-6">
+              <div className="bg-[#0C021E] rounded-xl border border-[#9D9FA9] shadow-2xl p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                  <h3 className="font-montserrat font-semibold text-xl text-white">Link Deep-ID DID</h3>
+                  <button
+                    onClick={() => setActiveSection('overview')}
+                    className="bg-[#0C021E] hover:bg-[#1A0A3A] border border-[#9D9FA9] text-white font-montserrat font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:scale-105 w-full sm:w-auto"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+                <DIDLinker />
+              </div>
+            </div>
+          );
+
         case 'organizations':
           return (
             <div className="space-y-6">
@@ -739,5 +758,183 @@ export default function AdminManagement() {
         </div>
       </div>
     </ProtectedRoute>
+  );
+}
+
+function DIDLinker() {
+  const [lookup, setLookup] = useState('');
+  const [deepDid, setDeepDid] = useState('');
+  const [targetType, setTargetType] = useState<'auto'|'partners'|'awarded_team'|'user_app'>('auto');
+  const [result, setResult] = useState<{ type: 'success'|'error'; message: string }|null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ table: 'partners'|'awarded_team'|'user_app'; id: string; username: string; name: string; label: string }>>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
+  const [lastQuery, setLastQuery] = useState('');
+  const [hoverIndex, setHoverIndex] = useState<number>(-1);
+
+  useEffect(() => {
+    let timer: any;
+    if (lookup.trim().length > 0) {
+      setLoadingSuggest(true);
+      const q = lookup.trim();
+      timer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/admin/sso/search-users?q=${encodeURIComponent(q)}&target=${encodeURIComponent(targetType)}`, { credentials: 'include' });
+          const data = await res.json();
+          if (q === lookup.trim()) {
+            setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+            setShowDropdown(true);
+            setLastQuery(q);
+          }
+        } catch {
+          setSuggestions([]);
+          setShowDropdown(false);
+        } finally {
+          setLoadingSuggest(false);
+        }
+      }, 200);
+    } else {
+      setSuggestions([]);
+      setShowDropdown(false);
+      setLoadingSuggest(false);
+    }
+    return () => timer && clearTimeout(timer);
+  }, [lookup, targetType]);
+
+  const submit = async () => {
+    setResult(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/sso/link-deep-did', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lookup, deepDid, targetType }),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.message || `HTTP ${res.status}`);
+      }
+      setResult({ type: 'success', message: 'DID linked successfully.' });
+      setLookup('');
+      setDeepDid('');
+      setTargetType('auto');
+      setSuggestions([]);
+      setShowDropdown(false);
+    } catch (e: any) {
+      setResult({ type: 'error', message: e?.message || 'Failed to link DID' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-white/80 mb-1">Lookup (username, ID, or name)</label>
+          <div className="relative">
+            <input
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              placeholder="e.g., alice, team_123, John Doe"
+              value={lookup}
+              onChange={(e) => { setLookup(e.target.value); setShowDropdown(true); }}
+              onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
+              onKeyDown={(e) => {
+                if (!showDropdown || suggestions.length === 0) return;
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setHoverIndex((prev) => (prev + 1) % suggestions.length);
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setHoverIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+                } else if (e.key === 'Enter' && hoverIndex >= 0) {
+                  e.preventDefault();
+                  const s = suggestions[hoverIndex];
+                  const val = s.username || s.name || s.id;
+                  setLookup(val);
+                  setTargetType(s.table);
+                  setShowDropdown(false);
+                } else if (e.key === 'Escape') {
+                  setShowDropdown(false);
+                }
+              }}
+            />
+            {showDropdown && (loadingSuggest || suggestions.length > 0) && (
+              <div className="absolute z-20 mt-1 w-full bg-[#0C021E] border border-white/20 rounded-xl shadow-2xl max-h-60 overflow-auto">
+                {loadingSuggest && (
+                  <div className="px-4 py-2 text-sm text-white/60">Searching...</div>
+                )}
+                {!loadingSuggest && suggestions.length === 0 && (
+                  <div className="px-4 py-2 text-sm text-white/60">No matches</div>
+                )}
+                {!loadingSuggest && suggestions.map((s, idx) => {
+                  const isActive = idx === hoverIndex;
+                  return (
+                    <button
+                      key={`${s.table}:${s.id}`}
+                      type="button"
+                      onMouseEnter={() => setHoverIndex(idx)}
+                      onMouseLeave={() => setHoverIndex(-1)}
+                      onClick={() => {
+                        const val = s.username || s.name || s.id;
+                        setLookup(val);
+                        setTargetType(s.table);
+                        setShowDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm ${isActive ? 'bg-white/10 text-white' : 'text-white/80'} hover:bg-white/10`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{s.label}</span>
+                        <span className="text-xs text-white/40">{s.table}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-white/80 mb-1">Deep-ID (did:...)</label>
+          <input
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            placeholder="did:example:123456"
+            value={deepDid}
+            onChange={(e) => setDeepDid(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        {(['auto','partners','awarded_team','user_app'] as const).map((opt) => (
+          <label key={opt} className="flex items-center gap-2 text-white/80 text-sm">
+            <input
+              type="radio"
+              name="targetType"
+              checked={targetType === opt}
+              onChange={() => setTargetType(opt)}
+            />
+            {opt}
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={submit}
+          disabled={submitting || !lookup || !deepDid}
+          className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold disabled:opacity-50 hover:from-purple-500 hover:to-indigo-500 transition-all"
+        >
+          {submitting ? 'Linking...' : 'Link DID'}
+        </button>
+        {result && (
+          <span className={`text-sm ${result.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+            {result.message}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-white/50">
+        Auto mode searches across partners, awarded_team, and user_app and updates the first match.
+      </p>
+    </div>
   );
 }

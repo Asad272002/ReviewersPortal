@@ -24,6 +24,36 @@ export default function Login() {
   const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    // Check for URL params manually to avoid Suspense requirement for useSearchParams
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const errorParam = params.get('error');
+      const detailsParam = params.get('details');
+      
+      if (errorParam) {
+        let msg = errorParam.replace(/_/g, ' ');
+        // Capitalize first letter
+        msg = msg.charAt(0).toUpperCase() + msg.slice(1);
+        
+        if (detailsParam) {
+          msg += ` (${decodeURIComponent(detailsParam)})`;
+        }
+        
+        // Map specific error codes to user-friendly messages
+        const errorMap: Record<string, string> = {
+          'account_not_linked': 'Your Deep-ID is not linked to any portal account.',
+          'sso_failed': 'Login with Deep-ID failed.',
+          'missing_verifier': 'Authentication session expired. Please try again.',
+          'invalid_state': 'Security check failed. Please try again.',
+          'deepid_not_configured': 'Deep-ID is not configured. Ask an admin to run: npm run deepid:register and set DEEP_SSO_CLIENT_ID/DEEP_SSO_CLIENT_SECRET, then restart.'
+        };
+        
+        setError(errorMap[errorParam] || msg);
+      }
+    }
+  }, []);
+
   // Client-side guard: if already authenticated, go to dashboard
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -377,6 +407,30 @@ export default function Login() {
                     </svg>
                   </div>
                 )}
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-white/20"></div>
+                <span className="flex-shrink-0 mx-4 text-white/50 text-sm font-montserrat">Or</span>
+                <div className="flex-grow border-t border-white/20"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => window.location.href = '/api/auth/deep-id/start'}
+                className="w-full relative overflow-hidden bg-white/5 hover:bg-white/10 border border-white/20 text-white font-montserrat font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    {/* Simple fingerprint/ID icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-blue-300">
+                      <path d="M12 12c0-3 2.5-5.5 5-5.5 4 0 7 2.5 7 7s-2.5 7-7 7c-2.5 0-5-2.5-5-5.5" />
+                      <path d="M12 12c0-3-2.5-5.5-5-5.5-4 0-7 2.5-7 7s2.5 7 7 7c2.5 0 5-2.5 5-5.5" />
+                      <path d="M12 12v.01" />
+                    </svg>
+                  </div>
+                  <span>Continue with Deep-ID</span>
+                </div>
               </button>
             </form>
 

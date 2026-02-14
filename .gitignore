@@ -45,3 +45,6 @@ next-env.d.ts
 
 # uploads
 public/uploads/*
+
+# Deep-ID local client registration output
+.deepid-client.json
