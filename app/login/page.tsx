@@ -245,7 +245,6 @@ export default function Login() {
         </button>
       </div>
 
-      
       {/* Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         {/* Left Side - Info Card (Desktop - Absolute Positioned) */}
@@ -433,6 +432,18 @@ export default function Login() {
                 </div>
               </button>
             </form>
+
+            <div className="mt-6 text-center text-xs text-white/50 font-montserrat">
+              By continuing, you agree to our{' '}
+              <a href="/privacy" className="text-[#A3A3FF] hover:text-white underline underline-offset-2">
+                Privacy Policy
+              </a>{' '}
+              and{' '}
+              <a href="/terms" className="text-[#A3A3FF] hover:text-white underline underline-offset-2">
+                Terms of Use
+              </a>
+              .
+            </div>
 
             {/* Mobile/Tablet Resources Links */}
             <div className="lg:hidden mt-8 border-t border-white/10 pt-6">

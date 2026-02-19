@@ -25,6 +25,21 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Reviewers Portal",
   description: "Deep Funding Reviewers Portal",
+  icons: {
+    icon: [
+      {
+        url: "/reviewerlogo.png",
+        type: "image/png",
+        sizes: "32x32",
+      },
+      {
+        url: "/reviewerlogo.png",
+        type: "image/png",
+        sizes: "192x192",
+      },
+    ],
+    shortcut: "/reviewerlogo.png",
+  },
 };
 
 export default function RootLayout({
