@@ -102,19 +102,21 @@ const Header = ({ title = 'Dashboard' }: HeaderProps) => {
               </div>
             </button>
 
-            <Link 
-              href="/analysis" 
-              className="hidden md:flex mr-2 md:mr-4 font-montserrat text-white hover:text-white transition-all duration-300 items-center gap-2 group relative px-3 py-1.5 rounded-full hover:bg-white/10 border border-transparent hover:border-white/10"
-            >
-                <div className="p-1.5 rounded-full bg-primary/20 text-primary-light group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-[0_0_10px_rgba(144,80,233,0.3)] group-hover:shadow-[0_0_15px_rgba(144,80,233,0.6)]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg>
-                </div>
-                <span className="hidden sm:inline font-medium tracking-wide">Analysis</span>
-            </Link>
+            {user.role !== 'team' && (
+              <Link 
+                href="/analysis" 
+                className="hidden md:flex mr-2 md:mr-4 font-montserrat text-white hover:text-white transition-all duration-300 items-center gap-2 group relative px-3 py-1.5 rounded-full hover:bg-white/10 border border-transparent hover:border-white/10"
+              >
+                  <div className="p-1.5 rounded-full bg-primary/20 text-primary-light group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-[0_0_10px_rgba(144,80,233,0.3)] group-hover:shadow-[0_0_15px_rgba(144,80,233,0.6)]">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="20" x2="18" y2="10"></line>
+                          <line x1="12" y1="20" x2="12" y2="4"></line>
+                          <line x1="6" y1="20" x2="6" y2="14"></line>
+                      </svg>
+                  </div>
+                  <span className="hidden sm:inline font-medium tracking-wide">Analysis</span>
+              </Link>
+            )}
             
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="font-montserrat font-semibold text-white text-sm sm:text-base tracking-wide">

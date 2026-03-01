@@ -128,6 +128,41 @@ export default function AnalysisPage() {
     ...(otherCount > 0 ? [{ name: 'Pending/Other', value: otherCount, color: '#FF9800' }] : [])
   ];
 
+  if (user?.role === 'team') {
+    return (
+      <ProtectedRoute>
+        <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
+          <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" />
+          <Header title="Access Denied" />
+          <div className="flex flex-1 relative z-10 overflow-hidden">
+            <Sidebar />
+            <main className="flex-1 flex items-center justify-center p-8">
+              <div className="bg-[#1A0A3A]/80 backdrop-blur-md border border-red-500/30 rounded-2xl p-10 max-w-md text-center shadow-2xl">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-white font-montserrat mb-4">Unauthorized Access</h2>
+                <p className="text-gray-300 font-montserrat mb-8">
+                  The Analysis page is currently restricted to Reviewers and Admins. Please return to your dashboard.
+                </p>
+                <button 
+                  onClick={() => window.location.href = '/'}
+                  className="w-full bg-[#9050E9] hover:bg-[#A96AFF] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            </main>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-screen bg-[#0C021E] relative overflow-hidden">
