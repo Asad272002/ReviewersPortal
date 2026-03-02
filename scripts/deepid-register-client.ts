@@ -27,7 +27,7 @@ async function main() {
     client_name: 'reviewers-portal',
     grant_types: ['authorization_code', 'refresh_token'],
     response_types: ['code', 'id_token'],
-    scope: 'openid profile email offline_access',
+    scope: 'openid offline_access',
     redirect_uris: [...devCandidates, prodCallback],
     token_endpoint_auth_method: 'client_secret_basic',
   };

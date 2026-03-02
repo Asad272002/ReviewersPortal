@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       response_type: 'code',
       client_id: CLIENT_ID,
       redirect_uri: redirectUri,
-      scope: 'openid profile email offline_access',
+      scope: 'openid offline_access',
       state: state,
       nonce: nonce,
       code_challenge: codeChallenge,
@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
     });
 
     if (process.env.NODE_ENV !== 'production') {
+      console.log('[Deep-ID] Domain:', DEEP_SSO_DOMAIN);
+      console.log('[Deep-ID] Client ID:', CLIENT_ID);
       console.log('[Deep-ID] Using redirect_uri:', redirectUri);
     }
 
