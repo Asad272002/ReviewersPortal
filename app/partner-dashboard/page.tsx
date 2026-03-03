@@ -482,7 +482,7 @@ function ReportCard({ report, onReview, isSubmitting, showProjectContext = false
               <div className="flex items-center gap-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${report.partner_review.verdict === 'Approve' ? 'bg-green-400' : 'bg-red-400'}`} />
                 <span className={`font-semibold ${report.partner_review.verdict === 'Approve' ? 'text-green-400' : 'text-red-400'}`}>
-                  {report.partner_review.verdict}d
+                  {report.partner_review.verdict === 'Approve' ? 'Approved' : 'Rejected'}
                 </span>
               </div>
               {report.partner_review.comment && <p className="text-sm text-white/70 italic">"{report.partner_review.comment}"</p>}
