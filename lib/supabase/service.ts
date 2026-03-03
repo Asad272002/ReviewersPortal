@@ -643,7 +643,8 @@ export const supabaseService = {
   async getUserByDeepDid(did: string): Promise<{ id: string; username: string; name: string; role: string } | null> {
     const trimmedDid = String(did).trim();
     if (!trimmedDid) return null;
-    const normalizedDid = trimmedDid.replace(/^did:/i, ''); // normalize optional did: prefix
+    // Normalize: ensure it starts with 'did:'
+    const normalizedDid = trimmedDid.startsWith('did:') ? trimmedDid : `did:${trimmedDid}`;
 
     const getFirst = (row: any, keys: string[]): any => {
       for (const k of keys) {

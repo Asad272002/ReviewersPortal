@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
 
     const lookup = normalizeString(lookupRaw);
     const deepDidInput = normalizeString(deepDidRaw);
-    const deepDid = deepDidInput.replace(/^did:/i, ''); // normalize: strip optional did: prefix
+    
+    // Normalize: ensure it starts with 'did:'
+    const deepDid = deepDidInput.startsWith('did:') ? deepDidInput : `did:${deepDidInput}`;
 
     if (!lookup || !deepDid) {
       return NextResponse.json({ success: false, message: 'lookup and deepDid are required' }, { status: 400 });

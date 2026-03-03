@@ -92,12 +92,15 @@ export async function GET(request: NextRequest) {
       throw e;
     }
 
-    const did = claims.sub; // DID is in 'sub'
+    const didRaw = claims.sub; // DID is in 'sub'
 
-    if (!did) {
+    if (!didRaw) {
       logSSOError('missing_did', 'No DID in token');
       throw new Error('No DID in token');
     }
+
+    // Normalize DID: ensure it starts with 'did:'
+    const did = didRaw.startsWith('did:') ? didRaw : `did:${didRaw}`;
 
     // Lookup user by DID
     const user = await supabaseService.getUserByDeepDid(did);
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest) {
       // We do NOT auto-create accounts
       const url = new URL('/login', request.url);
       url.searchParams.set('error', 'account_not_linked');
-      url.searchParams.set('details', `did:${did}`);
+      url.searchParams.set('details', did); // Use normalized DID
       return clearSSOCookies(NextResponse.redirect(url));
     }
 
