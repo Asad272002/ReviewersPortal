@@ -126,6 +126,13 @@ export default function MilestoneReportPage() {
   }, []);
 
   useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      milestoneNumber: '',
+      milestoneTitle: '',
+      milestoneBudgetAmount: '',
+      milestoneDescriptionFromProposal: ''
+    }));
     if (!form.proposalId) {
       setAvailableMilestones([]);
       return;
@@ -146,6 +153,19 @@ export default function MilestoneReportPage() {
       }
     })();
   }, [form.proposalId]);
+
+  useEffect(() => {
+    if (!form.milestoneNumber) return;
+    const m = availableMilestones.find(x => String(x.milestone_number) === String(form.milestoneNumber));
+    if (m) {
+      setForm(prev => ({
+        ...prev,
+        milestoneTitle: m.title || '',
+        milestoneBudgetAmount: m.budget != null ? String(m.budget) : '',
+        milestoneDescriptionFromProposal: [m.description, m.deliverables ? `Deliverables:\n${m.deliverables}` : ''].filter(Boolean).join('\n\n')
+      }));
+    }
+  }, [form.milestoneNumber, availableMilestones]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
