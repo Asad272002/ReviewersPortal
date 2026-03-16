@@ -60,7 +60,7 @@ export default function Login() {
       if (user?.role === 'partner') {
         router.replace('/partner-dashboard');
       } else {
-        router.replace('/');
+        router.replace('/dashboard');
       }
     }
   }, [authLoading, isAuthenticated, router, user]);
@@ -199,7 +199,7 @@ export default function Login() {
         if (isPartnerLogin) {
           router.push('/partner-dashboard');
         } else {
-          router.push('/');
+          router.push('/dashboard');
         }
       } else {
         setError('Invalid username or password');

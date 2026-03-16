@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       .sign(secret);
 
     // Redirect based on role
-    const redirectUrl = normalizedRole === 'partner' ? '/partner-dashboard' : '/';
+    const redirectUrl = normalizedRole === 'partner' ? '/partner-dashboard' : '/dashboard';
     const response = NextResponse.redirect(new URL(redirectUrl, request.url));
 
     // Set auth cookie

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { LucideIcon, Vote, ClipboardList } from 'lucide-react';
+import { LucideIcon, Vote, ClipboardList, Activity, ShieldCheck } from 'lucide-react';
 
 interface NavItemProps {
   icon?: string;
@@ -138,8 +138,8 @@ const Sidebar = () => {
               <NavItem 
                 icon="dashboard-icon.svg" 
                 label="Dashboard" 
-                href="/"
-                active={pathname === '/'} 
+                href="/dashboard"
+                active={pathname === '/dashboard'} 
                 onClick={closeMobileMenu}
               />
               {user?.role === 'reviewer' && (
@@ -220,14 +220,40 @@ const Sidebar = () => {
                 onClick={closeMobileMenu}
               />
               {user?.role === 'admin' && (
-                <NavItem 
-                  icon="admin-icon.svg" 
-                  label="Admin Management" 
-                  href="/admin-management"
-                  active={pathname === '/admin-management'} 
-                  multiline={true} 
-                  onClick={closeMobileMenu}
-                />
+                <>
+                  <NavItem 
+                    icon="admin-icon.svg" 
+                    label="Admin Management" 
+                    href="/admin-management"
+                    active={pathname === '/admin-management'} 
+                    multiline={true} 
+                    onClick={closeMobileMenu}
+                  />
+
+                  <div className="pt-6 pb-1 px-4">
+                    <p className="font-montserrat text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                      Integrations
+                    </p>
+                  </div>
+
+                  <NavItem
+                    LucideIcon={Activity}
+                    label="Deep Ops Preview"
+                    href="/admin/deep-ops"
+                    active={pathname === '/admin/deep-ops'}
+                    multiline={true}
+                    onClick={closeMobileMenu}
+                  />
+
+                  <NavItem
+                    LucideIcon={ShieldCheck}
+                    label="Deep Ops Submit & Audit"
+                    href="/admin/deep-ops/submit-audit"
+                    active={pathname?.startsWith('/admin/deep-ops/submit-audit') || false}
+                    multiline={true}
+                    onClick={closeMobileMenu}
+                  />
+                </>
               )}
             </>
           )}
